@@ -1,0 +1,711 @@
+html {
+    font-size:16px;
+}
+*{
+    margin: 0;
+    padding: 0;
+    font-family: 'poppins', sans-serif;
+}
+
+:root{
+    --body-color: #ffffff;
+    --nav-color: #ffffff;
+    --bg-color: #fff;
+}
+
+.dark-theme{
+    --body-color: #0a0a0a;
+    --nav-color: #000;
+    --bg-color: #000;
+}
+body{
+    background: var(--body-color);
+    transition: background 0.3s;
+}
+
+nav{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--nav-color);
+    padding: 5px 5%;
+}
+
+.logo{
+    width: 100px;
+    margin-right: 25px;
+}
+
+.nav-left, .nav-right{
+    display: flex;
+    align-items: center;
+}
+
+.nav-left ul li{
+    list-style: none;
+    display: inline-block;
+}
+
+.nav-left ul li a{
+    font-family: Arial, sans-serif;
+    font-size: 16px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    margin: 0 15px;
+    text-decoration: none;
+    color: #0c0b31;
+    width: fit-content;
+ }
+
+.nav-left ul li a:hover, nav-left ul li a:active {
+  color: #555;
+}
+
+ .nav-user-icon img{
+    width: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+ }
+
+.footer{
+    text-align: center;
+    color: #9a9a9a;
+    padding: 10px 0 20px;
+    font-size: 13px;
+    position: fixed;
+    left: 0;
+    bottom: 0;
+    width: 100%
+}
+.user-profile{
+    display: flex;
+    align-items: center;
+}
+
+.user-profile img{
+    width: 45px;
+    border-radius: 50%;
+    margin: 10px;
+}
+
+.settings-menu{
+    position: absolute;
+    width: 90%;
+    max-width: 350px;
+    background: #fff;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.4);
+    border-radius: 4px;
+    overflow: hidden;
+    top: 100px;
+    right: 5%;
+    max-height: 0;
+    transition: max-height 0.3s;
+    }
+
+.settings-menu-height{
+     max-height: 450px;
+}
+    .user-profile a{
+        font-size: 12px;
+        color: #1876f2;
+        text-decoration: none;
+    }
+    .settings-menu-inner{
+        padding: 20px;
+    }
+
+        .settings-menu hr{
+       border: 0;
+       height: 1px;
+       background: #9a9a9a;
+       margin: 15px 0;
+    }
+.settings-links{
+    display: flex;
+    align-items: center;
+    margin: 15px 0;
+}
+
+.settings-links .settings-icon{
+    width: 38px;
+    margin-right: 10px;
+    border-radius: 50%;
+}
+
+.settings-links a{
+    display: flex;
+    flex: 1;
+    align-items: center;
+    justify-content: space-between;
+    text-decoration: none;
+    color: #626262;
+}
+    #dark-btn{
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: #ccc;
+        width: 50px;
+        border-radius: 15px;
+        padding: 2px 3px;
+        cursor: pointer;
+        display: flex;
+        transition: padding-left 0.5s, background 0.5s;
+    }
+
+     #dark-btn span{
+        width: 18px;
+        height: 18px;
+        background: #fff;
+        border-radius: 50%;
+        display: inline-block;
+     }
+
+    #dark-btn.dark-btn-on{
+        padding-left: 23px;
+        background: #000;
+    }
+
+
+
+.clearfix {
+    clear: both;
+    margin-bottom: 10px;
+}
+
+.dropzone--over { opacity: 0.5}
+
+  .draggable {
+      width:80%;
+      height:3%;
+      background-color: none;
+      padding: 1px;
+      margin: 2px;
+      cursor: move;
+      display: flex;
+      align-items:center;
+      justify-content: center;
+      vertical-align: middle;
+      text-align:center;
+  }
+
+  .highlight {
+    background-color: yellow}
+
+main {
+    margin-top: 1.4rem;
+}
+
+.image {
+    width:50px;
+    height:50px;
+    margin-right:5px;
+    margin-bottom: 5px;
+}
+
+/* Dropdown Button */
+.dropbtn {
+    background-color: #324866;
+    color: white;
+    padding: 16px;
+    font-family: Arial, sans-serif;
+    font-size: medium;
+    font-weight: bold;
+    border: none;
+  }
+  
+  /* The container <div> - needed to position the dropdown content */
+  .dropdown {
+    position: relative;
+    display: inline-block;
+  }
+  
+  /* Dropdown Content (Hidden by Default) */
+  .dropdown-content {
+    display: none;
+    position: absolute;
+    background-color: #f1f1f1;
+    min-width: 160px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+    z-index: 2;
+  }
+  
+  /* Links inside the dropdown */
+  .dropdown-content a {
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    cursor: pointer;
+  }
+  .dropdown-content button {
+    display: hidden;
+    color: black;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+  }
+  
+  /* Change color of dropdown links on hover */
+  .dropdown-content a:hover {background-color: #ddd;}
+  
+  /* Show the dropdown menu on hover */
+  .dropdown:hover .dropdown-content {display: block;}
+  
+  /* Change the background color of the dropdown button when the dropdown content is shown */
+  .dropdown:hover .dropbtn {background-color: rgba(0,0,0,.5);}
+
+.dash {
+    margin-top: 20px;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    justify-content: space-around;
+    align-items: flex-start;
+    gap: 10px;
+}
+.dash2 {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 10px;
+    order: 2;
+    flex-grow: 2;
+}
+
+
+.varlist-container {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: wrap;
+    justify-content: flex-start;
+    align-items: flex-start;
+    min-width: none;
+    height: 85%;
+    position: relative;
+    background-color: #ffffff;
+    order: 1;
+
+    }
+ 
+
+.titleContainer {
+    display: flex;
+    flex-direction: row;
+    }
+
+   
+.table-dropzone {
+  height: 95%;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.table-dropzone table td{
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+}
+.invisible-dropzone {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    opacity: 0;
+    position: absolute;
+    width: 100%;
+    height: 50%;
+    top: 0;
+    pointer-events: none;
+    z-index: 1000;
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 18px;
+    letter-spacing: 2px;
+    word-spacing: 2px;
+    color: #000000;
+    font-weight: 700;
+    text-decoration: none;
+    font-style: normal;
+    font-variant: small-caps;
+    text-transform: none;
+}
+
+.top-half {
+    background-color: rgba(0, 255, 0, 0.2);
+}
+
+.bottom-half {
+    background-color: rgba(0, 0, 255, 0.2);
+    top: 50%; /* Position the bottom-half drop zone at the bottom */
+}
+
+.varset {
+    min-height:510px;
+    min-width: 250px;
+    border: 2px solid black;
+    background-color: #ffffff;
+    order: 3;
+    flex-grow: 1;
+    }
+
+.setlist {
+    margin-left: 30px;
+}
+
+.dash3 {
+    order: 3;
+    flex-grow: 1;
+}
+.dash4 {
+    min-height: 510px;
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    justify-content: flex-start;
+    align-items: flex-start;
+    gap: 10px;
+    order: 4;
+    flex-grow: 1;
+}
+
+.modsum {
+    min-height: 250px;
+    min-width: 200px;
+    border: 2px solid black;
+    background-color: #ffffff;
+    }
+.chartsel {
+    min-height: 250px;
+    min-width: 200px;
+    border: 2px solid black;
+    background-color: #ffffff;
+    }
+.nav-r {
+    display: flex;
+    gap: 10px;
+}
+.slidecontainer {
+    width: 100%; /* Width of the outside container */
+    font-family: Arial, sans-serif;
+    font-size: medium;
+    font-weight: bold;
+    color: white;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+  }
+  
+  /* The slider itself */
+  .slider {
+    -webkit-appearance: none;
+    width: 100%;
+    height: 15px;
+    border-radius: 5px;  
+    background: #d3d3d3;
+    outline: none;
+    opacity: 0.7;
+    -webkit-transition: .2s;
+    transition: opacity .2s;
+  }
+  
+  .slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 25px;
+    height: 25px;
+    border-radius: 50%; 
+    background: rgb(61,215,251);
+    cursor: pointer;
+  }
+  
+  .slider::-moz-range-thumb {
+    width: 25px;
+    height: 25px;
+    border-radius: 50%;
+    background: #04AA6D;
+    cursor: pointer;
+  }
+
+  .checkbox {
+    height: 20px;
+    width: 20px;
+    margin-bottom: 20px;
+  }
+
+  .checkboxtext {
+    font-family: Arial, sans-serif;
+    font-size: medium;
+    font-weight: bold;
+    color: white;
+  }
+
+#plotimg {
+    display: none;
+    height: 100%;
+    width: 100%;
+}
+
+.varlock-container {
+    min-height:510px;
+    min-width: 100px;
+    display: flex;
+    align-items:flex-start;
+    flex-direction: column;
+    justify-content:left;
+    flex-wrap: nowrap;
+    border: 2px solid black;
+    border-left: none;
+    background-color: #ffffff;
+    order: 3;
+    flex-grow: 1;
+    gap: 10px;
+}
+
+.varlocktext {
+    display: flex;
+    flex-direction: row;
+}
+
+.varlock {
+    margin-right: 5px;
+}
+
+.my-input-class {
+    padding: 3px 6px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+}
+
+.my-confirm-class {
+    padding: 3px 6px;
+    font-size: 12px;
+    color: white;
+    text-align: center;
+    vertical-align: middle;
+    border-radius: 4px;
+    background-color: #337ab7;
+    text-decoration: none;
+}
+
+.my-cancel-class {
+    padding: 3px 6px;
+    font-size: 12px;
+    color: white;
+    text-align: center;
+    vertical-align: middle;
+    border-radius: 4px;
+    background-color: #a94442;
+    text-decoration: none;
+}
+
+.error {
+    border: solid 1px;
+    border-color: #a94442;
+}
+
+.destroy-button{
+    padding:5px 10px 5px 10px;
+    border: 1px blue solid;
+    background-color:lightgray;
+}
+
+.toggle-icon {
+    cursor: pointer;
+  }
+  
+.checkmark-icon {
+    cursor: pointer;
+  }
+
+
+.custom-center-class {
+text-align: center;
+}
+
+.tw-toggle {
+    /* background: #95A5A6; */
+    display: inline-block;
+    padding: 2px 3px;
+    border-radius: 20px;
+    position:relative;
+    border: 2px solid #95A5A6;
+  }
+  
+  .tw-toggle label {
+    text-align: center;
+    font-family: sans-serif;
+    display: inline-block;
+    color: #95A5A6;
+    position:relative;
+    z-index:2;
+    margin: 0;
+    text-align: center;
+    padding: 2px 3px;
+    font-size: 15px;
+    /* cursor: pointer; */
+  }
+  
+  .tw-toggle input {
+    /* display: none; */
+    position: absolute;
+    z-index: 3;
+    opacity: 0;
+    cursor: pointer;
+  }
+  
+  .tw-toggle span {
+    height: 21px;
+    width: 21px;
+    line-height: 21px;
+    border-radius: 50%;
+    background:#fff;
+    display:block;
+    position:absolute;
+    left: 22px;
+    top: 2px;
+    transition:all 0.3s ease-in-out;
+  }
+  
+  .tw-toggle input[value="false"]:checked ~ span{
+    background:#e74c3c;
+    left:2px;
+    color:#fff;
+  }
+  
+  .tw-toggle input[value="true"]:checked ~ span{
+    background:#27ae60;
+    left: 46px;
+  }
+  .tw-toggle input[value="-1"]:checked ~ span{
+    background:#95A5A6;
+    left: 23px;
+  }
+  
+  .tw-toggle input[value="false"]:checked + label,.tw-toggle input[value="true"]:checked + label{
+    color:#fff;
+  }
+  .tw-toggle input[value="-1"]:checked + label{
+    color:#fff;
+  }
+
+.cfmodalbutton {
+    margin-top: 10px;
+    margin-left: 10px;
+    min-width: 50px;
+    min-height: 25px;
+}
+
+.cfmodal {
+    display: none;
+    flex-direction: row;
+    position: fixed;
+    z-index: 1;
+    top:0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    overflow: auto;
+    background-color: rgba(0,0,0,0.5);
+    resize: both;
+  }
+
+  .cfmodal-content {
+    background-color: #E9E9E9;
+    margin-top: 50px;
+    margin-left: 200px;
+    padding-top: 0px;
+    padding-left: 20px;
+    padding-right: 20px;
+    padding-bottom: 20px;
+    border: 1px solid #888;
+    width: 80%;
+    height: 80%;
+    box-shadow: 0 5px 8px 0 rgba(0,0,0,0.2),0 7px 0 rgba(0,0,0,0.17);
+    animation-name: modalopen;
+    animation-duration:1s;
+    resize: both;
+    overflow: auto;
+    position: relative;
+  }
+
+
+  .cfmodal-content .aggbuttonwrapper {
+    float: right;
+    position: absolute;
+    bottom: 0;
+    list-style: none;
+    font-size: 16px;
+    height: 25px;
+    display: flex;
+    width: 100%;
+    cursor: pointer;
+    align-items: center;
+    border-radius: 5px;
+    margin-bottom: 2px;
+    padding: 0 5px 0 10px;
+  }
+  .cfmodal-content .aggbuttonwrapper span{
+    margin-left: 5px;
+  }
+
+  .context-menu {
+    display: none;
+    position: absolute;
+    background-color: #f9f9f9;
+    border: 1px solid #ddd;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.15);
+    padding: 5px;
+    z-index: 1;
+  }
+
+  .context-menu .contextMenuItem {
+    list-style: none;
+    font-size: 16px;
+    height: 25px;
+    display: flex;
+    width: 100%;
+    cursor: pointer;
+    align-items: center;
+    border-radius: 5px;
+    margin-bottom: 2px;
+    padding: 0 5px 0 10px;
+  }
+
+#aggregateButton {
+    margin-left: 5px;
+    cursor: pointer;
+  }
+
+#closeCfModalBtn {
+    cursor: pointer;
+    color: red;
+    font-size: 28px;
+    float: right;
+}
+
+#modal-wrapper {
+  display: flex;
+  flex-direction: row;
+}
+
+#dropdown-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.column-item {
+  display: flex;
+  flex-direction: row;
+  margin-bottom: 10px;
+}
+
+#column-list {
+  margin-left: 50px;
+  margin-top: 10px;
+}
+

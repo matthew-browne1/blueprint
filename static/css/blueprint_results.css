@@ -1,0 +1,49 @@
+body {
+    margin: 0;
+    font-family: 'Arial', sans-serif;
+    background-color: #FDFDFD;
+}
+
+h1 {
+    margin: 0;
+    font-size: 2.5em;
+    letter-spacing: 2px;
+    font-style: italic; 
+}
+
+.title-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    color: black;
+}
+
+.main-charts {
+    display: flex;
+    justify-content: space-between;
+    padding: 20px;
+    flex-direction: row;
+}
+
+.chart-cont {
+    max-width: 48%;
+    flex:1;
+}
+
+#budgetPerChannelChart-cont {
+    max-width: 98%;
+}
+
+.all-charts-cont {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 20px;
+    height: 80vh;
+}
+
+.logo {
+    width: 150px; /* Set the desired width for your logo */
+    height: auto;
+}
