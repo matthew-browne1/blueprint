@@ -1,0 +1,340 @@
+{% extends 'base.html' %}
+
+{% block content %}
+
+<title>Model Creator</title>
+
+<link rel="stylesheet" href="/static/css/nouislider.css">
+<link rel="stylesheet" href="/static/css/model_creator.css">
+<nav-model>
+    <div class="nav-model-left">
+        <ul>
+            <li><a href="">Database</a>
+                <ul>
+                    <li><a href="#">Import Data</a></li>
+                    <li><a href="#">Save</a></li>
+                    <li><a href="#">Export Data</a></li>
+                </ul>
+            </li>
+            <li><a href="">Edit</a>
+                <ul>
+                    <li><a href="#">Adstock Ranges</a></li>
+                    <li><a href="#">Additional Variables</a></li>
+                    <li><a href="#">Group Variables</a></li>
+                    <li><a href="#">Optimisation Settings</a></li>
+                </ul>
+            </li>
+            <li><a href="">Analysis</a>
+                <ul>
+                    <li><a href="#">Charts</a></li>
+                    <li><a href="#">A v F</a></li>
+                    <li><a href="#">Diagnostic Residual Plots</a></li>
+                    <li><a href="#">Correlation Plots</a></li>
+                    <li><a href="#">Auto correlation Function</a></li>
+                    <li><a href="#">Sand Diagram</a></li>
+                    <li><a class="nav-link" href="{{ url_for('annual_profile') }}">Annual Profile</a></li>
+                </ul>
+            </li>
+            <li><a href="">ROI Calculator</a></li>
+        </ul>
+    </div>
+
+    <div class="nav-model-right">
+        <div class="nav-modal-checkbox">
+            <label class="checkboxtext" for="checkbox">Optimise</label>
+            <input class="checkbox" type="checkbox" name="optomize"></input>
+        </div>
+
+        <div class="nav-model-slider">
+            <label class="checkboxtext" for="range">α</label>
+            <input type="range" id="nav-modal-slider" min="0" max="100" value="50" oninput="slider()">
+            <div id="slider-value">0</div>
+        </div>
+
+        <div class="nav-model-play-icon">
+            <img id="playbtn" src="/static/images/playpause.png">
+        </div>
+    </div>
+
+</nav-model>
+
+<div class="model-container">
+    <div class="model-left-sidebar">
+        <nav-sidebar>
+            <a href="#content1" class="sidebar-content-link"><span>Variable List</span></a>
+            <a href="#content2" class="sidebar-content-link"><span>Variable Settings</span></a>
+            <a href="#content3" class="sidebar-content-link"><span>Adstock Settings</span></a>
+            <a href="#content4" class="sidebar-content-link"><span>Additional Variables</span></a>
+        </nav-sidebar>
+
+        <div class="sidebar-content" id="content1">
+            <div class="sidebar-content-header">
+                <label class="sidebar-content-headertext" for="sidebar-content-toggle">Variable List</label>
+                <button class="sidebar-content-toggle">&times;</button>
+            </div>
+            <div class="varlist-container" id="varlist-container-1">
+                <table id="table1" class="hover">
+                    <thead>
+                    <tr>
+                        <th>Variable</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                  
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="sidebar-content" id="content2">
+            <div class="sidebar-content-header">
+                <label class="sidebar-content-headertext" for="sidebar-content-toggle">Variable Settings</label>
+                <button class="sidebar-content-toggle">&times;</button>
+            </div>
+            <div class="select-box">
+                <label class="select-label" for="model-class-dropdown">Model Class</label>
+                <select class="select" id="model-class-dropdown">
+                    <option value="">Select Option</option>
+                    <option value="a">Fixed Effect</option>
+                    <option value="b">Variable Effect</option>
+                    <option value="c">Cross-Sectional Constant</option>
+                    <option value="d">Random Forest</option>
+                </select>
+            </div>
+
+            <div class="select-box">
+                <label class="select-label" for="model-dropdown">Model Field</label>
+                <select class="select" id="model-dropdown">
+                    <option value="" selected disabled>Select Option</option>
+                </select>
+            </div>
+            <div class="select-box">
+                <label class="select-label" for="target-dropdown">Target Variable</label>
+                <select class="select" id="target-dropdown">
+                    {% for target in targetList %}
+                    <option value="{{ target }}">{{ target }}</option>
+                    {% endfor %}
+                </select>
+
+            </div>
+            <div class="select-box">
+                <label class="select-label" for="cross-section-dropdown">Cross-Section Field</label>
+                <select class="select" id="cross-section-dropdown">
+                    <option value="" selected disabled>Select Option</option>
+                </select>
+                <div class="select-checkbox">
+                    <input type="checkbox" id="cross-checkbox"></input>
+                    <label for="cross-checkbox">Use as cross-sectional constants</label>
+                </div>
+            </div>
+            <div class="select-box">
+                <label class="select-label" for="time-series-dropdown">Time Series Field</label>
+                <select class="select" id="time-series-dropdown">
+                    <option value="" selected disabled>Select Option</option>
+                </select>
+            </div>
+            <div class="tolerance-container">
+                <div class="tolerance-select-box">
+                    <label class="select-label" for="t-value">Min T-Value</label>
+                    <input type="number" id="t-value" step="0.01" min="0" value="1.64">
+                </div>
+                <div class="tolerance-box">
+                    <label class="select-label" for="tolerance-input">Tolerance</label>
+                    <input type="number" id="tolerance-input" value="0.1" step="0.1" min="0.1">
+                </div>
+            </div>
+
+            <div class="select-checkbox">
+                <input type="checkbox" id="apply-tolerance"/>
+                <label for="apply-tolerance">Apply Tolerance</label>
+            </div>
+            <div>
+
+                <button id="saveButton">Save Preference</button>
+            </div>
+        </div>
+
+        <div class="sidebar-content" id="content3">
+            <div class="sidebar-content-header">
+                <label class="sidebar-content-headertext" for="sidebar-content-toggle">Adstock & Alpha Settings</label>
+                <button class="sidebar-content-toggle">&times;</button>
+            </div>
+            <div class="adstock-settings-container" id="adstock-settings-container">
+               
+            </div>
+
+        </div>
+        <div class="sidebar-content" id="content4">
+            <div class="sidebar-content-header">
+                <label class="sidebar-content-headertext" for="sidebar-content-toggle">Additional Varriables</label>
+                <button class="sidebar-content-toggle">&times;</button>
+            </div>
+
+            <h3>Page is under construction</h3>
+
+        </div>
+
+    </div>
+<div class="model-main-content">
+        <h2>Base Variable Dropbox</h2>
+
+      <div class = "table-dropzone" id="table2cont">
+       
+        <table id="table2" class="hover">
+          <thead>
+            <tr>
+                <th>variable</th>
+                <th>toggle</th>
+                <th>inModel</th>
+                <th>adstock</th>
+                <th>coefficient</th>
+                <th>varType</th>
+                <th>stdError</th>
+                <th>t_value</th>
+                <th>p_value</th>
+                <th>95CILow</th>
+                <th>95CIHigh</th>
+                <th>insig</th>
+                <th>pctCont</th>
+                <th>test</th>
+            </tr>
+        </thead>
+        <tbody>
+            
+        </tbody>
+    </table>
+      <div id="topHalfDropzone" class="invisible-dropzone top-half">
+        <p>[drop base variable here]</p>
+      </div>
+      <div id="bottomHalfDropzone" class="invisible-dropzone bottom-half">
+        <p>[drop intervention variable here]</p>
+      </div>
+  
+    </div>
+       
+        </table>
+    </div>
+</div>
+<div id="simpleModal" class="gvmodal">
+    <form id="checkbox-form" method="POST">
+
+    <div class="gvmodal-content">
+        <div class="gvmodal-header">
+            <span class="gvcloseBtn">&times;</span>
+            <p>Group Variables</p>
+        </div>
+
+        <div class="gvmodal-bodyv3">
+            <div class="gvleft">
+                <p>Groups:</p>
+            </div>
+            <div class="gvrightContainer">
+                <p>Add to: </p>
+                <div class="dropDownDiv" id="dropDownDiv">
+                    {{dropdown_html|safe}}
+                </div>
+            </div>
+        </div>
+        <button type="button" id="my-button" name="action" value="ButtonConfirmAdded" class="gvbuttonv2" style="display:none"></button>
+        <input type="hidden" id="selectedItems" name="selectedItems" value="">
+        <div class="gvmodal-body" id="ModalBodyForVars">
+
+            <div id="GroupsContainer" class="GroupsContainer">
+                {{group_html|safe}}
+            </div>
+
+        </div>
+        <div class="gvmodal-bodyv2" id="ModalBodyForButtons">
+            <div class="bodyv2buttons">
+                <button id="button1" class="gvbuttonv2" type="button" value="ButtonConfirmGroup">Group</button>
+                <button id="b2" class="gvbuttonv2" type="button" name="action" value="ButtonUngroup">Ungroup</button>
+                <button id="b3" class="gvbuttonv2" type="button" disabled name="action" value="ButtonRename">Rename</button>
+            </div>
+            <div class="input-wrapper">
+                <input type="text" id="searchInput" class="filter-input" onkeyup="filterVariables()" placeholder="Search for variable">
+                <button type="reset" class="searchClear" onclick="searchClear2()">&times;</button>
+            </div>
+        </div>
+
+    </div>
+    </form>
+</div>
+
+<div id="allGroupsModal" class="allGroupsModal">
+
+
+        <div class="allGroupsModalContent">
+
+                <div class="allGroupsHeader">
+                    <span class="allGroupsCloseBtn" id="allGroupsCloseBtn">&times;</span>
+                    <p>All Groups</p>
+                </div>
+                <div class="setGroupHeadings">
+                    <div class="setGroupHeadingsLeft">
+                        <p>Variable List
+                    </div>
+                    <div class="setGroupHeadingsLeft">
+                        <p>Set List
+                    </div>
+                </div>
+                    <div class="allGroupsModalBodyContainer" id="allGroupsModalBodyContainer">
+                        <div class="allGroupsModalBody dropzoneV2" id="setVariables" ondragover='event.preventDefault()' ondrop='handleDropV2(event)'>
+                            {{variableList_html|safe}}
+                        </div>
+                        <div class="allGroupsModalBody" id="setGroups">
+                            {{setGroups_html|safe}}
+                        </div>
+                    </div>
+
+                    <div class="lowercontainer" id="lowercontainer">
+                        <div class="setGroupHeadingsRight">
+                            <div class="setGroupFooterLeft">
+                                <input type="text" id="searchInputAG" class="searchInputAG" onkeyup="filterVariablesAG()" placeholder="Search for variable" autocomplete="off">
+                                <button type="reset" class="searchClearAG" onclick="searchClear2AG()">&times;</button>
+                            </div>
+                        </div>
+                        <div class="setGroupHeadingsRight">
+                            <button id="createSetBtn" class="allGroupsBtnv2" value="createSet">Create Set</button>
+                            <button id="deleteSetBtn" class="allGroupsBtnv2" value="deleteSet">Delete Set</button>
+                            <button id="renameSetBtn" class="allGroupsBtnv2" value="renameSet" disabled name="action">Rename Set</button>
+                        </div>
+                    </div>
+
+        </div>
+
+</div>
+
+<div id="customMenu" class="customMenu hidden">
+    <ul class="menu">
+        <li> <button id="allGroupsBtn" class="allGroupsBtn">All Groups</button></li>
+        <li> <img src="/static/images/groupingicon.png" class="contextMenuIcons"> <button id="modalBtn" class="gvbutton">Group Variables</button></li>
+        <li><button id="splitToIncr" class="splitToIncrBtn">Split to Incremental</button></li>
+        <li> 
+          <i class="fa-solid fa-gear"></i>
+          <span id="aggregateButton">Create Aggregation</span>
+        </li>
+        <li>dfgdfgh</li>
+        <li>dgfh</li>
+        <li>dfghdfghdfgh</li>
+
+    </ul>
+</div>
+
+
+<script src="static/js/wNumb.js"></script>
+<script src="static/js/nouislider.js"></script>
+<script src="static/js/slider2.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
+<script src="https://cdn.datatables.net/buttons/2.4.0/js/dataTables.buttons.min.js"></script>
+<script src="https://cdn.datatables.net/select/1.7.0/js/dataTables.select.min.js"></script>
+<script src="https://cdn.datatables.net/datetime/1.5.0/js/dataTables.dateTime.min.js"></script>
+<script src="../static/js/dataTables.editor.js"></script>
+<script src="../static/js/editor.dataTables.js"></script>
+<script src="../static/js/dataTable.js"></script>
+<script src="//cdn.datatables.net/plug-ins/1.13.6/features/pageResize/dataTables.pageResize.min.js"></script>
+<script>var columnsForSplit = {{ columnsForSplit|tojson }}</script>
+<script src="static/js/GVScript.js"></script>
+<script src="static/js/AllGroups.js"></script>
+<script src="static/js/plots.js"></script>
+
+{% endblock content %}

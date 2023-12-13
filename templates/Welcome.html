@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Welcome to TMO 3.0</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <img src="/static/images/RA Logo 1.png" alt="Retail Alchemy Logo">
+        <h1 class="app-name">TMO 3.O</h1>
+        <p class="app-description">Welcome to the new and improved TMO app</p>
+    </div>
+
+    {% if current_user.is_authenticated %}
+        <p>Hello, {{ current_user.full_name }} You are logged in.</p>
+    {% else %}
+
+    <button onclick="openLoginForm()"
+            style="width:30%; height: 60px; font-size: 1.3rem;">Login
+    </button>
+    {% endif %}
+</div>
+
+<div id="id01" class="bg-modal"></div>
+<div class="modal-content">
+    <div class="modal-close"
+         onclick="closeLoginForm()">&times;
+    </div>
+    <div class="modal-form">
+        <div class="modal-icon">
+            <img src="/static/images/User Login.png">
+        </div>
+        <div class="modal-header">
+            User Login
+        </div>
+        <form action="/login" method="post">
+            {% if not current_user.is_authenticated %}
+                <div class="modal-element">
+                    <label for="uname"><b>Username</b></label>
+                    <input type="text" placeholder="Enter Username" name="uname" required>
+                </div>
+                <div class="modal-element">
+                    <label for="psw"><b>Password</b></label>
+                    <input type="password" placeholder="Enter Password" name="psw" required>
+                </div>
+                <div class="modal-element">
+                    <button>Login</button>
+                </div>
+            {% else %}
+                <p>You are already logged in as {{ current_user.username }}.</p>
+            {% endif %}
+        </form>
+    </div>
+</div>
+<script src="/static/js/main.js"></script>
+</body>
+</html>

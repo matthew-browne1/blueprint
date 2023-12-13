@@ -1,0 +1,59 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<h1>Drag</h1>
+
+
+<div class="starting dropzone" style="border-color: red">
+    {% for variable in variables %}
+        <div class="draggable" draggable="True" id="{{ variable }}">
+            <p>{{ variable }}</p>
+        </div>
+    {% endfor %}
+</div>
+
+
+<div class = 'ending dropzone' style="border-color: green">
+    
+</div>
+
+<script src = "https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
+<script type="text/javascript">
+
+    document.addEventListener("DOMContentLoaded", function() {
+        const draggables = document.querySelectorAll('.draggable');
+        const dropzones = document.querySelectorAll('.dropzone');
+
+        draggables.forEach(draggable => {
+            draggable.addEventListener('dragstart', () => {
+                draggable.classList.add('dragging');
+            });
+
+          draggable.addEventListener('dragend', e => {
+            e.preventDefault();
+            draggable.classList.remove("dragging");
+          });
+        });
+
+
+         dropzones.forEach(dropzone => {
+              dropzone.addEventListener('dragover', e => {
+                e.preventDefault();
+                const draggable = document.querySelector('.dragging');
+                dropzone.classList.add("dropzone--over");
+              });
+
+             dropzone.addEventListener('dragleave', e => {
+                dropzone.classList.remove('dropzone--over');
+             });
+
+             dropzone.addEventListener('drop', e => {
+                const draggable = document.querySelector('.dragging');
+                dropzone.appendChild(draggable);
+                dropzone.classList.remove('dropzone--over');
+              });
+         });
+    });
+
+</script>
+{% endblock content %}

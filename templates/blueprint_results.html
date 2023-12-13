@@ -1,0 +1,38 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blueprint Results</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+  <link rel="stylesheet" href="/static/css/blueprint_results.css">
+</head>
+<body>
+  <div class="title-container">
+    <h1>Blueprint Results</h1>
+    <img src="/static/images/blueprint logo.png" alt="Logo" class="logo">
+  </div>
+  <div class="all-charts-cont">
+    <div class="main-charts">
+      <div class="chart-cont" id="myChart-cont">
+        <canvas id="myChart" width="800" height="400"></canvas>
+      </div>
+
+      <div class="chart-cont" id="budgetPerScenarioChart-cont">
+        <canvas id="budgetPerScenarioChart" width="800" height="400"></canvas>
+      </div>
+    </div>
+    <div class="chart-cont" id="budgetPerChannelChart-cont">
+      <canvas id="budgetPerChannelChart" width="1600" height="400"></canvas>
+    </div>
+    <div style="width: 80%; margin: auto;">
+      <canvas id="polynomialChart" width="800" height="400"></canvas>
+  </div>
+  </div>
+</body>
+
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script type="module" src="../static/js/blueprintCharts.js"></script>
