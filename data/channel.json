@@ -1,0 +1,194 @@
+{
+    "1": [
+        {
+            "Channel": "Bvod",
+            "Carryover": 0.263685209,
+            "Alpha": 2.35e-05,
+            "CPU": 1,
+            "Max_Spend_Cap": 544328.2647,
+            "Current_Budget": 362885.5098,
+            "Current_ROI": 1.39926032,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "CTV",
+            "Carryover": 0.266864873,
+            "Alpha": 0.0002463,
+            "CPU": 1,
+            "Max_Spend_Cap": 180758.6269,
+            "Current_Budget": 120505.7513,
+            "Current_ROI": 1.165153327,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "Display",
+            "Carryover": 0.214036091,
+            "Alpha": 0.000266829,
+            "CPU": 1,
+            "Max_Spend_Cap": 210223.5647,
+            "Current_Budget": 140149.0432,
+            "Current_ROI": 11.02485473,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "Facebook",
+            "Carryover": 0.337375705,
+            "Alpha": 0.000179943,
+            "CPU": 1,
+            "Max_Spend_Cap": 254199.2744,
+            "Current_Budget": 169466.1829,
+            "Current_ROI": 3.665426739,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "Instagram",
+            "Carryover": 0.343220903,
+            "Alpha": 0.000197662,
+            "CPU": 1,
+            "Max_Spend_Cap": 327230.4553,
+            "Current_Budget": 218153.6369,
+            "Current_ROI": 4.577283468,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "NBC WG BVOD",
+            "Carryover": 0.199094015,
+            "Alpha": 2.6e-05,
+            "CPU": 1,
+            "Max_Spend_Cap": 299231.438,
+            "Current_Budget": 199487.6253,
+            "Current_ROI": 1.442615853,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "NBC WG Social",
+            "Carryover": 0.200017058,
+            "Alpha": 2.53e-05,
+            "CPU": 1,
+            "Max_Spend_Cap": 404119.0185,
+            "Current_Budget": 269412.679,
+            "Current_ROI": 1.570359846,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "NBC WG TV",
+            "Carryover": 0.20737696,
+            "Alpha": 2.24e-05,
+            "CPU": 1,
+            "Max_Spend_Cap": 1847251.5,
+            "Current_Budget": 1231501.0,
+            "Current_ROI": 1.095490586,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "NBC WG VOD",
+            "Carryover": 0.200724737,
+            "Alpha": 2.52e-05,
+            "CPU": 1,
+            "Max_Spend_Cap": 129031.1318,
+            "Current_Budget": 86020.75454,
+            "Current_ROI": 1.514938489,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "NBC WG display",
+            "Carryover": 0.212252237,
+            "Alpha": 2.26e-05,
+            "CPU": 1,
+            "Max_Spend_Cap": 157360.9848,
+            "Current_Budget": 104907.3232,
+            "Current_ROI": 1.426339599,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "NBC digital",
+            "Carryover": 0.253555284,
+            "Alpha": 6.04e-05,
+            "CPU": 1,
+            "Max_Spend_Cap": 314304.2107,
+            "Current_Budget": 209536.1405,
+            "Current_ROI": 3.22236843,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "NBC ppc",
+            "Carryover": 0.254885676,
+            "Alpha": 5.92e-05,
+            "CPU": 1,
+            "Max_Spend_Cap": 81201.34497,
+            "Current_Budget": 54134.22998,
+            "Current_ROI": 4.105830632,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "NBC social",
+            "Carryover": 0.255866603,
+            "Alpha": 5.95e-05,
+            "CPU": 1,
+            "Max_Spend_Cap": 399440.37,
+            "Current_Budget": 266293.58,
+            "Current_ROI": 2.810325773,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "NBD WG YT",
+            "Carryover": 0.194311817,
+            "Alpha": 2.81e-05,
+            "CPU": 1,
+            "Max_Spend_Cap": 96127.89256,
+            "Current_Budget": 64085.26171,
+            "Current_ROI": 1.470823868,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "PPC",
+            "Carryover": 0.282755618,
+            "Alpha": 0.000860367,
+            "CPU": 1,
+            "Max_Spend_Cap": 111763.5149,
+            "Current_Budget": 74509.00994,
+            "Current_ROI": 10.24859076,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "Sponsorship",
+            "Carryover": 0.617748133,
+            "Alpha": 8.84e-05,
+            "CPU": 1,
+            "Max_Spend_Cap": 1519071.428,
+            "Current_Budget": 1012714.285,
+            "Current_ROI": 3.28897716,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "TV",
+            "Carryover": 0.380832058,
+            "Alpha": 5.29e-05,
+            "CPU": 1,
+            "Max_Spend_Cap": 3535290.734,
+            "Current_Budget": 2356860.489,
+            "Current_ROI": 0.288523207,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "Vod",
+            "Carryover": 0.265041454,
+            "Alpha": 0.000244479,
+            "CPU": 1,
+            "Max_Spend_Cap": 84769.5486,
+            "Current_Budget": 56513.0324,
+            "Current_ROI": 1.876356613,
+            "Min_Spend_Cap": 0
+        },
+        {
+            "Channel": "YT",
+            "Carryover": 0.401596214,
+            "Alpha": 0.000274001,
+            "CPU": 1,
+            "Max_Spend_Cap": 233013.5237,
+            "Current_Budget": 155342.3491,
+            "Current_ROI": 4.861131594,
+            "Min_Spend_Cap": 0
+        }
+    ]
+}

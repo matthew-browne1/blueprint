@@ -326,7 +326,9 @@ class Optimiser:
     
 
     def beta_opt(channel_input, laydown, num_weeks=1000):
-        laydown.drop(columns="Time_Period", inplace=True)
+
+        laydown = laydown.drop(columns="Time_Period")
+        
         model = ConcreteModel()
 
         streams = [entry['Channel'] for entry in channel_input]

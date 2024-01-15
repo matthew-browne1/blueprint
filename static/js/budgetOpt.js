@@ -106,6 +106,14 @@ document.addEventListener("DOMContentLoaded", function () {
       blendValue: blendValue,
       tableID: 1
     };
+    var dateButtonIsChecked = $("#date-filter-button").prop("checked");
+    var startDate = $("#start-date").datepicker("getDate");
+    var endDate = $("#end-date").datepicker("getDate");
+    var dateTuple = [startDate, endDate];
+    if (dateButtonIsChecked) {
+      dataToSend[dates] = dateTuple;
+    }
+    console.log(dataToSend);
 
     // Use jQuery AJAX to send the data to the Flask endpoint
     $.ajax({
@@ -279,8 +287,7 @@ function openNewTab() {
   window.open("/blueprint_results", "_blank");
   }
 
-
- 
+  
   $("#results-div").on("click", "#results-button", function () {
     console.log(tabNames);
     console.log("results button clicked");
@@ -298,3 +305,27 @@ function openNewTab() {
       },
     });
   });
+
+  $(function () {
+    $("#start-date").datepicker();
+  });
+
+  $(function () {
+    $("#end-date").datepicker();
+  });
+
+$("#date-filter-button").on("click", function () {
+  var isChecked = $(this).prop("checked");
+  var dateContainers = $(".date-inputs");
+
+  if (isChecked) {
+    console.log("date button is checked");
+    dateContainers.addClass("greyed-out");
+  } else {
+    console.log("date button is unchecked");
+    dateContainers.removeClass("greyed-out");
+  }
+});
+
+
+

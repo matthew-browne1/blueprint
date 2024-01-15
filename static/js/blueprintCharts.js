@@ -61,8 +61,8 @@ $.ajax({
 
     const budAndRevOptions = {
       scales: {
-        x: { stacked: true },
-        y: { stacked: true },
+        x: { stacked: false },
+        y: { stacked: false },
       },
       responsive: true,
       maintainAspectRatio: false

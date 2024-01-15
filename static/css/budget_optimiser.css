@@ -178,7 +178,7 @@
 }
 
 .bo-container {
-    transition: max-height 0.5s ease-in-out, opacity 0.5s ease-in-out;
+
     width: 100%;
     margin-top: 20px;
     margin: auto;
@@ -212,7 +212,6 @@
   white-space: nowrap;
   word-wrap: break-word;
 }
-
 
 .button-4:hover {
   background-color: #F3F4F6;
@@ -370,6 +369,8 @@
   transition: 0.3s ease all;
 }
 
+
+
 .fa-pen-to-square:hover {
   color: #0858e2;
 }
@@ -407,6 +408,9 @@
   align-items: center;
   text-align: center;
   margin-bottom: 10px;
+  border-radius: 10px;
+  border: 2px solid #AFABAB;
+  padding: 10px;
 }
 
 .date-inputs {
@@ -518,5 +522,64 @@
   background-color: #FFFFFF;
   align-items: center;
   text-align: center;
+}
+
+.date-range-label {
+  display: flex;
+  flex-direction: row;
+}
+
+#start-date {
+  width: auto;
+}
+
+#end-date {
+  width: auto;
+}
+
+.greyed-out {
+  /* Add your grey-out styles here */
+  opacity: 0.6; /* Adjust the opacity as needed */
+  pointer-events: none;
+  transition: opacity 0.5s ease;
+}
+
+.button.d,
+.button.d .layer {
+  border-radius: 100px;
+}
+
+.button.d .knobs:before {
+  content: "ON";
+  position: absolute;
+  top: 4px;
+  left: 4px;
+  width: 20px;
+  height: 10px;
+  color: #fff;
+  font-size: 10px;
+  font-weight: bold;
+  text-align: center;
+  line-height: 1;
+  padding: 9px 4px;
+  background-color: #03a9f4;
+  border-radius: 50%;
+  transition: 0.3s cubic-bezier(0.18, 0.89, 0.35, 1.15) all;
+}
+
+.button.d .checkbox:checked + .knobs:before {
+  content: "OFF";
+  left: 42px;
+  background-color: #f44336;
+}
+
+.button.d .checkbox:checked ~ .layer {
+  background-color: #fcebeb;
+}
+
+.button.d .knobs,
+.button.d .knobs:before,
+.button.d .layer {
+  transition: 0.3s ease all;
 }
 

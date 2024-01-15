@@ -5,6 +5,7 @@
    <title>Blueprint</title>
 
 <link rel="stylesheet" href="/static/css/budget_optimiser.css">
+<link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
 <div class="all-content">
 
 <div class="main-container" id="main-container">
@@ -106,10 +107,22 @@
                   </div>
                </div>
                <div class="date-cont" id="date-cont">
+                  <div class="date-range-label">
                   <label for="end-date">Date Range Filter:</label>
+                  <div class="toggle-button-cover">
+                     <div class="button-cover">
+                        <div class="button d">
+                           <input type="checkbox" class="checkbox" id="date-filter-button" />
+                           <div class="knobs"></div>
+                           <div class="layer"></div>
+                        </div>
+                     </div>
+                  </div>
+               </div>
                   <div class="date-inputs">
-                     <input type="date" id="start-date">
-                     <input type="date" id="end-date">
+                     <input type="text" name="start-date" id="start-date" placeholder="Start date" />
+                     <i class="fa-solid fa-arrow-right" id="date-filter-arrow"></i>
+                     <input type="text" name="end-date" id="end-date" placeholder="End date" />
                   </div>
                </div>
                <div class="opt-cont-parent" id="opt-button-cont">
@@ -390,6 +403,7 @@
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
 <script src="//cdn.datatables.net/plug-ins/1.13.6/features/pageResize/dataTables.pageResize.min.js"></script>
 <script type="module" src="static/js/budgetOpt.js"></script>

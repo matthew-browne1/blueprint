@@ -15,7 +15,7 @@
     </div>
 
     {% if current_user.is_authenticated %}
-        <p>Hello, {{ current_user.full_name }} You are logged in.</p>
+        <p>Currently logged-in user: {{ current_user.user_info[0].full_name }}</p>
     {% else %}
 
     <button onclick="openLoginForm()"

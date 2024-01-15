@@ -29,6 +29,8 @@ h1 {
 .chart-cont {
     max-width: 48%;
     flex:1;
+    border-radius: 10px;
+    border: 2px solid #AFABAB;
 }
 
 #budgetPerChannelChart-cont {

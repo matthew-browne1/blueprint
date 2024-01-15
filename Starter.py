@@ -1,26 +1,17 @@
 
 # %% --------------------------------------------------------------------------
-# initial setup
+#
 # -----------------------------------------------------------------------------
 
-from pbiembedservice import PbiEmbedService
-from utils import Utils
-from flask import Flask, render_template, send_file, jsonify, request, url_for, redirect
-from modelsum import test_model
-import matplotlib.pyplot as plt
-import matplotlib.dates as mdates
-import matplotlib
-matplotlib.use("agg")
+from flask import Flask, render_template, send_file, jsonify, request, url_for, redirect, flash
 import numpy as np
 import pandas as pd
 import seaborn as sns
-import base64
-import random
 import json
 import os
 import sys
-from io import BytesIO
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.orm import joinedload
 from urllib.parse import parse_qs
 from pyomo_opt import Optimiser
 from sqlalchemy import create_engine, text, Column, DateTime, Integer
@@ -28,14 +19,11 @@ from sqlalchemy.orm import Session, declarative_base
 import datetime
 from sqlalchemy.exc import SQLAlchemyError
 import urllib.parse
-import traceback
-import psycopg2
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import secrets
-from werkzeug.security import check_password_hash
 
 app = Flask(__name__)
 
@@ -44,6 +32,7 @@ engine = create_engine('postgresql://postgres:'+urllib.parse.quote_plus("Gde3400
 app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:'+urllib.parse.quote_plus("Gde3400@@")+'@192.168.1.2:5432/CPW Blueprint'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = secrets.token_hex()
+app.config['SESSION_COOKIE_SECURE'] = True
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
@@ -63,7 +52,7 @@ class UserInfo(db.Model):
 
 @login_manager.user_loader
 def load_user(user_id):
-    return User.query.get(int(user_id))
+    return User.query.options(joinedload(User.user_info)).get(int(user_id))
 
 user_data = [
     {'username': 'mattbrowne1', 'password': 'password123', 'full_name': 'Matthew Browne', 'email': 'matthew.browne@retailalchemy.co.uk'},
@@ -105,159 +94,6 @@ set_json = os.path.join(sys.path[0], "data/setGroups.json")
 input_file = json_dest
 output_file = data_dest
 
-def csv_to_json(filepath):
-    df = pd.read_csv(filepath)
-    jsonstring = pd.DataFrame.to_json(df)
-    json_object = json.dumps(jsonstring, indent=4)
-    with open(channel_json, "w") as outfile:
-        outfile.write(json.loads(json_object))
-    pass
-
-@app.route('/data', methods=['GET', 'POST', 'DELETE'])
-def handle_ajax():
-    with open(output_file) as file:
-        data = json.load(file)
-    print(request.content_type)
-    print(request.method)
-
-    if request.method == 'POST':
-        payload = request.get_data(parse_form_data=True)
-        decoded_payload = payload.decode()
-        parsed_payload = parse_qs(decoded_payload)
-
-        if 'action' in parsed_payload:
-            action = parsed_payload['action'][0]
-            print(action)
-
-            if action == 'create':
-                new_variable = parsed_payload.get('data[0][variable]', [''])[0]
-                new_adstock = parsed_payload.get('data[0][adstock]', [''])[0]
-
-                max_row_id = max(int(row['DT_RowId'][3:]) for row in data['data'])
-                new_row_id = f'row{max_row_id + 1}'
-
-                # Create a new row with the provided data
-                new_row = {
-                    'DT_RowId': new_row_id,
-                    'variable': new_variable,
-                    'toggle': '',
-                    'inModel': '',
-                    'coefficient': '',
-                    'stdError': '',
-                    't_value': '',
-                    'p_value': '',
-                    '95CILow': '',
-                    '95CIHigh': '',
-                    'insig': '',
-                    'adstock': new_adstock,
-                    'pctCont': ''
-                }
-
-                # Append the new row to the data list
-                data['data'].append(new_row)
-
-                with open(output_file, 'w') as file:
-                    json.dump(data, file, indent=4)
-
-                return jsonify(new_row)
-
-            elif action == 'edit':
-                print(parsed_payload.items())
-                for updated_row_key, updated_row_value in parsed_payload.items():
-                    print(updated_row_key)
-                    print(updated_row_value)
-                    row_index = None
-
-                    if updated_row_key.startswith('data[row'):
-                        row_index = updated_row_key.split('row')[1].split(']')[0]
-                        print(row_index)
-
-                    if row_index is not None:
-                        for row in data['data']:
-
-                            if str(row['DT_RowId']) == "row" + row_index:
-                                print(row_index)
-                                print("jejeje")
-                                if updated_row_key.endswith('][variable]'):
-                                    if row['variable'] != updated_row_value[0]:
-                                        row['variable'] = updated_row_value[0]
-                                        print(row['variable'])
-                                        break
-                                elif updated_row_key.endswith('][adstock]'):
-                                    if row['adstock'] != updated_row_value[0]:
-                                        row['adstock'] = updated_row_value[0]
-                                        print(row['adstock'])
-                                        break
-
-                    with open(output_file, 'w') as file:
-                        json.dump(data, file, indent=4)
-
-                        response = {
-                            'data': [
-                                {
-                                    'DT_RowId': row['DT_RowId'],
-                                    'variable': row['variable'],
-                                    'toggle': row['toggle'],
-                                    'inModel': row['inModel'],
-                                    'coefficient': row['coefficient'],
-                                    'stdError': row['stdError'],
-                                    't_value': row['t_value'],
-                                    'p_value': row['p_value'],
-                                    '95CILow': row['95CILow'],
-                                    '95CIHigh': row['95CIHigh'],
-                                    'insig': row['insig'],
-                                    'adstock': row['adstock'],
-                                    'pctCont': row['pctCont']
-                                }
-
-                            ]
-                        }
-                        print(response)
-                        return jsonify(response)
-            elif action == "remove":
-                empty_obj = {}
-                return jsonify(empty_obj)
-
-    elif request.method == 'GET':
-        print("getting")
-        response_data = data['data']
-
-        response = {
-            'data': response_data,
-        }
-        return jsonify(response)
-
-
-    elif request.method == 'DELETE':
-        row_id = request.args.get('row_id', '')
-
-        for row in data['data']:
-            if row['DT_RowId'] == row_id:
-                data['data'].remove(row)
-                break
-
-        with open(output_file, 'w') as file:
-            json.dump(data, file, indent=4)
-
-        response = {'status': 'success', 'message': 'Row deleted successfully'}
-        return jsonify(response)
-
-    response = {'status': 'error', 'message': 'Invalid request'}
-    return jsonify(response)
-
-
-@app.route('/toggle_states', methods = ['POST'])
-def toggle_states():
-    try:
-        data = request.json
-        print(data)
-        print(type(data))
-        toggle_states = data
-        print(toggle_states)
-        return jsonify({"message": "Toggle states saved successfully"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
 # OPTIMISER FILE PATHS
 
 laydown_filepath = os.path.join(sys.path[0], "optimiser input data/UK_Laydown_v3.csv")
@@ -268,12 +104,13 @@ channel_input.drop(columns='Unnamed: 0', inplace=True)
 channel_dict = {1:channel_input.to_dict("records")}
 ST_laydown = pd.read_csv(laydown_filepath)
 ST_laydown = ST_laydown.fillna(0)
-print(ST_laydown.columns)
+
 streams = []
 for var in channel_dict[1]:
     streams.append(var['Channel'])
 
 ST_laydown_dates = ST_laydown['Time_Period']
+
 
 with open(channel_json, "w") as file:
     json.dump(channel_dict, file, indent=4)
@@ -281,9 +118,8 @@ with open(channel_json, "w") as file:
 with open(channel_json) as file:
     ST_channel_input = json.load(file)
 
-
-
 opt_betas_dict = Optimiser.beta_opt(laydown=ST_laydown, channel_input=channel_dict[1])
+
 channel_input['Beta'] = list(opt_betas_dict.values())
 channel_dict = {"1":channel_input.to_dict("records")}
 table_data = channel_dict
@@ -292,6 +128,7 @@ for var in table_data["1"]:
 
 max_budget = 0
 results = {}
+
 # %% --------------------------------------------------------------------------
 #
 # -----------------------------------------------------------------------------
@@ -309,6 +146,14 @@ def optimise():
     num_weeks = 1000
     blend = data['blendValue']
     
+    if 'dates' in data:
+        start_date = data['dates'][0]
+        end_date = data['dates'][1]
+        ST_laydown = ST_laydown[(ST_laydown["Time-Period"] >= start_date) & (ST_laydown["Time-Period"] <= end_date)]
+        
+    print(start_date)
+    print(end_date)
+
     ST_channel_input = table_data[table_id]
 
     global results
@@ -316,6 +161,8 @@ def optimise():
 
     LT_laydown = ST_laydown
     LT_channel_input = ST_channel_input
+
+    
 
     if blend.lower() == "blend":
         if obj_func.lower() == "profit":
@@ -456,8 +303,7 @@ def results_output():
         for stream in streams:
             opt_rev_dict[stream] = rev_per_stream(stream, current_budget_dict[stream])
 
-        def daily_budget_from_pct_laydown(stream, budget):
-            cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
+        def daily_budget_from_pct_laydown(stream):
             
             pct_laydown = []
             for x in range(len(recorded_impressions[stream])):
@@ -542,6 +388,7 @@ def chart_data():
 
 np.random.seed(42)  
 
+
 def poly_function(x,y,degree):
 
     x_reshaped = x.reshape(-1, 1)
@@ -555,6 +402,7 @@ def poly_function(x,y,degree):
 
     return model.predict(x_poly)
 
+
 @app.route('/polynomial_data', methods=['GET'])
 def polynomial_data():
     poly_x = np.random.uniform(0, 100, 20)
@@ -562,15 +410,17 @@ def polynomial_data():
     degree = 2
     lobf = poly_function(poly_x, poly_y, degree)
     print(f"lobf={lobf}")
+    lobf_dict = dict(zip(poly_x, lobf))
     data = {
         "x": poly_x.tolist(),
         "y": poly_y.tolist(),
-        "lobf": lobf.tolist()
+        "lobf": dict(sorted(lobf_dict.items()))
     }
-
+    print(data)
     return jsonify(data)
 
 @app.route('/blueprint_results')
+@login_required
 def blueprint_results():
     return render_template('blueprint_results.html')
 
@@ -582,23 +432,59 @@ def date_range():
     print(end_date)
     return jsonify({"startDate":start_date, "endDate":end_date})
 
-@app.route('/budget_optimiser')
-def budget_optimiser():
-    return render_template('Budget Optimiser.html')
+@app.route('/blueprint')
+@login_required
+def blueprint():
+    print(ST_laydown_dates)
+    return render_template('Budget Optimiser.html', current_user = current_user)
 
-# Load configuration for PBI
-app.config.from_object('config.BaseConfig')
+@app.route('/create_copy', methods = ['POST'])
+def create_copy():
+    global table_data
+
+    tableID = str(request.form.get('tableID'))
+    channel_dict = channel_input.to_dict("records")
+    for var in channel_dict:
+        var['Laydown'] = ST_laydown[var['Channel']].tolist()
+    if tableID not in table_data.keys():
+        table_data[tableID] = channel_dict
+    print(len(table_data))
+    return jsonify({"success": True, "table_id": tableID})
+
+@app.route('/channel', methods = ['GET', 'PUT'])
+def channel():
+    print("reaching /channel")
+    if request.method == 'GET':
+        print("getting")
+        return jsonify(table_data)
+
+@app.route('/channel_delete', methods = ['POST'])
+def channel_delete():
+    deleted_tab = str(request.json.get("tabID"))
+    print(deleted_tab)
+    table_data.pop(deleted_tab)
+    return jsonify({"success":"tab removed succesfully"})
+
+@app.route('/channel_main', methods = ['GET'])
+def channel_main():
+    print(table_data.keys())
+    
+    return jsonify(table_data)
+
 
 @app.route('/')
 def welcome_page():
-    return render_template('Welcome.html')
+    print(current_user)
+    
+    return render_template('Welcome.html', current_user=current_user)
 
 # Get request required pending login db sorted
 @app.route('/home', methods=['GET', 'POST'])
-def home():
-    return render_template('Home.html')
 
-@app.route('/login', methods = ['POST'])
+def home():
+    return render_template('Home.html', current_user=current_user)
+
+@app.route('/login', methods=['POST'])
 def login():
     if request.method == 'POST':
         username = request.form.get('uname')
@@ -607,8 +493,14 @@ def login():
         user = User.query.filter_by(username=username).first()
 
         if user and bcrypt.check_password_hash(user.password, password):
-            login_user(user)
+            login_user(user, remember=True)  # Use Flask-Login's login_user
+            print(f"User {username} logged in successfully.")
+            print(current_user.user_info)
             return redirect(url_for('home'))
+        else:
+            print(f"Failed login attempt for user {username}.")
+            flash('Invalid username or password', 'error')
+            return redirect(url_for('login'))
 
 @app.route('/logout')
 @login_required
@@ -621,4 +513,6 @@ if __name__ == '__main__':
 
         db.create_all()
 
-        app.run(debug=True)
+        app.run(host="0.0.0.0", debug=True)
+
+

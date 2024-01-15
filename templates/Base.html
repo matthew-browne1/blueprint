@@ -11,8 +11,6 @@
       rel="stylesheet">
     <link href="https://cdn.datatables.net/v/dt/dt-1.13.4/b-2.3.6/b-colvis-2.3.6/b-html5-2.3.6/cr-1.6.2/date-1.4.1/fc-4.2.2/fh-3.3.2/kt-2.9.0/r-2.4.1/rg-1.3.1/rr-1.3.3/sc-2.1.1/sp-2.1.2/sl-1.6.2/sr-1.2.2/datatables.min.css" rel="stylesheet"/>
     <link rel="stylesheet" href="/static/css/editor.dataTables.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/GVStyle.css">
-    <link rel="stylesheet" type="text/css" href="/static/css/AllGroups.css">
     <script src="https://kit.fontawesome.com/bcdb575c88.js" crossorigin="anonymous"></script>
   
 </head>
@@ -26,20 +24,8 @@
                 <a class="nav-link" href="{{ url_for('home') }}">Home</a>
             </li>
             <li>
-                <a class="nav-link" href="{{ url_for('data_viewer') }}">Data Viewer</a>
+                <a class="nav-link" href="{{ url_for('blueprint') }}">Blueprint</a>
             </li>
-            <li>
-                <a class="nav-link" href="{{ url_for('model_creator') }}">Model Creator</a>
-            </li>
-            <li>
-                <a class="nav-link" href="{{ url_for('budget_optimiser') }}">Budget Optimiser</a>
-            </li>
-            <li>
-                <a class="nav-link" href="{{ url_for('dashboard') }}">Dashboard</a>
-            </li>
-            <li class="nav-item">
-                <a class="nav-link" href="{{ url_for('model_landing_page') }}">Model Landing Page</a>
-              </li>
         </ul>
     </div>
     <div class="nav-right">
@@ -58,8 +44,8 @@
             <div class="user-profile">
                 <img src="/static/images/User Login.png">
                 <div>
-                    <p>John Doe</p>
-                    <a href="#">JohnDoe@abc.com</a>
+                    <p>{{ current_user.user_info[0].full_name }}</p>
+                    <a href="#">{{ current_user.user_info[0].email }}</a>
                 </div>
             </div>
             <hr>
