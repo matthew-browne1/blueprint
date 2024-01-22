@@ -110,7 +110,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var startDate = $("#start-date").datepicker("getDate");
     var endDate = $("#end-date").datepicker("getDate");
     var dateTuple = [startDate, endDate];
-    if (dateButtonIsChecked) {
+    if (!dateButtonIsChecked) {
       dataToSend[dates] = dateTuple;
     }
     console.log(dataToSend);
@@ -319,13 +319,11 @@ $("#date-filter-button").on("click", function () {
   var dateContainers = $(".date-inputs");
 
   if (isChecked) {
-    console.log("date button is checked");
+    console.log("date button is unchecked");
     dateContainers.addClass("greyed-out");
   } else {
-    console.log("date button is unchecked");
+    console.log("date button is checked");
     dateContainers.removeClass("greyed-out");
   }
 });
-
-
 

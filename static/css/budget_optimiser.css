@@ -20,10 +20,11 @@
   .obj-func {
     display: flex;
     align-items: center;
+    flex-grow: 1;
   }
   /*Styling Selectbox*/
   .dropdown {
-    width: 200px;
+    max-width: 200px;
     display: block;
     background-color: #fff;
     border-radius: 2px;
@@ -175,6 +176,7 @@
 .exh-bud {
     display: flex;
     align-items: center;
+    flex-grow: 1;
 }
 
 .bo-container {
@@ -246,7 +248,7 @@
 .fade-in {
   display: flex;
   opacity: 0; /* Initially set opacity to 0 */
-  transition: opacity 0.5s ease-in-out; /* Add a 0.5s ease-in-out transition for opacity */
+  transition: opacity 0.5s ease-in-out;
 }
 
 .collapse-content {
@@ -581,5 +583,13 @@
 .button.d .knobs:before,
 .button.d .layer {
   transition: 0.3s ease all;
+}
+
+.show-table {
+  flex-grow: 1;
+}
+
+.blend {
+  flex-grow: 1;
 }
 

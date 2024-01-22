@@ -76,61 +76,170 @@ def add_user(user_data):
     else:
         print(f"User '{user_data['username']}' already exists.")
 
+@app.route('/get_user_id', methods = ['GET'])
+def get_user_id():
+    user_id = current_user.id
+    return jsonify({'user_id':user_id})
 
-csvfile = os.path.join(sys.path[0], "Bakers_Dog_Meal_Conv.csv")
-GROUPED_VARS = os.path.join(sys.path[0], "data/grouped_vars.json")
-settings_json = os.path.join(sys.path[0], "data/settings.json")
-annual_profile_jpg = os.path.join(sys.path[0], "static/images/annual_profile.png")
-adstock_json = os.path.join(sys.path[0], "data/adstock.json")
-channel_inputs_filepath = os.path.join(sys.path[0], "channel inputs.csv")
+@app.route('/toggle_states', methods = ['POST'])
+def toggle_states():
+    try:
+        data = request.json
+       
+        return jsonify({"message": "Toggle states saved successfully"})
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
-# VARIABLE_LIST = os.path.join(sys.path[0], "data/table.json")
+# OPTIMISER FILE PATHS - OLD VERSION
 
-json_dest = os.path.join(sys.path[0], "data/table.json")
-data_dest = os.path.join(sys.path[0], "data/data.json")
-varlist_dest = os.path.join(sys.path[0], "data/varlist.json")
-sign_json = os.path.join(sys.path[0], "data/sign.json")
-set_json = os.path.join(sys.path[0], "data/setGroups.json")
-input_file = json_dest
-output_file = data_dest
+# laydown_filepath = os.path.join(input_fpath, f"Opt Inputs/Laydown_{brand}.csv")
+# seas_index_fp = os.path.join(input_fpath, f"Opt Inputs/Index_{brand}.csv")
 
-# OPTIMISER FILE PATHS
+# channel_json = os.path.join(sys.path[0], "data/channel.json")
+# channel_input = pd.read_csv("optimiser input data/UK_Channel_Inputs_v3.csv")
+# channel_input.drop(columns='Unnamed: 0', inplace=True)
 
-laydown_filepath = os.path.join(sys.path[0], "optimiser input data/UK_Laydown_v3.csv")
+# channel_dict = {1:channel_input.to_dict("records")}
+# ST_laydown = pd.read_csv(laydown_filepath)
+# ST_laydown.rename(columns={'Unnamed: 0':'Time_Period'}, inplace=True)
+# ST_laydown = ST_laydown.fillna(0)
+
+# streams = []
+# for var in channel_dict[1]:
+#     streams.append(var['Channel'])
+
+# ST_laydown_dates = ST_laydown['Time_Period']
+
+# with open(channel_json, "w") as file:
+#     json.dump(channel_dict, file, indent=4)
+
+# with open(channel_json) as file:
+#     ST_channel_input = json.load(file)
+
+# opt_betas_dict = Optimiser.beta_opt(laydown=ST_laydown, channel_input=channel_dict[1])
+
+# channel_input['Beta'] = list(opt_betas_dict.values())
+# channel_dict = {"1":channel_input.to_dict("records")}
+
+# max_budget = 0
+# results = {}
+
+# seas_index = pd.read_csv(seas_index_fp)
+# seas_index.rename(columns={'Unnamed: 0':'Time_Period'}, inplace=True)
+
+######
+
+# USING HEADER FILE FOR ST AND LT
+
+# ST
+
+brand = 'Gourmet'
+input_fpath = "Y:/2023/Nestle Spiderweb/Deep Dive/Alphas/"
+
+laydown_filepath = os.path.join(input_fpath, f"Opt Inputs/Laydown_{brand}.csv")
+seas_index_fp = os.path.join(input_fpath, f"Opt Inputs/Index_{brand}.csv")
 channel_json = os.path.join(sys.path[0], "data/channel.json")
-channel_input = pd.read_csv("optimiser input data/UK_Channel_Inputs_v3.csv")
-channel_input.drop(columns='Unnamed: 0', inplace=True)
 
-channel_dict = {1:channel_input.to_dict("records")}
-ST_laydown = pd.read_csv(laydown_filepath)
-ST_laydown = ST_laydown.fillna(0)
+alpha_headers_fp = os.path.join(input_fpath, "Alpha Work_v2.xlsx")
+alpha_headers = pd.read_excel(alpha_headers_fp, 'Opt_Header')
+
+ST_header = alpha_headers[alpha_headers['Range'] == brand]
+ST_header = ST_header.iloc[:, :-3]
+
+ST_header.drop(columns=['Channel'], inplace=True)
+ST_header.rename(columns={'concat':'Channel', 'Adstock':'Carryover', 'Wtd ROI':'Current_ROI', 'Total Spend':"Current_Budget"}, inplace=True)
+ST_header['Max_Spend_Cap'] = ST_header['Current_Budget']*1.5
+ST_header['Min_Spend_Cap'] = 0
+ST_header['CPU'] = 1
+
+laydown = pd.read_csv(laydown_filepath)
+laydown.rename(columns={'Unnamed: 0':'Time_Period'}, inplace=True)
+laydown.fillna(0)
+
+seas_index = pd.read_csv(seas_index_fp)
+seas_index.rename(columns={'Unnamed: 0':'Time_Period'}, inplace=True)
+
+for x in laydown.columns.tolist():
+    if x not in ST_header['Channel'].tolist() and x != 'Time_Period':
+        laydown.drop(columns=[x], inplace=True)
 
 streams = []
-for var in channel_dict[1]:
-    streams.append(var['Channel'])
-
-ST_laydown_dates = ST_laydown['Time_Period']
+for stream in ST_header['Channel']:
+    streams.append(str(stream))
 
 
-with open(channel_json, "w") as file:
-    json.dump(channel_dict, file, indent=4)
+laydown_dates = laydown['Time_Period']
+print(f"current (incorrect) current budget: {ST_header['Current_Budget']}")
 
-with open(channel_json) as file:
-    ST_channel_input = json.load(file)
+for stream in streams:
+    ST_header.loc[ST_header['Channel'] == stream, 'Current_Budget'] = sum(laydown[stream])
 
-opt_betas_dict = Optimiser.beta_opt(laydown=ST_laydown, channel_input=channel_dict[1])
+ST_header_dict = ST_header.to_dict("records")
 
-channel_input['Beta'] = list(opt_betas_dict.values())
-channel_dict = {"1":channel_input.to_dict("records")}
-table_data = channel_dict
+ST_opt_betas_dict = Optimiser.beta_opt(laydown=laydown, channel_input=ST_header_dict)
+print(ST_opt_betas_dict)
+
+ST_header['Beta'] = list(ST_opt_betas_dict.values())
+
+ST_header_dict = ST_header.to_dict("records")
+
+max_spend_cap = sum(ST_header['Max_Spend_Cap'])
+
+print(max_spend_cap)
+
+table_df = ST_header.copy()
+
+dataTable_cols = ['Channel', 'Carryover', 'Alpha', 'Beta', 'Current_Budget', 'Min_Spend_Cap', 'Max_Spend_Cap', 'Laydown']
+
+for col in table_df.columns:
+    if col not in dataTable_cols:
+        table_df.drop(columns=col, inplace=True)
+
+table_dict = table_df.to_dict("records")
+
+table_data = {"1":table_dict}
 for var in table_data["1"]:
-    var['Laydown'] = ST_laydown[var['Channel']].tolist()
+    var['Laydown'] = laydown[var['Channel']].tolist()
 
-max_budget = 0
-results = {}
+### LT
+
+alpha_headers = pd.read_excel(alpha_headers_fp, 'Opt_Header')
+
+LT_header = alpha_headers[alpha_headers['Range'] == brand]
+LT_header = LT_header.iloc[:, :-3]
+
+LT_header.drop(columns=['Channel', 'Alpha'], inplace=True)
+LT_header.rename(columns={'concat':'Channel', 'LT Adstock':'Carryover', 'LT ROI':'Current_ROI', 'LT Alpha':'Alpha', 'Total Spend':"Current_Budget"}, inplace=True)
+LT_header['Max_Spend_Cap'] = LT_header['Current_Budget']*1.5
+LT_header['Min_Spend_Cap'] = 0
+LT_header['CPU'] = 1
+
+LT_seas_index = pd.read_csv(seas_index_fp)
+LT_seas_index.rename(columns={'Unnamed: 0':'Time_Period'}, inplace=True)
+
+for x in laydown.columns.tolist():
+    if x not in LT_header['Channel'].tolist() and x != 'Time_Period':
+        laydown.drop(columns=[x], inplace=True)
+
+streams = []
+for stream in LT_header['Channel']:
+    streams.append(str(stream))
+
+print(f"current (incorrect) current budget: {LT_header['Current_Budget']}")
+
+for stream in streams:
+    LT_header.loc[LT_header['Channel'] == stream, 'Current_Budget'] = sum(laydown[stream])
+
+LT_header['Current_ROI'] = LT_header['Current_ROI'].replace(0, 0.00001)
+
+LT_header['Beta'] = list(ST_opt_betas_dict.values())
+
+LT_header_dict = LT_header.to_dict("records")
+
+bud = sum(ST_header['Current_Budget'].to_list())
 
 # %% --------------------------------------------------------------------------
-#
+# 
 # -----------------------------------------------------------------------------
 
 @app.route('/optimise', methods = ['POST'])
@@ -138,7 +247,7 @@ def optimise():
 
     if request.method == "POST":
         data = request.json
-    
+    print("REACHING OPT METHOD")
     table_id = str(data['tableID'])
     obj_func = data['objectiveValue']
     exh_budget = data['exhaustValue']
@@ -146,40 +255,34 @@ def optimise():
     num_weeks = 1000
     blend = data['blendValue']
     
-    if 'dates' in data:
-        start_date = data['dates'][0]
-        end_date = data['dates'][1]
-        ST_laydown = ST_laydown[(ST_laydown["Time-Period"] >= start_date) & (ST_laydown["Time-Period"] <= end_date)]
-        
-    print(start_date)
-    print(end_date)
-
-    ST_channel_input = table_data[table_id]
-
-    global results
-    streams = [entry['Channel'] for entry in ST_channel_input]
-
-    LT_laydown = ST_laydown
-    LT_channel_input = ST_channel_input
-
+    # if 'dates' in data:
+    #     print('dates found in data')
+    #     start_date = data['dates'][0]
+    #     end_date = data['dates'][1]
+    #     laydown = laydown[(laydown["Time-Period"] >= start_date) & (laydown["Time-Period"] <= end_date)]
+    #     print(start_date)
+    #     print(end_date)
+    print(f"table id = {table_id}")
     
+    # NEED TO ADD HANDLING SO THAT EDITS MADE TO TABLE DATA ARE ADDED TO THE ST_HEADER
+
+    print(f"laydown = {laydown}")
+    print(f"CPU = {[entry['CPU'] for entry in ST_header_dict]}")
+    global results
+    streams = [entry['Channel'] for entry in ST_header_dict]
 
     if blend.lower() == "blend":
         if obj_func.lower() == "profit":
-            ST_res = list(Optimiser.profit_max(channel_input = ST_channel_input, laydown = ST_laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
-            LT_res = list(Optimiser.profit_max(channel_input = LT_channel_input, laydown = LT_laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
-            blend_list = list(np.add(ST_res, LT_res))
-            blend_res = dict(zip(streams, blend_list))
-            results[table_id] = blend_res
+            results[table_id] = Optimiser.blended_profit_max(ST_input = ST_header_dict, LT_input=LT_header_dict, laydown=laydown, seas_index=seas_index, exh_budget='yes', max_budget=max_budget, num_weeks=num_weeks)
         elif obj_func.lower() == 'revenue':
-            ST_res = list(Optimiser.revenue_max(channel_input = ST_channel_input, laydown = ST_laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
-            LT_res = list(Optimiser.revenue_max(channel_input = LT_channel_input, laydown = LT_laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
+            ST_res = list(Optimiser.revenue_max(channel_input = ST_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
+            LT_res = list(Optimiser.revenue_max(channel_input = LT_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
             blend_list = list(np.add(ST_res, LT_res))
             blend_res = dict(zip(streams, blend_list))
             results[table_id] = blend_res
         elif obj_func.lower() == 'roi':
-            ST_res = list(Optimiser.roi_max(channel_input = ST_channel_input, laydown = ST_laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
-            LT_res = list(Optimiser.roi_max(channel_input = LT_channel_input, laydown = LT_laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
+            ST_res = list(Optimiser.roi_max(channel_input = ST_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
+            LT_res = list(Optimiser.roi_max(channel_input = LT_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
             blend_list = list(np.add(ST_res, LT_res))
             blend_res = dict(zip(streams, blend_list))
             results[table_id] = blend_res
@@ -187,19 +290,19 @@ def optimise():
         return jsonify(results), 200
     elif blend.lower() == "st":
         if obj_func.lower() == "profit":
-            results[table_id] = Optimiser.profit_max(channel_input = ST_channel_input, laydown = ST_laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks)
+            results[table_id] = Optimiser.profit_max(channel_input = ST_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks)
         elif obj_func.lower() == 'revenue':
-            results[table_id] = Optimiser.revenue_max(channel_input = ST_channel_input, laydown = ST_laydown, exh_budget=exh_budget, max_budget=max_budget)
+            results[table_id] = Optimiser.revenue_max(channel_input = ST_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget)
         elif obj_func.lower() == 'roi':
-            results[table_id] = Optimiser.roi_max(channel_input = ST_channel_input, laydown = ST_laydown, exh_budget=exh_budget, max_budget=max_budget)
+            results[table_id] = Optimiser.roi_max(channel_input = ST_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget)
         return jsonify(results), 200
     elif blend.lower() == "lt":
         if obj_func.lower() == "profit":
-            results[table_id] = Optimiser.profit_max(channel_input = LT_channel_input, laydown = LT_laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks)
+            results[table_id] = Optimiser.profit_max(channel_input = LT_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks)
         elif obj_func.lower() == 'revenue':
-            results[table_id] = Optimiser.revenue_max(channel_input = LT_channel_input, laydown = LT_laydown, exh_budget=exh_budget, max_budget=max_budget)
+            results[table_id] = Optimiser.revenue_max(channel_input = LT_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget)
         elif obj_func.lower() == 'roi':
-            results[table_id] = Optimiser.roi_max(channel_input = LT_channel_input, laydown = LT_laydown, exh_budget=exh_budget, max_budget=max_budget)
+            results[table_id] = Optimiser.roi_max(channel_input = LT_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget)
         print(results)
         return jsonify(results), 200
 
@@ -208,7 +311,7 @@ def results_output():
 
     tab_names = dict(request.json)
 
-    raw_input_data = channel_input.to_dict("records")
+    raw_input_data = ST_header.to_dict("records")
     
     current_budget_list = [entry['Current_Budget'] for entry in raw_input_data]
     current_budget_dict = dict(zip(streams, current_budget_list))
@@ -216,11 +319,11 @@ def results_output():
     cost_per_list = [float(entry['CPU']) for entry in raw_input_data]
     cost_per_dict = dict(zip(streams, cost_per_list))
 
-    current_budget_laydown_dict = {'Time_Period':list(ST_laydown_dates)}
+    current_budget_laydown_dict = {'Time_Period':list(laydown_dates)}
     for stream in streams:
-        current_budget_laydown_dict[stream] = [i * cost_per_dict[stream] for i in list(ST_laydown.fillna(0)[stream])]
-    ST_laydown['Time_Period'] = ST_laydown_dates
-    ST_laydown.set_index("Time_Period", inplace=True)
+        current_budget_laydown_dict[stream] = [i * cost_per_dict[stream] for i in list(laydown.fillna(0)[stream])]
+    laydown['Time_Period'] = laydown_dates
+    laydown.set_index("Time_Period", inplace=True)
 
     stacked_df2 = pd.DataFrame(current_budget_laydown_dict)
     stacked_df2.set_index('Time_Period', inplace=True)
@@ -243,8 +346,8 @@ def results_output():
     alpha_dict = dict(zip(streams, alpha_list))
 
     recorded_impressions = {}
-    for x in ST_laydown.columns:
-        recorded_impressions[x] = ST_laydown.fillna(0)[x].to_list()
+    for x in laydown.columns:
+        recorded_impressions[x] = laydown.fillna(0)[x].to_list()
 
     def rev_per_stream(stream, budget):
                 
@@ -274,7 +377,7 @@ def results_output():
         total_rev = total_rev + infsum
         return rev_list
 
-    current_rev_dict = {'Time_Period':list(ST_laydown.index)}
+    current_rev_dict = {'Time_Period':list(laydown.index)}
 
     for stream in streams:
         current_rev_dict[stream] = rev_per_stream(stream, current_budget_dict[stream])
@@ -299,7 +402,7 @@ def results_output():
 
         opt_budget_dict = value
         print(f"results from optimiser:{results}")
-        opt_rev_dict = {'Time_Period':list(ST_laydown.index)}
+        opt_rev_dict = {'Time_Period':list(laydown.index)}
         for stream in streams:
             opt_rev_dict[stream] = rev_per_stream(stream, current_budget_dict[stream])
 
@@ -313,7 +416,7 @@ def results_output():
                     pct_laydown.append(0)
             return pct_laydown
 
-        opt_budget_laydown_dict = {'Time_Period':list(ST_laydown.index)}
+        opt_budget_laydown_dict = {'Time_Period':list(laydown.index)}
         for stream in streams:
             opt_budget_laydown_dict[stream] = [i * opt_budget_dict[stream] for i in daily_budget_from_pct_laydown(stream, opt_budget_dict[stream])]
 
@@ -332,7 +435,7 @@ def results_output():
 
         concat_df = pd.concat([concat_df, stacked_df4])
 
-        opt_rev_dict = {'Time_Period':list(ST_laydown.index)}
+        opt_rev_dict = {'Time_Period':list(laydown.index)}
         for stream in streams:
             opt_rev_dict[stream] = rev_per_stream(stream, opt_budget_dict[stream])
 
@@ -426,16 +529,16 @@ def blueprint_results():
 
 @app.route('/date_range', methods = ['GET','POST'])
 def date_range():
-    start_date = list(ST_laydown_dates)[1]
+    start_date = list(laydown_dates)[1]
     print(start_date)
-    end_date = list(ST_laydown_dates)[-1]
+    end_date = list(laydown_dates)[-1]
     print(end_date)
     return jsonify({"startDate":start_date, "endDate":end_date})
 
 @app.route('/blueprint')
 @login_required
 def blueprint():
-    print(ST_laydown_dates)
+    print(laydown_dates)
     return render_template('Budget Optimiser.html', current_user = current_user)
 
 @app.route('/create_copy', methods = ['POST'])
@@ -443,9 +546,9 @@ def create_copy():
     global table_data
 
     tableID = str(request.form.get('tableID'))
-    channel_dict = channel_input.to_dict("records")
+    channel_dict = ST_header.to_dict("records")
     for var in channel_dict:
-        var['Laydown'] = ST_laydown[var['Channel']].tolist()
+        var['Laydown'] = laydown[var['Channel']].tolist()
     if tableID not in table_data.keys():
         table_data[tableID] = channel_dict
     print(len(table_data))
@@ -467,15 +570,12 @@ def channel_delete():
 
 @app.route('/channel_main', methods = ['GET'])
 def channel_main():
-    print(table_data.keys())
-    
+    print(table_data.keys())    
     return jsonify(table_data)
-
 
 @app.route('/')
 def welcome_page():
     print(current_user)
-    
     return render_template('Welcome.html', current_user=current_user)
 
 # Get request required pending login db sorted
@@ -490,6 +590,8 @@ def login():
         username = request.form.get('uname')
         password = request.form.get('psw')
 
+        configurations = load_configurations()
+
         user = User.query.filter_by(username=username).first()
 
         if user and bcrypt.check_password_hash(user.password, password):
@@ -502,6 +604,19 @@ def login():
             flash('Invalid username or password', 'error')
             return redirect(url_for('login'))
 
+def load_configurations():
+    try:
+        with open('data\config.json', 'r') as config_file:
+            configurations = json.load(config_file)
+    except (FileNotFoundError, json.JSONDecodeError):
+        # Handle the case when the file doesn't exist or is empty
+        configurations = {}
+        
+def save_configurations(configurations):
+    with open('config.json', 'w') as config_file:
+        json.dump(configurations, config_file, indent=2)
+
+    return configurations
 @app.route('/logout')
 @login_required
 def logout():
