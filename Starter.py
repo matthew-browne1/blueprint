@@ -17,7 +17,7 @@ from pyomo_opt import Optimiser
 from sqlalchemy import create_engine, text, Column, DateTime, Integer
 from sqlalchemy.orm import Session, declarative_base
 import datetime
-from sqlalchemy.exc import SQLAlchemyError
+from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 import urllib.parse
 from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
@@ -50,6 +50,13 @@ class UserInfo(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
+class Snapshot(db.Model):
+    name = db.Column(db.String, nullable=False)
+    id = db.Column(db.Integer, primary_key=True)
+    content = db.Column(db.String, nullable=False)
+    table_ids = db.Column(db.String, nullable = False)
+    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.options(joinedload(User.user_info)).get(int(user_id))
@@ -76,10 +83,55 @@ def add_user(user_data):
     else:
         print(f"User '{user_data['username']}' already exists.")
 
+
 @app.route('/get_user_id', methods = ['GET'])
 def get_user_id():
     user_id = current_user.id
     return jsonify({'user_id':user_id})
+
+
+@app.route('/save_snapshot', methods=['POST'])
+@login_required
+def save_snapshot():
+    snapshot_name = request.json.get('name')
+    user_id = current_user.id
+    content = request.json.get('content')
+    current_table_ids = list(table_data.keys())
+
+    table_ids_str = ','.join(map(str, current_table_ids))
+
+    # Check if a snapshot with the same name already exists for the current user
+    existing_snapshot = Snapshot.query.filter_by(name=snapshot_name, user_id=user_id).first()
+
+    if existing_snapshot:
+        # Update the existing snapshot
+        existing_snapshot.content = content
+        existing_snapshot.table_ids = table_ids_str
+    else:
+        # Create a new snapshot
+        new_snapshot = Snapshot(name=snapshot_name, content=content, table_ids=table_ids_str, user_id=user_id)
+        db.session.add(new_snapshot)
+
+    try:
+        db.session.commit()
+        return jsonify({'success': True})
+    except IntegrityError as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
+
+
+@app.route('/load_snapshot')
+@login_required
+def load_snapshot():
+    user_id = current_user.id
+    snapshot = Snapshot.query.filter_by(user_id=user_id).first()
+
+    content_list = snapshot.content
+    table_ids_list = snapshot.table_ids
+    print(table_data.keys())    
+    return jsonify({'content': content_list, 'table_ids': table_ids_list})
+
+
 
 @app.route('/toggle_states', methods = ['POST'])
 def toggle_states():
@@ -122,7 +174,7 @@ def toggle_states():
 # channel_dict = {"1":channel_input.to_dict("records")}
 
 # max_budget = 0
-# results = {}
+results = {}
 
 # seas_index = pd.read_csv(seas_index_fp)
 # seas_index.rename(columns={'Unnamed: 0':'Time_Period'}, inplace=True)
@@ -262,6 +314,7 @@ def optimise():
     #     laydown = laydown[(laydown["Time-Period"] >= start_date) & (laydown["Time-Period"] <= end_date)]
     #     print(start_date)
     #     print(end_date)
+
     print(f"table id = {table_id}")
     
     # NEED TO ADD HANDLING SO THAT EDITS MADE TO TABLE DATA ARE ADDED TO THE ST_HEADER
@@ -304,6 +357,7 @@ def optimise():
         elif obj_func.lower() == 'roi':
             results[table_id] = Optimiser.roi_max(channel_input = LT_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget)
         print(results)
+
         return jsonify(results), 200
 
 @app.route('/results_output', methods = ['POST'])
@@ -407,7 +461,7 @@ def results_output():
             opt_rev_dict[stream] = rev_per_stream(stream, current_budget_dict[stream])
 
         def daily_budget_from_pct_laydown(stream):
-            
+        
             pct_laydown = []
             for x in range(len(recorded_impressions[stream])):
                 try:
@@ -417,8 +471,8 @@ def results_output():
             return pct_laydown
 
         opt_budget_laydown_dict = {'Time_Period':list(laydown.index)}
-        for stream in streams:
-            opt_budget_laydown_dict[stream] = [i * opt_budget_dict[stream] for i in daily_budget_from_pct_laydown(stream, opt_budget_dict[stream])]
+        for stream in list(streams):
+            opt_budget_laydown_dict[stream] = [i * opt_budget_dict[stream] for i in daily_budget_from_pct_laydown(stream)]
 
         stacked_df4 = pd.DataFrame(opt_budget_laydown_dict)
         stacked_df4.set_index('Time_Period', inplace=True)
@@ -454,8 +508,8 @@ def results_output():
 
         concat_df = pd.concat([concat_df, stacked_df5])
     
-    concat_df['Time_Period'] = pd.to_datetime(concat_df['Time_Period'], format="%d/%m/%Y").dt.date
-    
+    concat_df['Time_Period'] = pd.to_datetime(concat_df['Time_Period'], format="%Y/%m/%d").dt.date
+
     print(concat_df.info())
     try:
         concat_df.to_sql('Optimised CSV', engine, if_exists='replace', index=False)
@@ -541,6 +595,39 @@ def blueprint():
     print(laydown_dates)
     return render_template('Budget Optimiser.html', current_user = current_user)
 
+@app.route('/get_table_ids')
+def get_table_ids():
+    table_ids = list(table_data.keys())
+    return jsonify({"success": True, "tableIds":table_ids})
+
+@app.route('/table_ids_sync', methods = ['POST'])
+def table_ids_sync():
+    
+    try:
+       
+        received_data = request.get_json()
+        received_table_ids = received_data.get('tableIDs', [])
+        #parsed_data = parse_qs(received_data)
+        received_table_ids = list(map(str, received_data['tableIDs']))
+
+        print(f"received table ids: {received_table_ids}")
+
+        for table_id in list(table_data.keys()):
+            if table_id not in received_table_ids:
+                
+                del table_data[table_id]
+                print(f"deleted tab: {table_id}")
+
+        return jsonify({'success': True, 'message': 'Table data updated successfully'})
+
+    except KeyError:
+        print("tableIDs not found in ajax post request.")
+        return jsonify({'status': 'error', 'message': 'Invalid request data'}), 400
+    except Exception as e:
+    
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
+
 @app.route('/create_copy', methods = ['POST'])
 def create_copy():
     global table_data
@@ -550,8 +637,8 @@ def create_copy():
     for var in channel_dict:
         var['Laydown'] = laydown[var['Channel']].tolist()
     if tableID not in table_data.keys():
-        table_data[tableID] = channel_dict
-    print(len(table_data))
+        table_data[tableID] = table_dict
+    print(table_data.keys())
     return jsonify({"success": True, "table_id": tableID})
 
 @app.route('/channel', methods = ['GET', 'PUT'])
@@ -564,7 +651,7 @@ def channel():
 @app.route('/channel_delete', methods = ['POST'])
 def channel_delete():
     deleted_tab = str(request.json.get("tabID"))
-    print(deleted_tab)
+    print(f"deleted tab: {deleted_tab}")
     table_data.pop(deleted_tab)
     return jsonify({"success":"tab removed succesfully"})
 
@@ -629,5 +716,3 @@ if __name__ == '__main__':
         db.create_all()
 
         app.run(host="0.0.0.0", debug=True)
-
-

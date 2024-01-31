@@ -1,95 +1,108 @@
+$(document).ready(function() {
+  sendTableIDsOnRefresh();
+});
+
 var optResults = {};
-var channelTable = $("#channel1").DataTable({
-  dom: "Blfrtip",
-  ajax: {
-    url: "/channel_main",
-    contentType: "application/json",
-    dataSrc: "1",
-  },
-  drawCallback: function () {
-    $(".sparkline").sparkline("html", {
-      type: "line",
-      width: "250px",
-    });
-  },
-  columns: [
-    { data: "Channel" },
-    { data: "Carryover" },
-    { data: "Alpha" },
-    { data: "Beta", render: $.fn.DataTable.render.number(",", ".", 0, "") },
-    {
-      data: "Current_Budget",
-      render: $.fn.DataTable.render.number(",", ".", 0, "£"),
+function initializeInitialTable() {
+  var channelTable = $("#channel1").DataTable({
+    dom: "Blfrtip",
+    ajax: {
+      url: "/channel_main",
+      contentType: "application/json",
+      dataSrc: "1",
     },
-    {
-      data: "Min_Spend_Cap",
-      render: $.fn.DataTable.render.number(",", ".", 0, "£"),
+    drawCallback: function () {
+      $(".sparkline").sparkline("html", {
+        type: "line",
+        width: "250px",
+      });
     },
-    {
-      data: "Max_Spend_Cap",
-      render: $.fn.DataTable.render.number(",", ".", 0, "£"),
-    },
-    {
-      data: null,
-      defaultContent:
-        '<div class="toggle-button-cover"><div class="button-cover"><div class="button r" id="lock-button"><input type="checkbox" class="checkbox" /><div class="knobs"></div><div class="layer"></div></div></div></div>',
-    },
-    {
-      data: "Laydown",
-      render: function (data, type, row, meta) {
-        return type === "display"
-          ? '<span class="sparkline">' + data.toString() + "</span>"
-          : data;
+    columns: [
+      { data: "Channel" },
+      { data: "Carryover" },
+      { data: "Alpha" },
+      { data: "Beta", render: $.fn.DataTable.render.number(",", ".", 0, "") },
+      {
+        data: "Current_Budget",
+        render: $.fn.DataTable.render.number(",", ".", 0, "£"),
       },
+      {
+        data: "Min_Spend_Cap",
+        render: $.fn.DataTable.render.number(",", ".", 0, "£"),
+      },
+      {
+        data: "Max_Spend_Cap",
+        render: $.fn.DataTable.render.number(",", ".", 0, "£"),
+      },
+      {
+        data: null,
+        defaultContent:
+          '<div class="toggle-button-cover"><div class="button-cover"><div class="button r" id="lock-button"><input type="checkbox" class="checkbox" /><div class="knobs"></div><div class="layer"></div></div></div></div>',
+      },
+      {
+        data: "Laydown",
+        render: function (data, type, row, meta) {
+          return type === "display"
+            ? '<span class="sparkline">' + data.toString() + "</span>"
+            : data;
+        },
+      },
+    ],
+    select: {
+      style: "os",
     },
-  ],
-  select: {
-    style: "os",
-  },
-  autoWidth: false,
-  columnDefs: [
-    { width: "80px", targets: 0 }, // Set width for the first column (Channel)
-    { width: "80px", targets: 1 }, // Set width for the second column (Carryover)
-    { width: "80px", targets: 2 }, // Set width for the third column (Alpha)
-    { width: "80px", targets: 3 }, // Set width for the fourth column (Beta)
-    { width: "80px", targets: 4 }, // Set width for the fourth column (Beta)
-    { width: "80px", targets: 5 }, // Set width for the fifth column (Max Spend Cap)
-    { width: "80px", targets: 6 }, // Set width for the fifth column (Max Spend Cap)
-    { width: "40px", targets: 7 }, // Set width for the fifth column (Max Spend Cap)
-    { width: "250px", targets: 8 }, // Set width for the fifth column (Max Spend Cap)
-  ]
-});
-attachButtonListenersToDataTable();
-var channelEditor = new $.fn.dataTable.Editor({
-  ajax: "/channel_editor",
-  table: "#channel1",
-  fields: [
-    {
-      label: "Min Spend Cap:",
-      name: "Min_Spend_Cap",
-    },
-    {
-      label: "Max Spend Cap:",
-      name: "Max_Spend_Cap",
-    },
-  ],
-  idSrc: "DT_RowId"
-});
+    autoWidth: false,
+    columnDefs: [
+      { width: "80px", targets: 0 }, // Set width for the first column (Channel)
+      { width: "80px", targets: 1 }, // Set width for the second column (Carryover)
+      { width: "80px", targets: 2 }, // Set width for the third column (Alpha)
+      { width: "80px", targets: 3 }, // Set width for the fourth column (Beta)
+      { width: "80px", targets: 4 }, // Set width for the fourth column (Beta)
+      { width: "80px", targets: 5 }, // Set width for the fifth column (Max Spend Cap)
+      { width: "80px", targets: 6 }, // Set width for the fifth column (Max Spend Cap)
+      { width: "40px", targets: 7 }, // Set width for the fifth column (Max Spend Cap)
+      { width: "250px", targets: 8 }, // Set width for the fifth column (Max Spend Cap)
+    ]
+  });
+  attachButtonListenersToDataTable();
+  var channelEditor = new $.fn.dataTable.Editor({
+    ajax: "/channel_editor",
+    table: "#channel1",
+    fields: [
+      {
+        label: "Min Spend Cap:",
+        name: "Min_Spend_Cap",
+      },
+      {
+        label: "Max Spend Cap:",
+        name: "Max_Spend_Cap",
+      },
+    ],
+    idSrc: "DT_RowId",
+  });
 
-channelTable.on("click", "tbody td:nth-child(6), tbody td:nth-child(7)", function (e) {
-  channelEditor.inline(this);
-});
+  channelTable.on(
+    "click",
+    "tbody td:nth-child(6), tbody td:nth-child(7)",
+    function (e) {
+      channelEditor.inline(this);
+    }
+  );
 
-channelTable.on("page.dt", function () {
-  channelTable.ajax.reload(null, false);
-});
+  channelTable.on("page.dt", function () {
+    channelTable.ajax.reload(null, false);
+  });
+}
+
+initializeInitialTable();
+
 
 document.addEventListener("DOMContentLoaded", function () {
-  var obj = document.getElementById("obj-input");
-  var exh = document.getElementById("exh-input");
-  var max = document.getElementById("max-input");
-  var optButton = document.getElementById("opt-button");
-  var blend = document.getElementById("blend-input");
+  var obj = document.getElementById("obj-input1");
+  var exh = document.getElementById("exh-input1");
+  var max = document.getElementById("max-input1");
+  var optButton = document.getElementById("opt-button1");
+  var blend = document.getElementById("blend-input1");
 
   optButton.addEventListener("click", function () {
     sendToggleStatesToBackend();
@@ -106,9 +119,9 @@ document.addEventListener("DOMContentLoaded", function () {
       blendValue: blendValue,
       tableID: 1
     };
-    var dateButtonIsChecked = $("#date-filter-button").prop("checked");
-    var startDate = $("#start-date").datepicker("getDate");
-    var endDate = $("#end-date").datepicker("getDate");
+    var dateButtonIsChecked = $("#date-filter-button1").prop("checked");
+    var startDate = $("#start-date1").datepicker("getDate");
+    var endDate = $("#end-date1").datepicker("getDate");
     var dateTuple = [startDate, endDate];
     if (!dateButtonIsChecked) {
       dataToSend[dates] = dateTuple;
@@ -164,11 +177,11 @@ function showResultsButton() {
 }
 
 function showLoadingOverlay() {
-  document.getElementById("loading-overlay").style.display = "block";
+  document.getElementById("loading-overlay1").style.display = "block";
 }
 
 function hideLoadingOverlay() {
-  document.getElementById("loading-overlay").style.display = "none";
+  document.getElementById("loading-overlay1").style.display = "none";
 }
 
 $(".dropdown").click(function () {
@@ -218,12 +231,12 @@ $(document).ready(function() {
         dataType: 'json',
         success: function(data) {
             // Set the fetched dates as default values for date inputs
-            $('#start-date').val(data.startDate);
-            $('#start-date').prop('min', data.startDate);
-            $("#start-date").prop("max", data.endDate);
-            $('#end-date').val(data.endDate);
-            $("#end-date").prop("min", data.startDate);
-            $("#end-date").prop("max", data.endDate);
+            $('#start-date1').val(data.startDate);
+            $('#start-date1').prop('min', data.startDate);
+            $("#start-date1").prop("max", data.endDate);
+            $('#end-date1').val(data.endDate);
+            $("#end-date1").prop("min", data.startDate);
+            $("#end-date1").prop("max", data.endDate);
         },
         error: function(error) {
             console.error('Error fetching dates:', error);
@@ -234,7 +247,7 @@ $(document).ready(function() {
 const toggleStates = {};
 function attachButtonListenersToDataTable() {
   // Assuming your DataTable has an ID, replace 'channel' with the actual ID
-  const dataTableCont = document.getElementById("channel-container");
+  const dataTableCont = document.getElementById("channel-container1");
 
   if (dataTableCont) {
     dataTableCont.addEventListener("change", function (e) {
@@ -307,14 +320,14 @@ function openNewTab() {
   });
 
   $(function () {
-    $("#start-date").datepicker();
+    $("#start-date1").datepicker();
   });
 
   $(function () {
-    $("#end-date").datepicker();
+    $("#end-date1").datepicker();
   });
 
-$("#date-filter-button").on("click", function () {
+$("#date-filter-button1").on("click", function () {
   var isChecked = $(this).prop("checked");
   var dateContainers = $(".date-inputs");
 

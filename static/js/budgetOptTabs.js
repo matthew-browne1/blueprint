@@ -60,7 +60,6 @@ function dropdownButtons(dropdownId) {
   });
 }
 
-
 function initializeDataTable(tableID) {
 
    $.ajax({
@@ -69,10 +68,8 @@ function initializeDataTable(tableID) {
      data: { tableID: tableID },
      success: function (response) {
 
-
-
       console.log("pinged create_copy")
-      console.log("/channel/"+tableID)
+      console.log("/channel"+tableID)
 
        $("#channel" + tableID).DataTable({
          destroy: true,
@@ -143,7 +140,7 @@ function initializeDataTable(tableID) {
              type: "line",
              width: "250px",
            });
-         },
+         }
        });
      },
      error: function (error) {
@@ -265,7 +262,6 @@ function attachButtonListenersToDataTable(tableID) {
 
 function sendToggleStatesToBackend() {
 
-
   // Make an AJAX request to send toggleStates to the backend using jQuery
   $.ajax({
     url: '/toggle_states',
@@ -289,3 +285,12 @@ function showLoadingOverlay(tableID) {
 function hideLoadingOverlay(tableID) {
   document.getElementById("loading-overlay"+tableID).style.display = "none";
 }
+
+function destroyTables(tableID) {
+  for (var i = 0; i < tableID; i++) {
+    console.log(i);
+    $('#channel' + i).DataTable().clear().destroy();
+    console.log("#channel"+i+" destroyed");
+  }
+}
+

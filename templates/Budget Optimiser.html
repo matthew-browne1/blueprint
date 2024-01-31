@@ -6,13 +6,13 @@
 
 <link rel="stylesheet" href="/static/css/budget_optimiser.css">
 <link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
-<div class="all-content">
+<div class="all-content" id="all-content">
 
 <div class="main-container" id="main-container">
    <div class="results-div" id="results-div">
       <!-- dynamic adding of show results button goes in this div -->
    </div>
-   <button type="button" id="col-btn" class="collapsible active">
+   <button type="button" id="col-btn1" class="collapsible active">
       <span id="button-text1">Scenario 1</span>
       <span>&nbsp;</span>
       <span>&nbsp;</span>
@@ -21,18 +21,18 @@
    <script>
 
    function editButton() {
-   var setText = document.getElementById("button-text");
+   var setText = document.getElementById("button-text1");
    var newText = prompt("Rename Tab:")
 
    if (newText !== null) {
       setText.textContent = newText;
       tabNames[1] = newText;
-   }
+      }
    }
 
    </script>
-   <div class="content" id="opt-tab">
-      <div class="loading-overlay" id="loading-overlay">
+   <div class="content" id="opt-tab1">
+      <div class="loading-overlay" id="loading-overlay1">
          <div class="searchLoader">
             <svg id="loading-wheel" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
                <style>
@@ -48,19 +48,19 @@
           </div>
       </div>
       <div class="content-sub">
-         <div class="div-above-nav-bar" id="buttons-div">
+         <div class="div-above-nav-bar" id="buttons-div1">
 
             <div class="nav-model-left" id="nav-bar">
                <div class="show-table">
-                  <button class="button-4" role="button" id="show-table-btn">Show/Hide Table</button>
+                  <button class="button-4" role="button" id="show-table-btn1">Show/Hide Table</button>
                </div>
                <div class="obj-func">       
-                  <div class="dropdown" id="dd-obj">
+                  <div class="dropdown" id="dd-obj1">
                      <div class="select">
                         <span>Select KPI</span>
                         <i class="fa fa-chevron-left"></i>
                      </div>
-                     <input type="hidden" name="objective" id="obj-input">
+                     <input type="hidden" name="objective" id="obj-input1">
                      <ul class="dropdown-menu">
                         <li id="profit">Profit</li>
                         <li id="revenue">Revenue</li>
@@ -69,12 +69,12 @@
                   </div>
             </div>
             <div class="blend">       
-               <div class="dropdown" id="dd-blend">
+               <div class="dropdown" id="dd-blend1">
                   <div class="select">
                      <span>Objective Function</span>
                      <i class="fa fa-chevron-left"></i>
                   </div>
-                  <input type="hidden" name="blend" id="blend-input">
+                  <input type="hidden" name="blend" id="blend-input1">
                   <ul class="dropdown-menu">
                      <li id="blend">Blended</li>
                      <li id="st">ST</li>
@@ -83,12 +83,12 @@
                </div>
                </div>
                <div class="exh-bud">       
-                  <div class="dropdown" id="dd-exh">
+                  <div class="dropdown" id="dd-exh1">
                      <div class="select">
                         <span>Budget Exhaustion</span>
                         <i class="fa fa-chevron-left"></i>
                      </div>
-                     <input type="hidden" name="exhaust-budget" id="exh-input">
+                     <input type="hidden" name="exhaust-budget" id="exh-input1">
                      <ul class="dropdown-menu">
                         <li id="yes">Exhaust Budget</li>
                         <li id="no">Do Not Exhaust Budget</li>
@@ -96,11 +96,11 @@
                   </div>
                </div>
                <p>Enter Total Budget:</p>
-               <input type="number" id="max-input" value="0" step="5000" placeholder="Enter Max Budget">
+               <input type="number" id="max-input1" value="0" step="5000" placeholder="Enter Max Budget">
                <div class="toggle-button-cover">
                   <div class="button-cover">
                      <div class="button r" id="lock-all-button">
-                        <input type="checkbox" class="checkbox main" />
+                        <input type="checkbox" class="checkbox main1" />
                         <div class="knobs"></div>
                         <div class="layer"></div>
                      </div>
@@ -112,7 +112,7 @@
                   <div class="toggle-button-cover">
                      <div class="button-cover">
                         <div class="button d">
-                           <input type="checkbox" class="checkbox" id="date-filter-button" />
+                           <input type="checkbox" class="checkbox" id="date-filter-button1" />
                            <div class="knobs"></div>
                            <div class="layer"></div>
                         </div>
@@ -120,17 +120,18 @@
                   </div>
                </div>
                   <div class="date-inputs">
-                     <input type="text" name="start-date" id="start-date" placeholder="Start date" />
+                     <input type="text" name="start-date" id="start-date1" class="start-date" placeholder="Start date" />
                      <i class="fa-solid fa-arrow-right" id="date-filter-arrow"></i>
-                     <input type="text" name="end-date" id="end-date" placeholder="End date" />
+                     <input type="text" name="end-date"
+                     class="end-date" id="end-date1" placeholder="End date" />
                   </div>
                </div>
                <div class="opt-cont-parent" id="opt-button-cont">
-                  <button class="button-4" role="button" id="opt-button">Optimise</button>
+                  <button class="button-4" role="button" id="opt-button1">Optimise</button>
                </div>
             </div>
          </div>
-         <div class="bo-container" id="channel-container">
+         <div class="bo-container" id="channel-container1">
          <table id="channel1" class="hover">
             <thead>
                <tr>
@@ -159,10 +160,10 @@
 <script>
    tabNames = {}
    function initializeInitialButton() {
-     var content = document.getElementById("opt-tab");
-     var coll = document.getElementById("show-table-btn");
-     var table = document.getElementById("channel-container");
-     var buttonsDiv = document.getElementById("buttons-div");
+     var content = document.getElementById("opt-tab1");
+     var coll = document.getElementById("show-table-btn1");
+     var table = document.getElementById("channel-container1");
+     var buttonsDiv = document.getElementById("buttons-div1");
       coll.addEventListener("click", function() {
          this.classList.toggle("active");
          console.log("col-btn"+tabCounter)
@@ -189,8 +190,7 @@
      var coll = document.getElementById("show-table-btn"+colID);
      var table = document.getElementById("channel-container"+colID);
      var buttonsDiv = document.getElementById("buttons-div"+colID);
-     console.log("col-btn"+tabCounter)
-     var content = document.getElementById("opt-tab"+colID);
+     console.log("col-btn"+tabCounter);
      coll.addEventListener("click", function() {
          this.classList.toggle("active");
          console.log("col-btn"+tabCounter)
@@ -225,14 +225,16 @@
          success: function (response) {
             console.log("Response from backend:", response);
             // Add any further handling based on the backend response
+            sendTableIDsOnRefresh();
          },
          error: function (error) {
             console.error("error deleting tab:", error);
+            sendTableIDsOnRefresh();
          },
          });
          tab.remove();
       });
-
+      
    }
 
 
@@ -254,7 +256,7 @@
    var initialButtonName = document.getElementById("button-text"+tabCounter);
    tabNames[tabCounter] = initialButtonName.textContent;
    console.log(tabNames);
-
+function newTabButtonInit() {
    document.getElementById("new-tab-button").addEventListener("click", function() {
       tabCounter++;
    
@@ -344,13 +346,27 @@
                         </div>
                      </div>
                      <div class="date-cont" id="date-cont">
-                        <label for="end-date">Date Range Filter:</label>
-                        <div class="date-inputs">
-                           <input type="date" id="start-date">
-                           <input type="date" id="end-date">
+                  <div class="date-range-label">
+                     <label for="end-date">Date Range Filter:</label>
+                     <div class="toggle-button-cover">
+                        <div class="button-cover">
+                           <div class="button d">
+                              <input type="checkbox" class="checkbox" id="date-filter-button1" />
+                              <div class="knobs"></div>
+                              <div class="layer"></div>
+                           </div>
                         </div>
+                     </div>
                   </div>
-                     <button class="button-4" role="button" id="opt-button${tabCounter}">Optimise</button>
+                     <div class="date-inputs">
+                        <input type="text" name="start-date" id="start-date${tabCounter}" class="start-date" placeholder="Start date" />
+                        <i class="fa-solid fa-arrow-right" id="date-filter-arrow"></i>
+                        <input type="text" name="end-date" class="end-date" id="end-date${tabCounter}" placeholder="End date" />
+                     </div>
+                  </div>
+               <div class="opt-cont-parent" id="opt-button-cont">
+                  <button class="button-4" role="button" id="opt-button${tabCounter}">Optimise</button>
+               </div>
                      </div>
                   </div>
                </div>
@@ -397,9 +413,12 @@
       tabNames[tabCounter] = buttonName.textContent;
       console.log(tabNames);
    });
-
-
+}
+newTabButtonInit();
    </script>
+
+<button id="content-save-button">Save Content Button</button>
+<button id="content-load-button">Load Content Button</button>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
@@ -408,8 +427,9 @@
 <script src="//cdn.datatables.net/plug-ins/1.13.6/features/pageResize/dataTables.pageResize.min.js"></script>
 <script type="module" src="static/js/budgetOpt.js"></script>
 <script src="static/js/budgetOptTabs.js"></script>
-<script src="../static/js/dataTables.editor.js"></script>
-<script src="../static/js/editor.dataTables.js"></script>
+<script src="/static/js/dataTables.editor.js"></script>
+<script src="/static/js/editor.dataTables.js"></script>
 <script src="https://omnipotent.net/jquery.sparkline/2.1.2/jquery.sparkline.js"></script>
+<script src="static/js/saveContent.js"></script>
 
 {% endblock content %}
