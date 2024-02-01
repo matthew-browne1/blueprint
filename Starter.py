@@ -219,7 +219,6 @@ streams = []
 for stream in ST_header['Channel']:
     streams.append(str(stream))
 
-
 laydown_dates = laydown['Time_Period']
 print(f"current (incorrect) current budget: {ST_header['Current_Budget']}")
 
@@ -627,6 +626,10 @@ def table_ids_sync():
     
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@app.route('/sync_tab_counter', methods = ['GET'])
+def sync_tab_counter():
+    last_number = list(table_data.keys())[-1]
+    return jsonify({'lastNumber': last_number})
 
 @app.route('/create_copy', methods = ['POST'])
 def create_copy():

@@ -170,6 +170,7 @@ $(document).on("click", "#content-load-button", function () {
           initializeInitialTable();         
           dropdownButtons(1);
           initializeButtons(1);
+          newTabButtonInit();
           startingFromSecondElement.forEach(function (id) {
             dropdownButtons(id);
             initializeDataTable(id);
@@ -177,9 +178,11 @@ $(document).on("click", "#content-load-button", function () {
             // redrawAllSparklines(id);
             initializeCollapsibleButtons(id);
             initializeButtons(id);
+            closeButtonTab(id);
           });
         }
         sendTableIDsOnRefresh();
+        syncTabCounter();
       }
     });
     

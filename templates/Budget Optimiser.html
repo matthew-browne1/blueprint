@@ -250,9 +250,28 @@
    }
 
    initializeInitialButton();
+   var tabCounter;
+   function syncTabCounter() {
+      $.ajax({
+         url: '/sync_tab_counter',
+         type: 'GET',
+         contentType: "application/json",
+         success: function (response) {
+            if (response && response.lastNumber) {
+               var lastNumber = response.lastNumber;
+               tabCounter = lastNumber;
+               console.log("tabCounter being set to: ", lastNumber);
 
+            }
+         },
+         error: function (error) {
+            console.error("error fetching last number", error);
+         }
+      })
+   }
 
-   var tabCounter = 1;
+   syncTabCounter();
+ 
    var initialButtonName = document.getElementById("button-text"+tabCounter);
    tabNames[tabCounter] = initialButtonName.textContent;
    console.log(tabNames);
