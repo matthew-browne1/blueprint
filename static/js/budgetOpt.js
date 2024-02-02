@@ -1,5 +1,7 @@
 $(document).ready(function() {
   sendTableIDsOnRefresh();
+  newTabButtonInit();
+  syncTabCounter();
 });
 
 var optResults = {};

@@ -156,6 +156,14 @@
    <i class="fa-solid fa-plus fa-2xl" id="new-tab-button"></i>
    <ol id="optimisation-tabs"></ol>
 </div>
+<div id="savePopup" class="popup">
+   <div class="popup-content">
+      <i class="fa-solid fa-x fa-xl close-icon" id="popup-close" onclick="closePopup()"></i>
+      <h2>Choose a Saved Snapshot</h2>
+      <ul id="saveList"></ul>
+      <button id="loadButtonPopup" onclick="loadSelectedSave()">Load Snapshot</button>
+   </div>
+</div>
 </div>
 <script>
    tabNames = {}
@@ -438,6 +446,7 @@ newTabButtonInit();
 
 <button id="content-save-button">Save Content Button</button>
 <button id="content-load-button">Load Content Button</button>
+<button id="save-list">Load from Saved Snapshots</button>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
@@ -450,5 +459,6 @@ newTabButtonInit();
 <script src="/static/js/editor.dataTables.js"></script>
 <script src="https://omnipotent.net/jquery.sparkline/2.1.2/jquery.sparkline.js"></script>
 <script src="static/js/saveContent.js"></script>
+<script src="static/js/saveUI.js"></script>
 
 {% endblock content %}

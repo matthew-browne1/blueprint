@@ -37,6 +37,7 @@ app.config['SESSION_COOKIE_SECURE'] = True
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
+login_manager.login_view = 'login'
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -131,7 +132,18 @@ def load_snapshot():
     print(table_data.keys())    
     return jsonify({'content': content_list, 'table_ids': table_ids_list})
 
+@app.route('/get_saves', methods = ['GET'])
+def get_saves():
+    user_saves = Snapshot.query.filter_by(user_id=current_user.id).all()
+    saves_data = []
+    for save in user_saves:
+        save_info = {
+            'name' : save.name,
+            'table_ids' : save.table_ids
+        }
+        saves_data.append(save_info)
 
+    return jsonify({'saves' : saves_data})
 
 @app.route('/toggle_states', methods = ['POST'])
 def toggle_states():
