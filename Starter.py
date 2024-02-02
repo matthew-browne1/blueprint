@@ -606,7 +606,7 @@ def blueprint():
     print(laydown_dates)
     return render_template('Budget Optimiser.html', current_user = current_user)
 
-@app.route('/get_table_ids')
+@app.route('/get_table_ids', methods = ['GET'])
 def get_table_ids():
     table_ids = list(table_data.keys())
     return jsonify({"success": True, "tableIds":table_ids})

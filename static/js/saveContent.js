@@ -9,22 +9,15 @@ saveButton.addEventListener("click", function () {
   var snapshotName = window.prompt("Please provide a name for this snapshot:");
   if (snapshotName !== null) {
           $.ajax({
-            url: "load_snapshot",
+            url: "get_table_ids",
             method: "GET",
             contentType: "application/json",
             success: function (response) {
-              if (response && response.table_ids) {
-                var tableIdsString = response.table_ids;
-
-                var tableIdsArray = tableIdsString
-                  .split(",")
-                  .map(function (id) {
-                    return parseInt(id.trim(), 10);
-                  });
-
-                var startingFromSecondElement = tableIdsArray.slice(1);
-
-                destroyTables(startingFromSecondElement.length+1);
+              if (response && response.tableIds) {
+                console.log(response.tableIds);
+                var tableIds = response.tableIds;
+                
+                destroyTables(tableIds.length+1);
 
                 var contentToSave =
                   document.getElementById("all-content").innerHTML;
@@ -40,7 +33,7 @@ saveButton.addEventListener("click", function () {
                     success: function (response) {
                       console.log(response);
                       initializeInitialTable();
-                      startingFromSecondElement.forEach( function (id) {
+                      tableIds.forEach( function (id) {
                         initializeDataTable(id);
                       });
                       console.log("reinitialized all tables");

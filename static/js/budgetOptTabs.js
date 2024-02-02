@@ -287,7 +287,7 @@ function hideLoadingOverlay(tableID) {
 }
 
 function destroyTables(tableID) {
-  for (var i = 0; i < tableID; i++) {
+  for (var i = 1; i < tableID; i++) {
     console.log(i);
     $('#channel' + i).DataTable().clear().destroy();
     console.log("#channel"+i+" destroyed");
