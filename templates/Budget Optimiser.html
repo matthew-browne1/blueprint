@@ -6,6 +6,7 @@
 
 <link rel="stylesheet" href="/static/css/budget_optimiser.css">
 <link rel="stylesheet" href="//code.jquery.com/ui/1.13.2/themes/base/jquery-ui.css">
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
 <div class="all-content" id="all-content">
 
 <div class="main-container" id="main-container">
@@ -156,14 +157,53 @@
    <i class="fa-solid fa-plus fa-2xl" id="new-tab-button"></i>
    <ol id="optimisation-tabs"></ol>
 </div>
-<div id="savePopup" class="popup">
+<div id="loadPopup" class="popup">
    <div class="popup-content">
-      <i class="fa-solid fa-x fa-xl close-icon" id="popup-close" onclick="closePopup()"></i>
+      <i class="fa-solid fa-x fa-xl close-icon" id="load-popup-close" onclick="closeLoadPopup()"></i>
       <h2>Choose a Saved Snapshot</h2>
-      <ul id="saveList"></ul>
-      <button id="loadButtonPopup" onclick="loadSelectedSave()">Load Snapshot</button>
+      <div class="saves-cont">
+         <table id="load-table" class="display">
+            <thead>
+            <tr>
+               <th>Name</th>
+               <th>Table IDs</th>
+            </tr>
+            </thead>
+            <tbody>
+            <!-- Rows will be dynamically added here by DataTable -->
+            </tbody>
+         </table>
+      </div>
+      <button id="loadButtonPopup" class="button-4" onclick="loadFunc()">Load Snapshot</button>
    </div>
 </div>
+<div id="savePopup" class="popup">
+   <div class="popup-content">
+      <i class="fa-solid fa-x fa-xl close-icon" id="save-popup-close" onclick="closeSavePopup()"></i>
+      <h2>Overwrite Current Saves</h2>
+      <div class="saves-cont">
+         <table id="saves-table" class="display">
+            <thead>
+            <tr>
+               <th>Name</th>
+               <th>Table IDs</th>
+            </tr>
+            </thead>
+            <tbody>
+            <!-- Rows will be dynamically added here by DataTable -->
+            </tbody>
+         </table>
+      </div>
+      <div class="save-button-cont">
+         <button id="saveButtonPopup" class="button-4" onclick="saveFunc()">Save New Snapshot</button>
+         <button id="overwriteSave" class="button-4" onclick="overwriteSave()">Overwrite Existing Snapshot</button>
+      </div>
+   </div>
+</div>
+</div>
+<div class="snapshot-control-cont">
+   <button id="save-list" class="button-4">Save Current Snapshot</button>
+   <button id="load-list" class="button-4">Load from Saved Snapshots</button>
 </div>
 <script>
    tabNames = {}
@@ -444,15 +484,12 @@ function newTabButtonInit() {
 newTabButtonInit();
    </script>
 
-<button id="content-save-button">Save Content Button</button>
-<button id="content-load-button">Load Content Button</button>
-<button id="save-list">Load from Saved Snapshots</button>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
+<script type="module" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
 <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
 <script src="https://cdn.datatables.net/1.13.5/js/jquery.dataTables.min.js"></script>
 <script src="//cdn.datatables.net/plug-ins/1.13.6/features/pageResize/dataTables.pageResize.min.js"></script>
+<script type="text/javascript" charset="utf8" src="https://cdn.datatables.net/select/1.3.3/js/dataTables.select.js"></script>
 <script type="module" src="static/js/budgetOpt.js"></script>
 <script src="static/js/budgetOptTabs.js"></script>
 <script src="/static/js/dataTables.editor.js"></script>

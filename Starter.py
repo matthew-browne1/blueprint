@@ -2,8 +2,7 @@
 # %% --------------------------------------------------------------------------
 #
 # -----------------------------------------------------------------------------
-
-from flask import Flask, render_template, send_file, jsonify, request, url_for, redirect, flash
+from flask import Flask, render_template, send_file, jsonify, request, url_for, redirect, flash, session
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -120,6 +119,29 @@ def save_snapshot():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
 
+@app.route('/overwrite_save', methods = ['POST'])
+@login_required
+def overwrite_save():
+    snapshot_id = request.json.get('selectedSaveId')
+    user_id = current_user.id
+    content = request.json.get('content')
+    current_table_ids = list(table_data.keys())
+
+    table_ids_str = ','.join(map(str, current_table_ids))
+
+    print(f"snapshot id = {snapshot_id}")
+    print(f"user id = {user_id}")
+
+    existing_snapshot = Snapshot.query.filter_by(id=snapshot_id, user_id=user_id).first()
+    existing_snapshot.content = content
+    existing_snapshot.table_ids = table_ids_str
+
+    try:
+        db.session.commit()
+        return jsonify({'success': True})
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'success': False, 'error': str(e)})
 
 @app.route('/load_snapshot')
 @login_required
@@ -133,17 +155,23 @@ def load_snapshot():
     return jsonify({'content': content_list, 'table_ids': table_ids_list})
 
 @app.route('/get_saves', methods = ['GET'])
+@login_required
 def get_saves():
+    if not current_user.is_authenticated:
+        return jsonify({'error': 'User not authenticated'}), 401
+
     user_saves = Snapshot.query.filter_by(user_id=current_user.id).all()
     saves_data = []
+
     for save in user_saves:
         save_info = {
-            'name' : save.name,
-            'table_ids' : save.table_ids
+            'DT_RowId': save.id,  # Unique identifier for DataTables (required)
+            'name': save.name,
+            'table_ids': save.table_ids
         }
         saves_data.append(save_info)
 
-    return jsonify({'saves' : saves_data})
+    return jsonify({'data': saves_data})
 
 @app.route('/toggle_states', methods = ['POST'])
 def toggle_states():
@@ -154,6 +182,30 @@ def toggle_states():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
+
+@app.route('/load_selected_row', methods = ['GET', 'POST'])
+@login_required
+def notify_selected_row():
+    if request.method == 'POST':
+        save_id = request.json.get('selectedSaveId')
+        session['save_id'] = save_id
+        return jsonify({'status': 'POST request procecssed successfully'})
+    
+    elif request.method == 'GET':
+        save_id = session.get('save_id')
+        session.pop('save_id', None)
+        save = Snapshot.query.filter_by(id=save_id, user_id = current_user.id).first()
+        if not save:
+            return jsonify({'error':'Unathorized access'}), 403
+        else:
+            content_list = save.content
+            table_ids_list = save.table_ids
+            print(table_data.keys())    
+            return jsonify({'content': content_list, 'table_ids': table_ids_list})
+
+
+
+    
 # OPTIMISER FILE PATHS - OLD VERSION
 
 # laydown_filepath = os.path.join(input_fpath, f"Opt Inputs/Laydown_{brand}.csv")

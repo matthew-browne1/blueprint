@@ -1,52 +1,7 @@
 var allDiv = document.getElementById("all-content");
 
-var saveButton = document.getElementById("content-save-button");
+var saveButton = document.getElementById("saveButtonPopup");
 var loadButton = document.getElementById("content-load-button");
-
-saveButton.addEventListener("click", function () {
-  console.log("save button clicked");
-
-  var snapshotName = window.prompt("Please provide a name for this snapshot:");
-  if (snapshotName !== null) {
-          $.ajax({
-            url: "get_table_ids",
-            method: "GET",
-            contentType: "application/json",
-            success: function (response) {
-              if (response && response.tableIds) {
-                console.log(response.tableIds);
-                var tableIds = response.tableIds;
-                
-                destroyTables(tableIds.length+1);
-
-                var contentToSave =
-                  document.getElementById("all-content").innerHTML;
-                  
-                  $.ajax({
-                    url: "/save_snapshot",
-                    method: "POST",
-                    contentType: "application/json",
-                    data: JSON.stringify({
-                      content: contentToSave,
-                      name: snapshotName,
-                    }),
-                    success: function (response) {
-                      console.log(response);
-                      initializeInitialTable();
-                      tableIds.forEach( function (id) {
-                        initializeDataTable(id);
-                      });
-                      console.log("reinitialized all tables");
-                    },
-                    error: function (error) {
-                      console.error("Error saving snapshot:", error);
-                    },
-                  });
-              }
-            },
-          });
-    } 
-});
 
 function initializeInitialTable() {
   var channelTable = $("#channel1").DataTable({
@@ -138,48 +93,6 @@ function initializeInitialTable() {
     channelTable.ajax.reload(null, false);
   });
 }
-$(document).on("click", "#content-load-button", function () {
-  
-    // Other code to load content from localStorage
-    $.ajax({
-      url: "load_snapshot",
-      method: "GET",
-      contentType: "application/json",
-      success: function (response) {
-        
-        if (response && response.content && response.table_ids) {
-          var tableIdsString = response.table_ids;
-          
-          var tableIdsArray = tableIdsString.split(",").map(function (id) {
-            return parseInt(id.trim(), 10);
-          });
-
-          var startingFromSecondElement = tableIdsArray.slice(1);
-          
-          var contentToLoad = response.content;
-          document.getElementById("all-content").innerHTML = contentToLoad;
-          
-          initializeInitialButton();
-          initializeInitialTable();         
-          dropdownButtons(1);
-          initializeButtons(1);
-          newTabButtonInit();
-          startingFromSecondElement.forEach(function (id) {
-            dropdownButtons(id);
-            initializeDataTable(id);
-            // attachButtonListenersToDataTable(id);
-            // redrawAllSparklines(id);
-            initializeCollapsibleButtons(id);
-            initializeButtons(id);
-            closeButtonTab(id);
-          });
-        }
-        sendTableIDsOnRefresh();
-        syncTabCounter();
-      }
-    });
-    
-});
 
 function sendTableIDsOnRefresh() {
   var tableIDs = [];

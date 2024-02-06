@@ -1,40 +1,283 @@
 $(document).ready(function () {
-  $("#save-list").click(function () {
-
-    $.ajax({
-      url: "/get_saves",
-      type: "GET",
-      contentType: "application/json",
-      success: function (response) {
-        if (response && response.saves) {
-          displaySaves(response.saves);
-          openPopup();
-        } else {
-            console.error("Invalid response from server");
-        }
-      },
-      error: function (error) {
-        console.error("Error fetching saves:", error);
-      },
-    });
+  
+  $("#load-list").click(function () {
+    openLoadPopup();
   });
+  $("#save-list").click(function () {
+    openSavePopup();
+  }); 
+
 });
 
-function openPopup() {
-  $("#savePopup").show();
+function openLoadPopup() {
+  $("#loadPopup").show();
+  initializeLoadTable();
 }
-
-function closePopup() {
+var savesTable;
+function closeLoadPopup() {
+  $("#loadPopup").hide();
+}
+function openSavePopup() {
+  $("#savePopup").show();
+  initializeSavesTable();
+}
+function closeSavePopup() {
   $("#savePopup").hide();
 }
 
-function displaySaves(saves) {
-  var saveList = $("#saveList");
-  saveList.empty();
+var isSaveTableInitialized = false;
+var isLoadTableInitialized = false;
+var saveTable;
+var loadTable;
 
-  saves.forEach(function (save) {
-    var listItem = $("<li>");
-    listItem.text(`Name: ${save.name}, Table IDs: ${save.table_ids}`);
-    saveList.append(listItem);
+function initializeLoadTable() {
+  if ($.fn.DataTable.isDataTable("#load-table")) {
+    console.log("load table already exists");
+    loadTable.ajax.reload();
+    return;
+  }
+  
+  console.log("initializing snapshot load table");
+  loadTable = $("#load-table").DataTable({
+    dom: "Blfrtip",
+    ajax: {
+      url: "/get_saves",
+      contentType: "application/json",
+      dataSrc: "data",
+    },
+    columns: [
+      { data: "name" },
+      { data: "table_ids" }
+    ],
+    select: 'single',
+    autoWidth: false,
+    rowId: 'DT_RowId'
   });
+  isLoadTableInitialized = true;
+
+}
+function initializeSavesTable() {
+  if ($.fn.DataTable.isDataTable("#saves-table")) {
+    console.log("saves table already exists");
+    saveTable.ajax.reload();
+    return;
+  }
+  
+  console.log("initializing saves table");
+  saveTable = $("#saves-table").DataTable({
+    dom: "Blfrtip",
+    ajax: {
+      url: "/get_saves",
+      contentType: "application/json",
+      dataSrc: "data",
+    },
+    columns: [
+      { data: "name" },
+      { data: "table_ids" }
+    ],
+    select: 'single',
+    autoWidth: false,
+    rowId: 'DT_RowId'
+  });
+  saveTable.on("select", function () {
+    $("#overwriteSave").show();
+  });
+
+  saveTable.on("deselect", function () {
+    $("#overwriteSave").hide();
+  });
+  isSaveTableInitialized = true;
+}
+
+function reloadSaveTable() {
+  if (saveTable && $.fn.DataTable.isDataTable("#save-table")) {
+    console.log("save table reloading contents");
+    saveTable.ajax.reload();
+  } else {
+    console.log("save table not initialized");
+  }
+}
+
+
+function loadFunc() {
+  var selectedRow = $("#load-table").DataTable().rows({ selected: true }).data()[0];
+
+  if (selectedRow) {
+    var selectedSaveId = selectedRow.DT_RowId;
+
+      $.ajax({
+        type: "POST",
+        url: "/load_selected_row",
+        contentType: "application/json",
+        data: JSON.stringify({ selectedSaveId: selectedSaveId}),
+        success: function (postResponse) {
+          console.log("POST request successful", postResponse);
+          console.log("commencing GET request");
+
+          $.ajax({
+            url: "/load_selected_row",
+            method: "GET",
+            contentType: "application/json",
+            success: function (response) {
+              if (response && response.content && response.table_ids) {
+                var tableIdsString = response.table_ids;
+
+                var tableIdsArray = tableIdsString
+                  .split(",")
+                  .map(function (id) {
+                    return parseInt(id.trim(), 10);
+                  });
+
+                var startingFromSecondElement = tableIdsArray.slice(1);
+
+                var contentToLoad = response.content;
+                document.getElementById("all-content").innerHTML =
+                  contentToLoad;
+
+                initializeInitialButton();
+                initializeInitialTable();
+                dropdownButtons(1);
+                initializeButtons(1);
+                newTabButtonInit();
+                console.log("attempting to reinitialize load and save table");
+               
+                initializeLoadTable();
+                initializeSavesTable();
+                
+                startingFromSecondElement.forEach(function (id) {
+                  dropdownButtons(id);
+                  initializeDataTable(id);
+                  // attachButtonListenersToDataTable(id);
+                  // redrawAllSparklines(id);
+                  initializeCollapsibleButtons(id);
+                  initializeButtons(id);
+                  closeButtonTab(id);
+                });
+              }
+              sendTableIDsOnRefresh();
+              syncTabCounter();
+              closeLoadPopup();
+              
+            },
+          });
+        }
+      })
+    
+
+    console.log("Selected Save ID:", selectedSaveId);
+  } else {
+    console.log("No row selected.");
+  }
+}
+function saveFunc() {
+  console.log("save button clicked");
+
+  var snapshotName = window.prompt("Please provide a name for this snapshot:");
+  if (snapshotName !== null) {
+    $.ajax({
+      url: "get_table_ids",
+      method: "GET",
+      contentType: "application/json",
+      success: function (response) {
+        if (response && response.tableIds) {
+          console.log(response.tableIds);
+          var tableIds = response.tableIds;
+
+          destroyTables(tableIds.length + 1);
+
+          if (isSaveTableInitialized) {
+            saveTable.destroy();
+            isSaveTableInitialized = false;
+            console.log("destroyed save table");
+          }
+          if (isLoadTableInitialized) {
+            loadTable.destroy();
+            isLoadTableInitialized = false;
+            console.log("destroyed load table");
+          }
+          
+          closeSavePopup();
+          var contentToSave = document.getElementById("all-content").innerHTML;
+
+          $.ajax({
+            url: "/save_snapshot",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+              content: contentToSave,
+              name: snapshotName,
+            }),
+            success: function (response) {
+              console.log(response);
+              initializeInitialTable();
+              tableIds.forEach(function (id) {
+                initializeDataTable(id);
+              });
+              initializeSavesTable();
+              initializeLoadTable();
+              console.log("reinitialized all tables");
+            },
+            error: function (error) {
+              console.error("Error saving snapshot:", error);
+            },
+          });
+        }
+      },
+    });
+  }
+}
+function overwriteSave() {
+  if(isSaveTableInitialized) {
+    var selectedRow = saveTable.row({ selected: true }).data();
+    if (selectedRow) {
+      var selectedSaveId = selectedRow.DT_RowId;
+      // Send a POST request to the Flask backend with the selected row data
+        $.ajax({
+          url: "get_table_ids",
+          method: "GET",
+          contentType: "application/json",
+          success: function (response) {
+            if (response && response.tableIds) {
+              console.log(response.tableIds);
+              var tableIds = response.tableIds;
+              
+              destroyTables(tableIds.length+1);
+              $('#saves-table').DataTable().destroy();
+              $('#load-table').DataTable().destroy();
+              console.log("saves and load tables destroyed");
+              isSaveTableInitialized = false;
+              isLoadTableInitialized = false;
+              closeSavePopup();
+              var contentToSave =
+                document.getElementById("all-content").innerHTML;
+              $.ajax({
+                url: "/overwrite_save",
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ 
+                  selectedSaveId: selectedSaveId,
+                  content: contentToSave
+                }),
+                success: function (response) {
+                  console.log(response);
+                  initializeInitialTable();
+                  tableIds.forEach(function (id) {
+                    initializeDataTable(id);
+                  });
+                  initializeSavesTable();
+                  initializeLoadTable();
+                  console.log("reinitialized all tables");
+                  console.log("Save overwritten successfully:", response);
+                  // Handle any further actions based on the backend response
+                  
+                },
+                error: function (error) {
+                  console.error("Error overwriting save:", error);
+                },
+              });
+            }
+          }
+        });
+      }
+  }
 }

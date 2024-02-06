@@ -613,13 +613,21 @@
   padding: 20px;
   border-radius: 5px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
-  text-align: center;
+  text-align: left;
   width: 60%; /* Adjust the width as needed */
   height: 60%; /* Adjust the height as needed */
   overflow-y: auto; /* Enable vertical scrolling if needed */
 }
 
-#popup-close {
+#load-popup-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 20px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+#save-popup-close {
   position: absolute;
   top: 10px;
   right: 10px;
@@ -634,6 +642,66 @@
   right: 10px;
 }
 
-#saveList {
+.save-button-cont {
+  position: absolute;
+  bottom: 10px;
+  right: 10px;
+  gap: 10px;
+}
 
+#overwriteSave {
+  display: none;
+}
+
+.selectable-list {
+  list-style: none;
+  padding: 0;
+}
+
+.selectable-list {
+  list-style: none;
+  padding: 0;
+  text-align: left;
+}
+
+.selectable-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  cursor: pointer;
+  transition: background-color 0.3s; /* Smooth transition for background color change */
+}
+
+.selectable-list li:hover {
+  background-color: #f0f0f0; /* Background color on hover */
+}
+
+.selectable-list li span {
+  flex-grow: 1;
+}
+
+.selectable-list li.header {
+  font-weight: bold; /* Make header text bold */
+  cursor: default; /* Disable cursor for headers */
+}
+
+.selectable-list li.selected {
+  border: 2px solid #3498db; /* Border color for selected item */
+  background-color: #e6f7ff; /* Background color for selected item */
+}
+
+tr {
+  cursor: pointer;
+}
+
+.saves-cont {
+  border: 2px solid;
+  border-radius: 10px;
+  border-color: #3498db;
+  padding: 10px;
+  margin: 10px;
+}
+
+.snapshot-control-cont {
+  padding: 10px;
 }
