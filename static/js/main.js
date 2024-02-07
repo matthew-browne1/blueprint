@@ -51,5 +51,9 @@ window.onclick = function(event) {
   }
 };
 
+function redirectToBp() {
+    window.location.href = 'blueprint';
+}
+
 
 

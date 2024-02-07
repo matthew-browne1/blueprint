@@ -656,7 +656,7 @@ def date_range():
 @login_required
 def blueprint():
     print(laydown_dates)
-    return render_template('Budget Optimiser.html', current_user = current_user)
+    return render_template('blueprint.html', current_user = current_user)
 
 @app.route('/get_table_ids', methods = ['GET'])
 def get_table_ids():
@@ -752,7 +752,7 @@ def login():
             login_user(user, remember=True)  # Use Flask-Login's login_user
             print(f"User {username} logged in successfully.")
             print(current_user.user_info)
-            return redirect(url_for('home'))
+            return redirect(url_for('blueprint'))
         else:
             print(f"Failed login attempt for user {username}.")
             flash('Invalid username or password', 'error')

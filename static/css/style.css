@@ -172,3 +172,17 @@ body.showLoginForm .modal-content{
     background: #4889da;
     color: #f5f5f5;
 }
+
+.continue-btn {
+  width:30%;
+  height: 60px;
+  font-size: 1.3rem;
+}
+
+.continue-btn:hover {
+  background-color: #393EE3; 
+}
+
+.current-user-welcome-text {
+  
+}

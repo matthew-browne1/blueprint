@@ -3,19 +3,19 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Welcome to TMO 3.0</title>
+    <title>Blueprint Login</title>
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
 <div class="container">
     <div class="header">
         <img src="/static/images/RA Logo 1.png" alt="Retail Alchemy Logo">
-        <h1 class="app-name">TMO 3.O</h1>
-        <p class="app-description">Welcome to the new and improved TMO app</p>
+        <h1 class="app-name">Blueprint</h1>
     </div>
 
     {% if current_user.is_authenticated %}
-        <p>Currently logged-in user: {{ current_user.user_info[0].full_name }}</p>
+        <p class="current-user-welcome-text">Currently logged-in user: {{ current_user.user_info[0].full_name }}</p>
+        <button class="continue-btn" onclick="redirectToBp()">Continue to Blueprint</button>
     {% else %}
 
     <button onclick="openLoginForm()"
