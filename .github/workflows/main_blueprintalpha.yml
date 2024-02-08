@@ -65,7 +65,7 @@ jobs:
           name: python-app
 
       - name: Unzip artifact for deployment
-        run: unzip unzip /home/runner/work/blueprint/blueprint/python-app/release.zip -d $GITHUB_WORKSPACE
+        run: unzip /home/runner/work/blueprint/blueprint/python-app/release.zip -d $GITHUB_WORKSPACE
 
       - name: Login to Azure
         uses: azure/login@v1
