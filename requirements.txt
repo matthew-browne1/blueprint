@@ -180,7 +180,7 @@ python-socketio==5.10.0
 pythonnet==3.0.1
 pytz==2023.3
 pywebview==4.2.2
-pywin32==306
+pywin32
 pywin32-ctypes==0.2.2
 pywinpty==2.0.10
 PyYAML==6.0
