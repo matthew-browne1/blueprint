@@ -2,7 +2,7 @@
 # %% --------------------------------------------------------------------------
 #
 # -----------------------------------------------------------------------------
-from flask import Flask, render_template, send_file, jsonify, request, url_for, redirect, flash, session
+from flask import Flask, render_template, send_file, jsonify, request, url_for, redirect, flash, session, current_app
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -26,12 +26,20 @@ import secrets
 
 app = Flask(__name__)
 
-engine = create_engine('postgresql://postgres:'+urllib.parse.quote_plus("Gde3400@@")+'@192.168.1.2:5432/CPW Blueprint')
+azure_host = "blueprintalpha.postgres.database.azure.com"
+azure_user = "bptestadmin"
+azure_password = "Password!"
+azure_database = "postgres" 
 
-app.config['SQLALCHEMY_DATABASE_URI'] = 'postgresql://postgres:'+urllib.parse.quote_plus("Gde3400@@")+'@192.168.1.2:5432/CPW Blueprint'
+# Create the new PostgreSQL URI for Azure
+azure_db_uri = f"postgresql://{azure_user}:{urllib.parse.quote_plus(azure_password)}@{azure_host}:5432/{azure_database}"
+
+app.config['SQLALCHEMY_DATABASE_URI'] = azure_db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = secrets.token_hex()
 app.config['SESSION_COOKIE_SECURE'] = True
+
+engine = create_engine(azure_db_uri)
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
@@ -249,6 +257,8 @@ results = {}
 
 # ST
 
+
+
 brand = 'Gourmet'
 input_fpath = "Y:/2023/Nestle Spiderweb/Deep Dive/Alphas/"
 
@@ -353,6 +363,24 @@ LT_header_dict = LT_header.to_dict("records")
 
 bud = sum(ST_header['Current_Budget'].to_list())
 
+seas_index_table_name = 'seas_index'
+ST_db_table_name = 'ST_header'
+LT_db_table_name = "LT_header"
+
+seas_index.to_sql(seas_index_table_name, con=engine, index=False, if_exists='replace')
+ST_header.to_sql(ST_db_table_name, con=engine, index=False, if_exists='replace')
+LT_header.to_sql(LT_db_table_name, con=engine, index=False, if_exists='replace')
+
+query = f'SELECT * FROM "ST_header"'
+ST_input_fetched = pd.read_sql(query, con=engine)
+query = f'SELECT * FROM "LT_header"'
+ST_input_fetched = pd.read_sql(query, con=engine)
+query = f'SELECT * FROM "seas_index"'
+seas_index_fetched = pd.read_sql(query, con=engine)
+
+ST_header_dict = LT_header.to_dict("records")
+LT_header_dict = LT_header.to_dict("records")
+
 # %% --------------------------------------------------------------------------
 # 
 # -----------------------------------------------------------------------------
@@ -389,7 +417,7 @@ def optimise():
 
     if blend.lower() == "blend":
         if obj_func.lower() == "profit":
-            results[table_id] = Optimiser.blended_profit_max(ST_input = ST_header_dict, LT_input=LT_header_dict, laydown=laydown, seas_index=seas_index, exh_budget='yes', max_budget=max_budget, num_weeks=num_weeks)
+            results[table_id] = Optimiser.blended_profit_max(ST_input = ST_header_dict, LT_input=LT_header_dict, laydown=laydown, seas_index=seas_index_fetched, exh_budget='yes', max_budget=max_budget, num_weeks=num_weeks)
         elif obj_func.lower() == 'revenue':
             ST_res = list(Optimiser.revenue_max(channel_input = ST_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
             LT_res = list(Optimiser.revenue_max(channel_input = LT_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
@@ -781,5 +809,6 @@ if __name__ == '__main__':
      with app.app_context():
 
         db.create_all()
-
+        for user in user_data:
+            add_user(user)
         app.run(host="0.0.0.0", debug=True)
