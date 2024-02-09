@@ -1138,7 +1138,7 @@ const selectedBrand = "Bakers"; // Initial scenario selection
       }
     });
     // Create a line chart
-    const response_curve_chart = new Chart(document.getElementById("response_curve"),
+    const response_curve_chart = new Chart(document.getElementById("response_curve_chart"),
      {
       type: 'line',
       data: {
@@ -1153,20 +1153,20 @@ const selectedBrand = "Bakers"; // Initial scenario selection
       },
       options: {
         scales: {
-          xAxes: [{
+          x: {
             type: 'linear',
             position: 'bottom',
             scaleLabel: {
               display: true,
               labelString: 'Budget'
             }
-          }],
-          yAxes: [{
+          },
+          y: {
             scaleLabel: {
               display: true,
               labelString: 'Response Curve'
             }
-          }]
+          }
         }
       }
     });

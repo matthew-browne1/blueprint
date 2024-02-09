@@ -439,12 +439,6 @@ def polynomial_data():
 def blueprint_results():
     return render_template('blueprint_results.html')
 
-@app.route('/blueprint_base')
-@login_required
-def blueprint_base():
-    return render_template('blueprint_results_base.html')
-
-
 @app.route('/date_range', methods = ['GET','POST'])
 def date_range():
     start_date = list(ST_laydown_dates)[1]

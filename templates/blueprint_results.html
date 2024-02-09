@@ -95,11 +95,10 @@
         </div>
     </div>
     <div class="nav-container">
-        <a href="#scenario" class="active">Scenario</a>
-        <a href="#channel">Channel</a>
-        <a href="#laydown">Laydown</a>
-        <a href="#responsecurve">Response Curve</a>
-        <a href="#budgetcurve">Budget Curve</a>
+        <a href="#scenario" class="active">Scenario Charts</a>
+        <a href="#channel">Channel Charts</a>
+        <a href="#laydown">Laydown Charts</a>
+        <a href="#curve">Curve Charts</a>
     </div>
     <div class="chart-container">
         <section id="scenario">
@@ -151,18 +150,19 @@
                 </div>
             </div>
         </section>
-        <section id="responsecurve">
-            Response Curve Charts
+        <section id="response">
+            Curve Charts
             <div class="chart-content" id="response_curve">
                 Response Curve
                 <canvas id="response_curve_chart" width="1600" height="400"></canvas>
             </div>
-        </section>
-        <section id="budgetcurve">
-            Budget Curve
             <div class="chart-content" id="budget_curve">
-                Response Curve
+                Budget Curve
                 <canvas id="budget_curve_chart" width="1600" height="400"></canvas>
+            </div>
+            <div class="chart-content" id="roi_curve">
+                ROI Curve
+                <canvas id="roi_curve_chart" width="1600" height="400"></canvas>
             </div>
         </section>
     </div>
