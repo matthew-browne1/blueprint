@@ -33,6 +33,7 @@ jobs:
       - name: Add files to the ZIP artifact
         run: |
           zip -r release.zip \
+            data \
             static \
             templates \
             application.py \
