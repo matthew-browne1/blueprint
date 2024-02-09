@@ -19,7 +19,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import secrets
-from Starter import User, Snapshot, UserInfo, db, add_user
+from application import User, Snapshot, UserInfo, db, add_user
 
 azure_host = "blueprintalpha.postgres.database.azure.com"
 azure_user = "bptestadmin"

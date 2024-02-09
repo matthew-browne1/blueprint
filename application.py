@@ -257,62 +257,126 @@ results = {}
 
 # ST
 
+# brand = 'Gourmet'
+# input_fpath = "Y:/2023/Nestle Spiderweb/Deep Dive/Alphas/"
+
+# laydown_filepath = os.path.join(input_fpath, f"Opt Inputs/Laydown_{brand}.csv")
+# seas_index_fp = os.path.join(input_fpath, f"Opt Inputs/Index_{brand}.csv")
+# channel_json = os.path.join(sys.path[0], "data/channel.json")
+
+# alpha_headers_fp = os.path.join(input_fpath, "Alpha Work_v2.xlsx")
+# alpha_headers = pd.read_excel(alpha_headers_fp, 'Opt_Header')
+
+# ST_header = alpha_headers[alpha_headers['Range'] == brand]
+# ST_header = ST_header.iloc[:, :-3]
+
+# ST_header.drop(columns=['Channel'], inplace=True)
+# ST_header.rename(columns={'concat':'Channel', 'Adstock':'Carryover', 'Wtd ROI':'Current_ROI', 'Total Spend':"Current_Budget"}, inplace=True)
+# ST_header['Max_Spend_Cap'] = ST_header['Current_Budget']*1.5
+# ST_header['Min_Spend_Cap'] = 0
+# ST_header['CPU'] = 1
+
+# laydown = pd.read_csv(laydown_filepath)
+# laydown.rename(columns={'Unnamed: 0':'Time_Period'}, inplace=True)
+# laydown.fillna(0)
+
+# seas_index = pd.read_csv(seas_index_fp)
+# seas_index.rename(columns={'Unnamed: 0':'Time_Period'}, inplace=True)
+
+# for x in laydown.columns.tolist():
+#     if x not in ST_header['Channel'].tolist() and x != 'Time_Period':
+#         laydown.drop(columns=[x], inplace=True)
 
 
-brand = 'Gourmet'
-input_fpath = "Y:/2023/Nestle Spiderweb/Deep Dive/Alphas/"
 
-laydown_filepath = os.path.join(input_fpath, f"Opt Inputs/Laydown_{brand}.csv")
-seas_index_fp = os.path.join(input_fpath, f"Opt Inputs/Index_{brand}.csv")
-channel_json = os.path.join(sys.path[0], "data/channel.json")
+# laydown_dates = laydown['Time_Period']
+# print(f"current (incorrect) current budget: {ST_header['Current_Budget']}")
 
-alpha_headers_fp = os.path.join(input_fpath, "Alpha Work_v2.xlsx")
-alpha_headers = pd.read_excel(alpha_headers_fp, 'Opt_Header')
+# for stream in streams:
+#     ST_header.loc[ST_header['Channel'] == stream, 'Current_Budget'] = sum(laydown[stream])
 
-ST_header = alpha_headers[alpha_headers['Range'] == brand]
-ST_header = ST_header.iloc[:, :-3]
+# ST_header_dict = ST_header.to_dict("records")
 
-ST_header.drop(columns=['Channel'], inplace=True)
-ST_header.rename(columns={'concat':'Channel', 'Adstock':'Carryover', 'Wtd ROI':'Current_ROI', 'Total Spend':"Current_Budget"}, inplace=True)
-ST_header['Max_Spend_Cap'] = ST_header['Current_Budget']*1.5
-ST_header['Min_Spend_Cap'] = 0
-ST_header['CPU'] = 1
+# ST_opt_betas_dict = Optimiser.beta_opt(laydown=laydown, channel_input=ST_header_dict)
+# print(ST_opt_betas_dict)
 
-laydown = pd.read_csv(laydown_filepath)
-laydown.rename(columns={'Unnamed: 0':'Time_Period'}, inplace=True)
-laydown.fillna(0)
+# ST_header['Beta'] = list(ST_opt_betas_dict.values())
 
-seas_index = pd.read_csv(seas_index_fp)
-seas_index.rename(columns={'Unnamed: 0':'Time_Period'}, inplace=True)
+# ST_header_dict = ST_header.to_dict("records")
 
-for x in laydown.columns.tolist():
-    if x not in ST_header['Channel'].tolist() and x != 'Time_Period':
-        laydown.drop(columns=[x], inplace=True)
+# max_spend_cap = sum(ST_header['Max_Spend_Cap'])
 
+# print(max_spend_cap)
+
+
+
+# ### LT
+
+# alpha_headers = pd.read_excel(alpha_headers_fp, 'Opt_Header')
+
+# LT_header = alpha_headers[alpha_headers['Range'] == brand]
+# LT_header = LT_header.iloc[:, :-3]
+
+# LT_header.drop(columns=['Channel', 'Alpha'], inplace=True)
+# LT_header.rename(columns={'concat':'Channel', 'LT Adstock':'Carryover', 'LT ROI':'Current_ROI', 'LT Alpha':'Alpha', 'Total Spend':"Current_Budget"}, inplace=True)
+# LT_header['Max_Spend_Cap'] = LT_header['Current_Budget']*1.5
+# LT_header['Min_Spend_Cap'] = 0
+# LT_header['CPU'] = 1
+
+# LT_seas_index = pd.read_csv(seas_index_fp)
+# LT_seas_index.rename(columns={'Unnamed: 0':'Time_Period'}, inplace=True)
+
+# for x in laydown.columns.tolist():
+#     if x not in LT_header['Channel'].tolist() and x != 'Time_Period':
+#         laydown.drop(columns=[x], inplace=True)
+
+# print(f"current (incorrect) current budget: {LT_header['Current_Budget']}")
+
+# for stream in streams:
+#     LT_header.loc[LT_header['Channel'] == stream, 'Current_Budget'] = sum(laydown[stream])
+
+# LT_header['Current_ROI'] = LT_header['Current_ROI'].replace(0, 0.00001)
+
+# LT_header['Beta'] = list(ST_opt_betas_dict.values())
+
+# LT_header_dict = LT_header.to_dict("records")
+
+
+
+seas_index_table_name = 'seas_index'
+ST_db_table_name = 'ST_header'
+LT_db_table_name = "LT_header"
+laydown_table_name = "laydown"
+
+# seas_index.to_sql(seas_index_table_name, con=engine, index=False, if_exists='replace')
+# ST_header.to_sql(ST_db_table_name, con=engine, index=False, if_exists='replace')
+# LT_header.to_sql(LT_db_table_name, con=engine, index=False, if_exists='replace')
+# laydown.to_sql(laydown_table_name, con=engine, index=False, if_exists='replace')
+
+laydown_query = 'select * FROM "laydown"'
+laydown_fetched = pd.read_sql(laydown_query, con=engine)
+ST_query = f'SELECT * FROM "ST_header"'
+ST_input_fetched = pd.read_sql(ST_query, con=engine)
+LT_query = f'SELECT * FROM "LT_header"'
+LT_input_fetched = pd.read_sql(LT_query, con=engine)
+si_query = f'SELECT * FROM "seas_index"'
+seas_index_fetched = pd.read_sql(si_query, con=engine)
+
+bud = sum(ST_input_fetched['Current_Budget'].to_list())
 streams = []
-for stream in ST_header['Channel']:
+for stream in ST_input_fetched['Channel']:
     streams.append(str(stream))
 
+laydown = laydown_fetched
+ST_header_dict = ST_input_fetched.to_dict("records")
+LT_header_dict = LT_input_fetched.to_dict("records")
+seas_index = seas_index_fetched.to_dict("records")
+
 laydown_dates = laydown['Time_Period']
-print(f"current (incorrect) current budget: {ST_header['Current_Budget']}")
 
-for stream in streams:
-    ST_header.loc[ST_header['Channel'] == stream, 'Current_Budget'] = sum(laydown[stream])
+### TABLE DATA ###
 
-ST_header_dict = ST_header.to_dict("records")
-
-ST_opt_betas_dict = Optimiser.beta_opt(laydown=laydown, channel_input=ST_header_dict)
-print(ST_opt_betas_dict)
-
-ST_header['Beta'] = list(ST_opt_betas_dict.values())
-
-ST_header_dict = ST_header.to_dict("records")
-
-max_spend_cap = sum(ST_header['Max_Spend_Cap'])
-
-print(max_spend_cap)
-
-table_df = ST_header.copy()
+table_df = ST_input_fetched.copy()
 
 dataTable_cols = ['Channel', 'Carryover', 'Alpha', 'Beta', 'Current_Budget', 'Min_Spend_Cap', 'Max_Spend_Cap', 'Laydown']
 
@@ -325,61 +389,6 @@ table_dict = table_df.to_dict("records")
 table_data = {"1":table_dict}
 for var in table_data["1"]:
     var['Laydown'] = laydown[var['Channel']].tolist()
-
-### LT
-
-alpha_headers = pd.read_excel(alpha_headers_fp, 'Opt_Header')
-
-LT_header = alpha_headers[alpha_headers['Range'] == brand]
-LT_header = LT_header.iloc[:, :-3]
-
-LT_header.drop(columns=['Channel', 'Alpha'], inplace=True)
-LT_header.rename(columns={'concat':'Channel', 'LT Adstock':'Carryover', 'LT ROI':'Current_ROI', 'LT Alpha':'Alpha', 'Total Spend':"Current_Budget"}, inplace=True)
-LT_header['Max_Spend_Cap'] = LT_header['Current_Budget']*1.5
-LT_header['Min_Spend_Cap'] = 0
-LT_header['CPU'] = 1
-
-LT_seas_index = pd.read_csv(seas_index_fp)
-LT_seas_index.rename(columns={'Unnamed: 0':'Time_Period'}, inplace=True)
-
-for x in laydown.columns.tolist():
-    if x not in LT_header['Channel'].tolist() and x != 'Time_Period':
-        laydown.drop(columns=[x], inplace=True)
-
-streams = []
-for stream in LT_header['Channel']:
-    streams.append(str(stream))
-
-print(f"current (incorrect) current budget: {LT_header['Current_Budget']}")
-
-for stream in streams:
-    LT_header.loc[LT_header['Channel'] == stream, 'Current_Budget'] = sum(laydown[stream])
-
-LT_header['Current_ROI'] = LT_header['Current_ROI'].replace(0, 0.00001)
-
-LT_header['Beta'] = list(ST_opt_betas_dict.values())
-
-LT_header_dict = LT_header.to_dict("records")
-
-bud = sum(ST_header['Current_Budget'].to_list())
-
-seas_index_table_name = 'seas_index'
-ST_db_table_name = 'ST_header'
-LT_db_table_name = "LT_header"
-
-seas_index.to_sql(seas_index_table_name, con=engine, index=False, if_exists='replace')
-ST_header.to_sql(ST_db_table_name, con=engine, index=False, if_exists='replace')
-LT_header.to_sql(LT_db_table_name, con=engine, index=False, if_exists='replace')
-
-query = f'SELECT * FROM "ST_header"'
-ST_input_fetched = pd.read_sql(query, con=engine)
-query = f'SELECT * FROM "LT_header"'
-ST_input_fetched = pd.read_sql(query, con=engine)
-query = f'SELECT * FROM "seas_index"'
-seas_index_fetched = pd.read_sql(query, con=engine)
-
-ST_header_dict = LT_header.to_dict("records")
-LT_header_dict = LT_header.to_dict("records")
 
 # %% --------------------------------------------------------------------------
 # 
@@ -456,7 +465,7 @@ def results_output():
 
     tab_names = dict(request.json)
 
-    raw_input_data = ST_header.to_dict("records")
+    raw_input_data = ST_input_fetched.to_dict("records")
     
     current_budget_list = [entry['Current_Budget'] for entry in raw_input_data]
     current_budget_dict = dict(zip(streams, current_budget_list))
@@ -728,7 +737,7 @@ def create_copy():
     global table_data
 
     tableID = str(request.form.get('tableID'))
-    channel_dict = ST_header.to_dict("records")
+    channel_dict = ST_input_fetched.to_dict("records")
     for var in channel_dict:
         var['Laydown'] = laydown[var['Channel']].tolist()
     if tableID not in table_data.keys():
@@ -811,4 +820,4 @@ if __name__ == '__main__':
         db.create_all()
         # for user in user_data:
         #     add_user(user)
-        app.run(host="0.0.0.0", debug=True)
+        app.run(host='0.0.0.0', port=os.environ.get('PORT', 5000))
