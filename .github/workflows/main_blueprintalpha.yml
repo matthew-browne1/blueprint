@@ -35,7 +35,7 @@ jobs:
           zip -r release.zip \
             static \
             templates \
-            Starter.py \
+            application.py \
             alpha_opt.py \
             pyomo_opt.py \
             requirements.txt
