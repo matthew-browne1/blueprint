@@ -543,13 +543,3 @@ class Optimiser:
         return opt_budgets_dict
 
 
-# %% --------------------------------------------------------------------------
-#
-# -----------------------------------------------------------------------------
-
-laydown = pd.read_csv('Y:/2023/Nestle CPW/UK/6. Blueprint Work (RF)/UK_Laydown_v4.csv')
-channel_input = pd.read_csv('Y:/2023/Nestle CPW/UK/6. Blueprint Work (RF)/UK_Channel_Inputs_v4.csv')
-incr_rev = pd.read_csv('Y:/2023/Nestle CPW/UK/6. Blueprint Work (RF)/UK_Incremental_Revenue_v4.csv')
-channel_dict = {"data":channel_input.to_dict("records")}
-laydown.drop(columns="Time_Period", inplace=True)
-

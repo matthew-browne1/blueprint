@@ -12,6 +12,3 @@ def generate_requirements_file(output_file='requirements.txt'):
         print(f"Requirements file '{output_file}' generated successfully.")
     else:
         print("Failed to generate the requirements file.")
-
-# Call the function to generate the requirements.txt file
-generate_requirements_file()
