@@ -23,9 +23,10 @@ from sklearn.preprocessing import PolynomialFeatures
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import secrets
+import logging
 
 app = Flask(__name__)
-
+logging.basicConfig(filename="app.log", level=logging.DEBUG)
 azure_host = "blueprintalpha.postgres.database.azure.com"
 azure_user = "bptestadmin"
 azure_password = "Password!"
@@ -87,9 +88,9 @@ def add_user(user_data):
         db.session.add(new_user_info)
         db.session.commit()
 
-        print(f"User '{user_data['username']}' added successfully.")
+        app.logger.info(f"User '{user_data['username']}' added successfully.")
     else:
-        print(f"User '{user_data['username']}' already exists.")
+        app.logger.info(f"User '{user_data['username']}' already exists.")
 
 
 @app.route('/get_user_id', methods = ['GET'])
@@ -137,8 +138,8 @@ def overwrite_save():
 
     table_ids_str = ','.join(map(str, current_table_ids))
 
-    print(f"snapshot id = {snapshot_id}")
-    print(f"user id = {user_id}")
+    app.logger.info(f"snapshot id = {snapshot_id}")
+    app.logger.info(f"user id = {user_id}")
 
     existing_snapshot = Snapshot.query.filter_by(id=snapshot_id, user_id=user_id).first()
     existing_snapshot.content = content
@@ -159,7 +160,7 @@ def load_snapshot():
 
     content_list = snapshot.content
     table_ids_list = snapshot.table_ids
-    print(table_data.keys())    
+    app.logger.info(table_data.keys())    
     return jsonify({'content': content_list, 'table_ids': table_ids_list})
 
 @app.route('/get_saves', methods = ['GET'])
@@ -208,7 +209,7 @@ def notify_selected_row():
         else:
             content_list = save.content
             table_ids_list = save.table_ids
-            print(table_data.keys())    
+            app.logger.info(table_data.keys())    
             return jsonify({'content': content_list, 'table_ids': table_ids_list})
 
 
@@ -290,7 +291,7 @@ results = {}
 
 
 # laydown_dates = laydown['Time_Period']
-# print(f"current (incorrect) current budget: {ST_header['Current_Budget']}")
+# app.logger.info(f"current (incorrect) current budget: {ST_header['Current_Budget']}")
 
 # for stream in streams:
 #     ST_header.loc[ST_header['Channel'] == stream, 'Current_Budget'] = sum(laydown[stream])
@@ -298,7 +299,7 @@ results = {}
 # ST_header_dict = ST_header.to_dict("records")
 
 # ST_opt_betas_dict = Optimiser.beta_opt(laydown=laydown, channel_input=ST_header_dict)
-# print(ST_opt_betas_dict)
+# app.logger.info(ST_opt_betas_dict)
 
 # ST_header['Beta'] = list(ST_opt_betas_dict.values())
 
@@ -306,7 +307,7 @@ results = {}
 
 # max_spend_cap = sum(ST_header['Max_Spend_Cap'])
 
-# print(max_spend_cap)
+# app.logger.info(max_spend_cap)
 
 
 
@@ -330,7 +331,7 @@ results = {}
 #     if x not in LT_header['Channel'].tolist() and x != 'Time_Period':
 #         laydown.drop(columns=[x], inplace=True)
 
-# print(f"current (incorrect) current budget: {LT_header['Current_Budget']}")
+# app.logger.info(f"current (incorrect) current budget: {LT_header['Current_Budget']}")
 
 # for stream in streams:
 #     LT_header.loc[LT_header['Channel'] == stream, 'Current_Budget'] = sum(laydown[stream])
@@ -399,7 +400,7 @@ def optimise():
 
     if request.method == "POST":
         data = request.json
-    print("REACHING OPT METHOD")
+    app.logger.info("REACHING OPT METHOD")
     table_id = str(data['tableID'])
     obj_func = data['objectiveValue']
     exh_budget = data['exhaustValue']
@@ -408,19 +409,19 @@ def optimise():
     blend = data['blendValue']
     
     # if 'dates' in data:
-    #     print('dates found in data')
+    #     app.logger.info('dates found in data')
     #     start_date = data['dates'][0]
     #     end_date = data['dates'][1]
     #     laydown = laydown[(laydown["Time-Period"] >= start_date) & (laydown["Time-Period"] <= end_date)]
-    #     print(start_date)
-    #     print(end_date)
+    #     app.logger.info(start_date)
+    #     app.logger.info(end_date)
 
-    print(f"table id = {table_id}")
+    app.logger.info(f"table id = {table_id}")
     
     # NEED TO ADD HANDLING SO THAT EDITS MADE TO TABLE DATA ARE ADDED TO THE ST_HEADER
 
-    print(f"laydown = {laydown}")
-    print(f"CPU = {[entry['CPU'] for entry in ST_header_dict]}")
+    app.logger.info(f"laydown = {laydown}")
+    app.logger.info(f"CPU = {[entry['CPU'] for entry in ST_header_dict]}")
     global results
     streams = [entry['Channel'] for entry in ST_header_dict]
 
@@ -456,7 +457,7 @@ def optimise():
             results[table_id] = Optimiser.revenue_max(channel_input = LT_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget)
         elif obj_func.lower() == 'roi':
             results[table_id] = Optimiser.roi_max(channel_input = LT_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget)
-        print(results)
+        app.logger.info(results)
 
         return jsonify(results), 200
 
@@ -555,7 +556,7 @@ def results_output():
     for key, value in results.items():
 
         opt_budget_dict = value
-        print(f"results from optimiser:{results}")
+        app.logger.info(f"results from optimiser:{results}")
         opt_rev_dict = {'Time_Period':list(laydown.index)}
         for stream in streams:
             opt_rev_dict[stream] = rev_per_stream(stream, current_budget_dict[stream])
@@ -610,12 +611,12 @@ def results_output():
     
     concat_df['Time_Period'] = pd.to_datetime(concat_df['Time_Period'], format="%Y/%m/%d").dt.date
 
-    print(concat_df.info())
+    app.logger.info(concat_df.info())
     try:
         concat_df.to_sql('Optimised CSV', engine, if_exists='replace', index=False)
-        print("csv uploaded to db successfully")
+        app.logger.info("csv uploaded to db successfully")
     except:
-        print("csv db upload failed")
+        app.logger.info("csv db upload failed")
 
     return jsonify({"message":"csv exported successfully"})
 
@@ -626,7 +627,7 @@ def chart_data():
         query = text('SELECT * FROM "Optimised CSV";')
 
         db_result = conn.execute(query)
-        #print(tp_result.fetchall())
+        #app.logger.info(tp_result.fetchall())
         chart_data = []
         col_names = db_result.keys()
         for x in db_result.fetchall():
@@ -636,7 +637,7 @@ def chart_data():
         return jsonify(chart_data)
     
     except SQLAlchemyError as e:
-        print('Error executing query:', str(e))
+        app.logger.info('Error executing query:', str(e))
         return jsonify({'error': 'Internal Server Error'}), 500
 
     finally:
@@ -666,17 +667,17 @@ def polynomial_data():
     poly_y = np.random.uniform(2, 4, 20)
     degree = 2
     lobf = poly_function(poly_x, poly_y, degree)
-    print(f"lobf={lobf}")
+    app.logger.info(f"lobf={lobf}")
     lobf_dict = dict(zip(poly_x, lobf))
     data = {
         "x": poly_x.tolist(),
         "y": poly_y.tolist(),
         "lobf": dict(sorted(lobf_dict.items()))
     }
-    print(data)
+    app.logger.info(data)
     return jsonify(data)
 
-@app.route('/blueprint_results')
+@app.route('/blueapp.logger.info_results')
 @login_required
 def blueprint_results():
     return render_template('blueprint_results.html')
@@ -684,15 +685,15 @@ def blueprint_results():
 @app.route('/date_range', methods = ['GET','POST'])
 def date_range():
     start_date = list(laydown_dates)[1]
-    print(start_date)
+    app.logger.info(start_date)
     end_date = list(laydown_dates)[-1]
-    print(end_date)
+    app.logger.info(end_date)
     return jsonify({"startDate":start_date, "endDate":end_date})
 
 @app.route('/blueprint')
 @login_required
 def blueprint():
-    print(laydown_dates)
+    app.logger.info(laydown_dates)
     return render_template('blueprint.html', current_user = current_user)
 
 @app.route('/get_table_ids', methods = ['GET'])
@@ -710,18 +711,18 @@ def table_ids_sync():
         #parsed_data = parse_qs(received_data)
         received_table_ids = list(map(str, received_data['tableIDs']))
 
-        print(f"received table ids: {received_table_ids}")
+        app.logger.info(f"received table ids: {received_table_ids}")
 
         for table_id in list(table_data.keys()):
             if table_id not in received_table_ids:
                 
                 del table_data[table_id]
-                print(f"deleted tab: {table_id}")
+                app.logger.info(f"deleted tab: {table_id}")
 
         return jsonify({'success': True, 'message': 'Table data updated successfully'})
 
     except KeyError:
-        print("tableIDs not found in ajax post request.")
+        app.logger.info("tableIDs not found in ajax post request.")
         return jsonify({'status': 'error', 'message': 'Invalid request data'}), 400
     except Exception as e:
     
@@ -742,31 +743,31 @@ def create_copy():
         var['Laydown'] = laydown[var['Channel']].tolist()
     if tableID not in table_data.keys():
         table_data[tableID] = table_dict
-    print(table_data.keys())
+    app.logger.info(table_data.keys())
     return jsonify({"success": True, "table_id": tableID})
 
 @app.route('/channel', methods = ['GET', 'PUT'])
 def channel():
-    print("reaching /channel")
+    app.logger.info("reaching /channel")
     if request.method == 'GET':
-        print("getting")
+        app.logger.info("getting")
         return jsonify(table_data)
 
 @app.route('/channel_delete', methods = ['POST'])
 def channel_delete():
     deleted_tab = str(request.json.get("tabID"))
-    print(f"deleted tab: {deleted_tab}")
+    app.logger.info(f"deleted tab: {deleted_tab}")
     table_data.pop(deleted_tab)
     return jsonify({"success":"tab removed succesfully"})
 
 @app.route('/channel_main', methods = ['GET'])
 def channel_main():
-    print(table_data.keys())    
+    app.logger.info(table_data.keys())    
     return jsonify(table_data)
 
 @app.route('/')
 def welcome_page():
-    print(current_user)
+    app.logger.info(current_user)
     return render_template('Welcome.html', current_user=current_user)
 
 # Get request required pending login db sorted
@@ -787,11 +788,11 @@ def login():
 
         if user and bcrypt.check_password_hash(user.password, password):
             login_user(user, remember=True)  # Use Flask-Login's login_user
-            print(f"User {username} logged in successfully.")
-            print(current_user.user_info)
+            app.logger.info(f"User {username} logged in successfully.")
+            app.logger.info(current_user.user_info)
             return redirect(url_for('blueprint'))
         else:
-            print(f"Failed login attempt for user {username}.")
+            app.logger.info(f"Failed login attempt for user {username}.")
             flash('Invalid username or password', 'error')
             return redirect(url_for('login'))
 
@@ -820,4 +821,4 @@ if __name__ == '__main__':
         db.create_all()
         # for user in user_data:
         #     add_user(user)
-        app.run(host='0.0.0.0', port=os.environ.get('PORT', 5000))
+        app.run(host='0.0.0.0', port=os.environ.get('PORT', 5000), debug=True)
