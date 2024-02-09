@@ -151,18 +151,12 @@ def optimise():
         end_date = data['dates'][1]
         ST_laydown = ST_laydown[(ST_laydown["Time-Period"] >= start_date) & (ST_laydown["Time-Period"] <= end_date)]
         
-    print(start_date)
-    print(end_date)
 
     ST_channel_input = table_data[table_id]
 
     global results
     streams = [entry['Channel'] for entry in ST_channel_input]
 
-    LT_laydown = ST_laydown
-    LT_channel_input = ST_channel_input
-
-    
 
     if blend.lower() == "blend":
         if obj_func.lower() == "profit":
@@ -365,28 +359,49 @@ def results_output():
 @app.route('/chart_data', methods = ['GET'])
 def chart_data():
     try:
-        conn = engine.connect()
-        query = text('SELECT * FROM "Optimised CSV";')
-
-        db_result = conn.execute(query)
-        #print(tp_result.fetchall())
-        chart_data = []
-        col_names = db_result.keys()
-        for x in db_result.fetchall():
-            a = dict(zip(col_names, x))
-            chart_data.append(a)
-       
+        fpath = 'C:/Users/adedoyin.showunmi/PycharmProjects/blueprint/optimiser output data'
+        csv_data = pd.read_csv(fpath + '/optimiser results stacked v2.csv')
+        chart_data = csv_data.to_dict(orient='records')
         return jsonify(chart_data)
-    
-    except SQLAlchemyError as e:
-        print('Error executing query:', str(e))
+
+    except Exception as e:
+        print('Error reading CSV file:', str(e))
         return jsonify({'error': 'Internal Server Error'}), 500
 
-    finally:
-        if 'conn' in locals():
-            conn.close()
+#     try:
+#         conn = engine.connect()
+#         query = text('SELECT * FROM "Optimised CSV";')
+#
+#         db_result = conn.execute(query)
+#         #print(tp_result.fetchall())
+#         chart_data = []
+#         col_names = db_result.keys()
+#         for x in db_result.fetchall():
+#             a = dict(zip(col_names, x))
+#             chart_data.append(a)
+#
+#         return jsonify(chart_data)
+#
+#     except SQLAlchemyError as e:
+#         print('Error executing query:', str(e))
+#         return jsonify({'error': 'Internal Server Error'}), 500
+#
+#     finally:
+#         if 'conn' in locals():
+#             conn.close()
+#
+# np.random.seed(42)
+@app.route('/chart_response', methods = ['GET'])
+def chart_response():
+    try:
+        fpath = 'C:/Users/adedoyin.showunmi/PycharmProjects/blueprint/optimiser output data'
+        csv_data = pd.read_csv(fpath + '/response_curve_data v2.csv')
+        chart_response = csv_data.to_dict(orient='records')
+        return jsonify(chart_response)
 
-np.random.seed(42)  
+    except Exception as e:
+        print('Error reading CSV file:', str(e))
+        return jsonify({'error': 'Internal Server Error'}), 500
 
 
 def poly_function(x,y,degree):
@@ -423,6 +438,12 @@ def polynomial_data():
 @login_required
 def blueprint_results():
     return render_template('blueprint_results.html')
+
+@app.route('/blueprint_base')
+@login_required
+def blueprint_base():
+    return render_template('blueprint_results_base.html')
+
 
 @app.route('/date_range', methods = ['GET','POST'])
 def date_range():

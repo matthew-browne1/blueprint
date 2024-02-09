@@ -110,7 +110,7 @@ document.addEventListener("DOMContentLoaded", function () {
     var startDate = $("#start-date").datepicker("getDate");
     var endDate = $("#end-date").datepicker("getDate");
     var dateTuple = [startDate, endDate];
-    if (dateButtonIsChecked) {
+    if (!dateButtonIsChecked) {
       dataToSend[dates] = dateTuple;
     }
     console.log(dataToSend);
