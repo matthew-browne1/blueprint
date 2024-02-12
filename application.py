@@ -13,7 +13,7 @@ from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import joinedload
 from urllib.parse import parse_qs
 from pyomo_opt import Optimiser
-from sqlalchemy import create_engine, text, Column, DateTime, Integer
+from sqlalchemy import create_engine, text, Column, DateTime, Integer, func
 from sqlalchemy.orm import Session, declarative_base
 import datetime
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
@@ -70,7 +70,7 @@ class Snapshot(db.Model):
 
 class ServerLogs(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC))
+    timestamp = db.Column(db.DateTime, default=func.now())
     ip_address = db.Column(db.String(15))
     request_method = db.Column(db.String(10))
     request_path = db.Column(db.String(255))
