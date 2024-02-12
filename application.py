@@ -39,6 +39,8 @@ app.config['SQLALCHEMY_DATABASE_URI'] = azure_db_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = secrets.token_hex()
 app.config['SESSION_COOKIE_SECURE'] = True
+app.config['PROPAGATE_EXCEPTIONS'] = True
+app.config['DEBUG'] = True
 
 engine = create_engine(azure_db_uri)
 
@@ -65,6 +67,35 @@ class Snapshot(db.Model):
     content = db.Column(db.String, nullable=False)
     table_ids = db.Column(db.String, nullable = False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+
+class ServerLogs(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    ip_address = db.Column(db.String(15))
+    request_method = db.Column(db.String(10))
+    request_path = db.Column(db.String(255))
+    status_code = db.Column(db.Integer)
+    response_size = db.Column(db.Integer)
+
+@app.after_request
+def after_request(response):
+    try:
+        if response.status_code >= 400:
+            # Log errors
+            log_entry = ServerLogs(
+                ip_address=request.remote_addr,
+                request_method=request.method,
+                request_path=request.path,
+                status_code=response.status_code,
+                response_size=len(response.data)
+            )
+            db.session.add(log_entry)
+            db.session.commit()
+    except Exception as e:
+        # Log any exceptions that occur during logging
+        current_app.logger.error(f"Error logging request: {str(e)}")
+
+    return response
 
 @login_manager.user_loader
 def load_user(user_id):
