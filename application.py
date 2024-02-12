@@ -70,7 +70,7 @@ class Snapshot(db.Model):
 
 class ServerLogs(db.Model):
     id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default=datetime.utcnow)
+    timestamp = db.Column(db.DateTime, default=datetime.datetime.now(datetime.UTC))
     ip_address = db.Column(db.String(15))
     request_method = db.Column(db.String(10))
     request_path = db.Column(db.String(255))
