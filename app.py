@@ -767,137 +767,7 @@ def notify_selected_row():
             app.logger.info(table_data.keys())    
             return jsonify({'content': content_list, 'table_ids': table_ids_list})
 
-
-
-    
-# OPTIMISER FILE PATHS - OLD VERSION
-
-# laydown_filepath = os.path.join(input_fpath, f"Opt Inputs/Laydown_{brand}.csv")
-# seas_index_fp = os.path.join(input_fpath, f"Opt Inputs/Index_{brand}.csv")
-
-# channel_json = os.path.join(sys.path[0], "data/channel.json")
-# channel_input = pd.read_csv("optimiser input data/UK_Channel_Inputs_v3.csv")
-# channel_input.drop(columns='Unnamed: 0', inplace=True)
-
-# channel_dict = {1:channel_input.to_dict("records")}
-# ST_laydown = pd.read_csv(laydown_filepath)
-# ST_laydown.rename(columns={'Unnamed: 0':'Time_Period'}, inplace=True)
-# ST_laydown = ST_laydown.fillna(0)
-
-# streams = []
-# for var in channel_dict[1]:
-#     streams.append(var['Channel'])
-
-# ST_laydown_dates = ST_laydown['Time_Period']
-
-# with open(channel_json, "w") as file:
-#     json.dump(channel_dict, file, indent=4)
-
-# with open(channel_json) as file:
-#     ST_channel_input = json.load(file)
-
-# opt_betas_dict = Optimiser.beta_opt(laydown=ST_laydown, channel_input=channel_dict[1])
-
-# channel_input['Beta'] = list(opt_betas_dict.values())
-# channel_dict = {"1":channel_input.to_dict("records")}
-
-# max_budget = 0
 results = {}
-
-# seas_index = pd.read_csv(seas_index_fp)
-# seas_index.rename(columns={'Unnamed: 0':'Time_Period'}, inplace=True)
-
-######
-
-# USING HEADER FILE FOR ST AND LT
-
-# ST
-
-# brand = 'Gourmet'
-# input_fpath = "Y:/2023/Nestle Spiderweb/Deep Dive/Alphas/"
-
-# laydown_filepath = os.path.join(input_fpath, f"Opt Inputs/Laydown_{brand}.csv")
-# seas_index_fp = os.path.join(input_fpath, f"Opt Inputs/Index_{brand}.csv")
-# channel_json = os.path.join(sys.path[0], "data/channel.json")
-
-# alpha_headers_fp = os.path.join(input_fpath, "Alpha Work_v2.xlsx")
-# alpha_headers = pd.read_excel(alpha_headers_fp, 'Opt_Header')
-
-# ST_header = alpha_headers[alpha_headers['Range'] == brand]
-# ST_header = ST_header.iloc[:, :-3]
-
-# ST_header.drop(columns=['Channel'], inplace=True)
-# ST_header.rename(columns={'concat':'Channel', 'Adstock':'Carryover', 'Wtd ROI':'Current_ROI', 'Total Spend':"Current_Budget"}, inplace=True)
-# ST_header['Max_Spend_Cap'] = ST_header['Current_Budget']*1.5
-# ST_header['Min_Spend_Cap'] = 0
-# ST_header['CPU'] = 1
-
-# laydown = pd.read_csv(laydown_filepath)
-# laydown.rename(columns={'Unnamed: 0':'Time_Period'}, inplace=True)
-# laydown.fillna(0)
-
-# seas_index = pd.read_csv(seas_index_fp)
-# seas_index.rename(columns={'Unnamed: 0':'Time_Period'}, inplace=True)
-
-# for x in laydown.columns.tolist():
-#     if x not in ST_header['Channel'].tolist() and x != 'Time_Period':
-#         laydown.drop(columns=[x], inplace=True)
-
-
-
-# laydown_dates = laydown['Time_Period']
-# app.logger.info(f"current (incorrect) current budget: {ST_header['Current_Budget']}")
-
-# for stream in streams:
-#     ST_header.loc[ST_header['Channel'] == stream, 'Current_Budget'] = sum(laydown[stream])
-
-# ST_header_dict = ST_header.to_dict("records")
-
-# ST_opt_betas_dict = Optimiser.beta_opt(laydown=laydown, channel_input=ST_header_dict)
-# app.logger.info(ST_opt_betas_dict)
-
-# ST_header['Beta'] = list(ST_opt_betas_dict.values())
-
-# ST_header_dict = ST_header.to_dict("records")
-
-# max_spend_cap = sum(ST_header['Max_Spend_Cap'])
-
-# app.logger.info(max_spend_cap)
-
-
-
-# ### LT
-
-# alpha_headers = pd.read_excel(alpha_headers_fp, 'Opt_Header')
-
-# LT_header = alpha_headers[alpha_headers['Range'] == brand]
-# LT_header = LT_header.iloc[:, :-3]
-
-# LT_header.drop(columns=['Channel', 'Alpha'], inplace=True)
-# LT_header.rename(columns={'concat':'Channel', 'LT Adstock':'Carryover', 'LT ROI':'Current_ROI', 'LT Alpha':'Alpha', 'Total Spend':"Current_Budget"}, inplace=True)
-# LT_header['Max_Spend_Cap'] = LT_header['Current_Budget']*1.5
-# LT_header['Min_Spend_Cap'] = 0
-# LT_header['CPU'] = 1
-
-# LT_seas_index = pd.read_csv(seas_index_fp)
-# LT_seas_index.rename(columns={'Unnamed: 0':'Time_Period'}, inplace=True)
-
-# for x in laydown.columns.tolist():
-#     if x not in LT_header['Channel'].tolist() and x != 'Time_Period':
-#         laydown.drop(columns=[x], inplace=True)
-
-# app.logger.info(f"current (incorrect) current budget: {LT_header['Current_Budget']}")
-
-# for stream in streams:
-#     LT_header.loc[LT_header['Channel'] == stream, 'Current_Budget'] = sum(laydown[stream])
-
-# LT_header['Current_ROI'] = LT_header['Current_ROI'].replace(0, 0.00001)
-
-# LT_header['Beta'] = list(ST_opt_betas_dict.values())
-
-# LT_header_dict = LT_header.to_dict("records")
-
-
 
 seas_index_table_name = 'seas_index'
 ST_db_table_name = 'ST_header'
@@ -971,18 +841,21 @@ def optimise():
     #     app.logger.info(start_date)
     #     app.logger.info(end_date)
 
-    app.logger.info(f"table id = {table_id}")
+    app.logger.info(f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
     
     # NEED TO ADD HANDLING SO THAT EDITS MADE TO TABLE DATA ARE ADDED TO THE ST_HEADER
 
     app.logger.info(f"laydown = {laydown}")
     app.logger.info(f"CPU = {[entry['CPU'] for entry in ST_header_dict]}")
+
     global results
+
     streams = [entry['Channel'] for entry in ST_header_dict]
 
     if blend.lower() == "blend":
         if obj_func.lower() == "profit":
             results[table_id] = Optimiser.blended_profit_max(ST_input = ST_header_dict, LT_input=LT_header_dict, laydown=laydown, seas_index=seas_index_fetched, exh_budget='yes', max_budget=max_budget, num_weeks=num_weeks)
+            app.logger.info(results[table_id])
         elif obj_func.lower() == 'revenue':
             ST_res = list(Optimiser.revenue_max(channel_input = ST_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
             LT_res = list(Optimiser.revenue_max(channel_input = LT_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
@@ -1377,5 +1250,3 @@ if __name__ == '__main__':
         # for user in user_data:
         #     add_user(user)
         app.run(host='0.0.0.0', port=os.environ.get('PORT', 5000), debug=True)
-
-
