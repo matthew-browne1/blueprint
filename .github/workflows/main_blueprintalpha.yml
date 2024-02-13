@@ -36,7 +36,7 @@ jobs:
             data \
             static \
             templates \
-            application.py \
+            app.py \
             alpha_opt.py \
             pyomo_opt.py \
             requirements.txt
