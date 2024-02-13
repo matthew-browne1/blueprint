@@ -484,26 +484,26 @@ class Optimiser:
             cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
             app.logger.info(f"cpu for {stream}: {cost_per_stream}")
             allocation = budget / cost_per_stream
-            print(f'allocation: {allocation}')
+            app.logger.info(f'allocation: {allocation}')
             pct_laydown = []
             for x in range(len(recorded_impressions[stream])):
                 try:
                     pct_laydown.append(recorded_impressions[stream][x]/sum(recorded_impressions[stream]))
                 except:
                     pct_laydown.append(0)
-            print(f"pct_laydown: {pct_laydown}")
+            app.logger.info(f"pct_laydown: {pct_laydown}")
             pam = [pct_laydown[i]*allocation for i in range(len(pct_laydown))]
             carryover_list = []
             carryover_list.append(pam[0])
             for x in range(1,len(pam)):
                 carryover_val = pam[x] + carryover_list[x-1]*carryover_dict[stream]
                 carryover_list.append(carryover_val)
-            print(f"carryover list: {carryover_list}")
+            app.logger.info(f"carryover list: {carryover_list}")
             rev_list = []
             for x in carryover_list:
                 rev_val = beta_dict[stream] * ((1 - exp(-alpha_dict[stream]*x))) 
                 rev_list.append(rev_val)
-            print(f"rev list: {rev_list}")
+            app.logger.info(f"rev list: {rev_list}")
             indexed_vals = [a * b for a, b in zip(rev_list, seas_dict[stream])]
             total_rev = sum(indexed_vals)
             infsum = 0
@@ -540,8 +540,9 @@ class Optimiser:
         def min_roi_constraint_rule(model, stream):
             return model.revenue_expr[stream] / model.stream_budget[stream] >= 0.00001
         model.min_roi_constraints = Constraint(streams, rule=min_roi_constraint_rule)
-
-        solver = SolverFactory('ipopt', executable = r"Ipopt\bin\ipopt.exe")
+        current_directory = os.getcwd()
+        ipopt_executable = os.path.join(current_directory, "Ipopt", "bin", "ipopt")
+        solver = SolverFactory('ipopt', executable = ipopt_executable)
 
         results = solver.solve(model)
 
