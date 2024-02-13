@@ -24,9 +24,9 @@ from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import secrets
 import logging
+from logging.handlers import RotatingFileHandler
 
 app = Flask(__name__)
-logging.basicConfig(filename="app.log", level=logging.DEBUG)
 azure_host = "blueprintalpha.postgres.database.azure.com"
 azure_user = "bptestadmin"
 azure_password = "Password!"
@@ -68,34 +68,23 @@ class Snapshot(db.Model):
     table_ids = db.Column(db.String, nullable = False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-class ServerLogs(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default=func.now())
-    ip_address = db.Column(db.String(15))
-    request_method = db.Column(db.String(10))
-    request_path = db.Column(db.String(255))
-    status_code = db.Column(db.Integer)
-    response_size = db.Column(db.Integer)
-
-@app.after_request
-def after_request(response):
-    try:
-        if response.status_code >= 400:
-            # Log errors
-            log_entry = ServerLogs(
-                ip_address=request.remote_addr,
-                request_method=request.method,
-                request_path=request.path,
-                status_code=response.status_code,
-                response_size=len(response.data)
-            )
-            db.session.add(log_entry)
+class DatabaseHandler(logging.Handler):
+    def emit(self, record):
+        try:
+            message = self.format(record)
+            db.session.add(Log(message=message))
             db.session.commit()
-    except Exception as e:
-        # Log any exceptions that occur during logging
-        current_app.logger.error(f"Error logging request: {str(e)}")
+        except Exception:
+            self.handleError(record)
 
-    return response
+database_handler = DatabaseHandler()
+database_handler.setLevel(logging.DEBUG)
+app.logger.addHandler(database_handler)
+
+class Log(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+    message = db.Column(db.String, nullable=False)
 
 @login_manager.user_loader
 def load_user(user_id):
