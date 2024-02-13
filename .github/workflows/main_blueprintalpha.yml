@@ -36,9 +36,8 @@ jobs:
             data \
             static \
             templates \
+            Ipopt \
             app.py \
-            alpha_opt.py \
-            pyomo_opt.py \
             requirements.txt
 
       - name: List contents of the ZIP artifact

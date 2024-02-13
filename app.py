@@ -459,6 +459,8 @@ class Optimiser:
         LT_alpha_list = [float(entry['Alpha']) for entry in LT_input]
         LT_alpha_dict = dict(zip(streams, LT_alpha_list))
         
+        app.logger.info(f"from within pyomo_opt method: spend cap dict: {spend_cap_dict}, ST cpu: {ST_cost_per_dict}, LT cpu: {LT_cost_per_dict}, ST carryover dict: {ST_carryover_dict}, LT carryover dict: {LT_carryover_dict}, ST beta dict: {ST_beta_dict}, LT beta dict: {LT_beta_dict}, ST alpha dict: {ST_alpha_dict}, LT alpha dict: {LT_alpha_dict}")
+
         recorded_impressions = {}
         for x in laydown.columns:
             recorded_impressions[x] = laydown[x].to_list()
@@ -480,33 +482,28 @@ class Optimiser:
         def rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dict, beta_dict):
             
             cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
-            print("cpu:")
-            print(cost_per_stream)
+            app.logger.info(f"cpu for {stream}: {cost_per_stream}")
             allocation = budget / cost_per_stream
-            print('allocation:')
-            print(allocation)
+            print(f'allocation: {allocation}')
             pct_laydown = []
             for x in range(len(recorded_impressions[stream])):
                 try:
                     pct_laydown.append(recorded_impressions[stream][x]/sum(recorded_impressions[stream]))
                 except:
                     pct_laydown.append(0)
-            print("pct_laydown:")
-            print(pct_laydown)
+            print(f"pct_laydown: {pct_laydown}")
             pam = [pct_laydown[i]*allocation for i in range(len(pct_laydown))]
             carryover_list = []
             carryover_list.append(pam[0])
             for x in range(1,len(pam)):
                 carryover_val = pam[x] + carryover_list[x-1]*carryover_dict[stream]
                 carryover_list.append(carryover_val)
-            print("carryover list:")
-            print(carryover_list)
+            print(f"carryover list: {carryover_list}")
             rev_list = []
             for x in carryover_list:
                 rev_val = beta_dict[stream] * ((1 - exp(-alpha_dict[stream]*x))) 
                 rev_list.append(rev_val)
-            print("rev list")
-            print(rev_list)
+            print(f"rev list: {rev_list}")
             indexed_vals = [a * b for a, b in zip(rev_list, seas_dict[stream])]
             total_rev = sum(indexed_vals)
             infsum = 0
@@ -544,17 +541,17 @@ class Optimiser:
             return model.revenue_expr[stream] / model.stream_budget[stream] >= 0.00001
         model.min_roi_constraints = Constraint(streams, rule=min_roi_constraint_rule)
 
-        solver = SolverFactory('ipopt', executable = r"C:\Ipopt\bin\ipopt.exe")
+        solver = SolverFactory('ipopt', executable = r"Ipopt\bin\ipopt.exe")
 
         results = solver.solve(model)
 
         if results.solver.termination_condition == TerminationCondition.optimal:
             opt_budgets = [model.stream_budget[stream].value for stream in streams]
             opt_budgets_dict = dict(zip(streams, opt_budgets))
-            print("Optimal Solution Found:")
+            app.logger.info("Optimal Solution Found:")
             for stream in streams:
-                print(f"{stream} Budget: {model.stream_budget[stream].value}")
-            print(f"Maximised Profit: {model.prof_max()}")
+                app.logger.info(f"{stream} Budget: {model.stream_budget[stream].value}")
+            app.logger.info(f"Maximised Profit: {model.prof_max()}")
         else:
             print("Solver did not find an optimal solution.")
             print(f"solution failed using budget input of: {max_budget} with max total spend cap of: {sum(spend_cap_list)}")
