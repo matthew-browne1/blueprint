@@ -28,6 +28,10 @@ from logging.handlers import RotatingFileHandler
 from pyomo.environ import *
 from pyomo.opt import SolverFactory
 import statsmodels as sm
+import io
+import pyutilib.subprocess.GlobalData
+
+pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 
 class Optimiser:
 
@@ -540,11 +544,11 @@ class Optimiser:
         def min_roi_constraint_rule(model, stream):
             return model.revenue_expr[stream] / model.stream_budget[stream] >= 0.00001
         model.min_roi_constraints = Constraint(streams, rule=min_roi_constraint_rule)
-        current_directory = os.getcwd()
-        ipopt_executable = os.path.join(current_directory, "Ipopt", "bin", "ipopt")
-        solver = SolverFactory('ipopt', executable = ipopt_executable)
+      
+        ipopt_executable = os.path.join('/site/wwwroot/Ipopt/bin/ipopt')
 
-        results = solver.solve(model)
+        solver = SolverFactory('ipopt', executable = ipopt_executable)
+        results = solver.solve(model, tee=True)
 
         if results.solver.termination_condition == TerminationCondition.optimal:
             opt_budgets = [model.stream_budget[stream].value for stream in streams]
@@ -613,6 +617,15 @@ class DatabaseHandler(logging.Handler):
 database_handler = DatabaseHandler()
 database_handler.setLevel(logging.DEBUG)
 app.logger.addHandler(database_handler)
+
+class PyomoLogHandler(logging.Handler):
+    def emit(self, record):
+        log_message = self.format(record)
+        db.session.add(Log(message=log_message))
+        db.session.commit()
+
+pyomo_logger = logging.getLogger('pyomo')
+pyomo_logger.addHandler(PyomoLogHandler())
 
 class Log(db.Model):
     id = db.Column(db.Integer, primary_key=True)
