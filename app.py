@@ -543,8 +543,19 @@ class Optimiser:
             return model.revenue_expr[stream] / model.stream_budget[stream] >= 0.00001
         model.min_roi_constraints = Constraint(streams, rule=min_roi_constraint_rule)
 
-        solver = SolverFactory('ipopt', executable = '/Ipopt/bin/ipopt')
+
+
+        current_dir = os.getcwd()
+        ipopt_fp = os.path.join(current_dir, 'Ipopt/bin/ipopt')
+        print(ipopt_fp)
+
+        solver = SolverFactory('ipopt', executable = ipopt_fp)
         results = solver.solve(model, tee=True)
+
+
+
+
+
 
         if results.solver.termination_condition == TerminationCondition.optimal:
             opt_budgets = [model.stream_budget[stream].value for stream in streams]
