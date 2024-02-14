@@ -545,7 +545,7 @@ class Optimiser:
             return model.revenue_expr[stream] / model.stream_budget[stream] >= 0.00001
         model.min_roi_constraints = Constraint(streams, rule=min_roi_constraint_rule)
       
-        ipopt_executable = os.path.join('/site/wwwroot/Ipopt/bin/ipopt')
+        ipopt_executable = os.path.join('/home/site/wwwroot/Ipopt/bin/ipopt')
 
         solver = SolverFactory('ipopt', executable = ipopt_executable)
         results = solver.solve(model, tee=True)
