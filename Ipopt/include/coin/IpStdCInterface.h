@@ -1,27 +1,15 @@
 /*************************************************************************
-   Copyright (C) 2004, 2010 International Business Machines and others.
+   Copyright (C) 2004, 2006 International Business Machines and others.
    All Rights Reserved.
-   This code is published under the Eclipse Public License.
+   This code is published under the Common Public License.
  
-   $Id: IpStdCInterface.h 2082 2012-02-16 03:00:34Z andreasw $
+   $Id: IpStdCInterface.h 822 2006-12-19 01:24:42Z andreasw $
  
    Authors:  Carl Laird, Andreas Waechter     IBM    2004-09-02
  *************************************************************************/
 
 #ifndef __IPSTDCINTERFACE_H__
 #define __IPSTDCINTERFACE_H__
-
-#ifndef IPOPT_EXPORT
-#ifdef _MSC_VER
-#ifdef IPOPT_DLL
-#define IPOPT_EXPORT(type) __declspec(dllexport) type __cdecl
-#else
-#define IPOPT_EXPORT(type) type __cdecl
-#endif
-#else 
-#define IPOPT_EXPORT(type) type
-#endif
-#endif
 
 #ifdef __cplusplus
 extern "C"
@@ -98,21 +86,6 @@ extern "C"
                             Index nele_hess, Index *iRow, Index *jCol,
                             Number *values, UserDataPtr user_data);
 
-  /** Type defining the callback function for giving intermediate
-   *  execution control to the user.  If set, it is called once per
-   *  iteration, providing the user with some information on the state
-   *  of the optimization.  This can be used to print some
-   *  user-defined output.  It also gives the user a way to terminate
-   *  the optimization prematurely.  If this method returns false,
-   *  Ipopt will terminate the optimization. */
-  typedef Bool (*Intermediate_CB)(Index alg_mod, /* 0 is regular, 1 is resto */
-				  Index iter_count, Number obj_value,
-				  Number inf_pr, Number inf_du,
-				  Number mu, Number d_norm,
-				  Number regularization_size,
-				  Number alpha_du, Number alpha_pr,
-				  Index ls_trials, UserDataPtr user_data);
-
   /** Function for creating a new Ipopt Problem object.  This function
    *  returns an object that can be passed to the IpoptSolve call.  It
    *  contains the basic definition of the optimization problem, such
@@ -124,7 +97,7 @@ extern "C"
    *
    *  If NULL is returned, there was a problem with one of the inputs
    *  or reading the options file. */
-  IPOPT_EXPORT(IpoptProblem) CreateIpoptProblem(
+  IpoptProblem CreateIpoptProblem(
       Index n             /** Number of optimization variables */
     , Number* x_L         /** Lower bounds on variables. This array of
                               size n is copied internally, so that the
@@ -181,54 +154,42 @@ extern "C"
 
   /** Method for freeing a previously created IpoptProblem.  After
       freeing an IpoptProblem, it cannot be used anymore. */
-  IPOPT_EXPORT(void) FreeIpoptProblem(IpoptProblem ipopt_problem);
+  void FreeIpoptProblem(IpoptProblem ipopt_problem);
 
 
   /** Function for adding a string option.  Returns FALSE the option
    *  could not be set (e.g., if keyword is unknown) */
-  IPOPT_EXPORT(Bool) AddIpoptStrOption(IpoptProblem ipopt_problem, char* keyword, char* val);
+  Bool AddIpoptStrOption(IpoptProblem ipopt_problem, char* keyword, char* val);
 
   /** Function for adding a Number option.  Returns FALSE the option
    *  could not be set (e.g., if keyword is unknown) */
-  IPOPT_EXPORT(Bool) AddIpoptNumOption(IpoptProblem ipopt_problem, char* keyword, Number val);
+  Bool AddIpoptNumOption(IpoptProblem ipopt_problem, char* keyword, Number val);
 
   /** Function for adding an Int option.  Returns FALSE the option
    *  could not be set (e.g., if keyword is unknown) */
-  IPOPT_EXPORT(Bool) AddIpoptIntOption(IpoptProblem ipopt_problem, char* keyword, Int val);
+  Bool AddIpoptIntOption(IpoptProblem ipopt_problem, char* keyword, Int val);
 
   /** Function for opening an output file for a given name with given
    *  printlevel.  Returns false, if there was a problem opening the
    *  file. */
-  IPOPT_EXPORT(Bool) OpenIpoptOutputFile(IpoptProblem ipopt_problem, char* file_name,
+  Bool OpenIpoptOutputFile(IpoptProblem ipopt_problem, char* file_name,
                            Int print_level);
 
   /** Optional function for setting scaling parameter for the NLP.
    *  This corresponds to the get_scaling_parameters method in TNLP.
    *  If the pointers x_scaling or g_scaling are NULL, then no scaling
    *  for x resp. g is done. */
-  IPOPT_EXPORT(Bool) SetIpoptProblemScaling(IpoptProblem ipopt_problem,
+  Bool SetIpoptProblemScaling(IpoptProblem ipopt_problem,
 			      Number obj_scaling,
 			      Number* x_scaling,
 			      Number* g_scaling);
-
-  /** Setting a callback function for the "intermediate callback"
-   *  method in the TNLP.  This gives control back to the user once
-   *  per iteration.  If set, it provides the user with some
-   *  information on the state of the optimization.  This can be used
-   *  to print some user-defined output.  It also gives the user a way
-   *  to terminate the optimization prematurely.  If the callback
-   *  method returns false, Ipopt will terminate the optimization.
-   *  Calling this set method to set the CB pointer to NULL disables
-   *  the intermediate callback functionality. */
-  IPOPT_EXPORT(Bool) SetIntermediateCallback(IpoptProblem ipopt_problem,
-					     Intermediate_CB intermediate_cb);
 
   /** Function calling the Ipopt optimization algorithm for a problem
       previously defined with CreateIpoptProblem.  The return
       specified outcome of the optimization procedure (e.g., success,
       failure etc).
    */
-  IPOPT_EXPORT(enum ApplicationReturnStatus) IpoptSolve(
+  enum ApplicationReturnStatus IpoptSolve(
       IpoptProblem ipopt_problem
                          /** Problem that is to be optimized.  Ipopt
                              will use the options previously specified with
@@ -239,31 +200,23 @@ extern "C"
                              (output only - ignored if set to NULL) */
     , Number* obj_val    /** Final value of objective function
                              (output only - ignored if set to NULL) */
-    , Number* mult_g     /** Input: Initial values for the constraint
-                                    multipliers (only if warm start option
-                                    is chosen)
-                             Output: Final multipliers for constraints
-                                     (ignored if set to NULL) */
-    , Number* mult_x_L   /** Input: Initial values for the multipliers for
-                                    lower variable bounds (only if warm start
-                                    option is chosen)
-                             Output: Final multipliers for lower variable
-                                     bounds (ignored if set to NULL) */
-    , Number* mult_x_U   /** Input: Initial values for the multipliers for
-                                    upper variable bounds (only if warm start
-                                    option is chosen)
-                             Output: Final multipliers for upper variable
-                                     bounds (ignored if set to NULL) */
+    , Number* mult_g     /** Final multipliers for constraints
+                             (output only - ignored if set to NULL) */
+    , Number* mult_x_L   /** Final multipliers for lower variable bounds
+                             (output only - ignored if set to NULL) */
+    , Number* mult_x_U   /** Final multipliers for upper variable bounds
+                             (output only - ignored if set to NULL) */
     , UserDataPtr user_data
-                         /** Pointer to user data.  This will be
-                             passed unmodified to the callback
-                             functions. */
+    /** Pointer to user data.  This will be
+    passed unmodified to the callback
+    functions. */
   );
 
   /**
   void IpoptStatisticsCounts;
 
   void IpoptStatisticsInfeasibilities; */
+
 #ifdef __cplusplus
 } /* extern "C" { */
 #endif

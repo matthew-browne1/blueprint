@@ -1,8 +1,8 @@
 // Copyright (C) 2004, 2009 International Business Machines and others.
 // All Rights Reserved.
-// This code is published under the Eclipse Public License.
+// This code is published under the Common Public License.
 //
-// $Id: IpTNLP.hpp 2212 2013-04-14 14:51:52Z stefan $
+// $Id: IpTNLP.hpp 1462 2009-06-02 04:17:13Z andreasw $
 //
 // Authors:  Carl Laird, Andreas Waechter     IBM    2004-08-13
 
@@ -126,8 +126,8 @@ namespace Ipopt
     }
 
     /** overload this method to return the variables linearity
-     * (TNLP::LINEAR or TNLP::NON_LINEAR). The var_types
-     *  array has been allocated with length at least n. (default implementation
+     * (TNLP::Linear or TNLP::NonLinear). The var_types
+     *  array should be allocated with length at least n. (default implementation
      *  just return false and does not fill the array).*/
     virtual bool get_variables_linearity(Index n, LinearityType* var_types)
     {
@@ -135,7 +135,7 @@ namespace Ipopt
     }
 
     /** overload this method to return the constraint linearity.
-     *  array has been allocated with length at least n. (default implementation
+     * array should be alocated with length at least n. (default implementation
      *  just return false and does not fill the array).*/
     virtual bool get_constraints_linearity(Index m, LinearityType* const_types)
     {
@@ -211,28 +211,6 @@ namespace Ipopt
                                    Number obj_value,
                                    const IpoptData* ip_data,
                                    IpoptCalculatedQuantities* ip_cq)=0;
-    /** This method is called just before finalize_solution.  With
-     *  this method, the algorithm returns any metadata collected
-     *  during its run, including the metadata provided by the user
-     *  with the above get_var_con_metadata.  Each metadata can be of
-     *  type string, integer, and numeric. It can be associated to
-     *  either the variables or the constraints.  The metadata that
-     *  was associated with the primal variable vector is stored in
-     *  var_..._md.  The metadata associated with the constraint
-     *  multipliers is stored in con_..._md.  The metadata associated
-     *  with the bound multipliers is stored in var_..._md, with the
-     *  suffixes "_z_L", and "_z_U", denoting lower and upper
-     *  bounds. */
-    virtual void finalize_metadata(Index n,
-                                   const StringMetaDataMapType& var_string_md,
-                                   const IntegerMetaDataMapType& var_integer_md,
-                                   const NumericMetaDataMapType& var_numeric_md,
-                                   Index m,
-                                   const StringMetaDataMapType& con_string_md,
-                                   const IntegerMetaDataMapType& con_integer_md,
-                                   const NumericMetaDataMapType& con_numeric_md)
-    {}
-
 
     /** Intermediate Callback method for the user.  Providing dummy
      *  default implementation.  For details see IntermediateCallBack

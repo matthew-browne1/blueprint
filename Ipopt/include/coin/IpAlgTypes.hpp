@@ -1,8 +1,8 @@
-// Copyright (C) 2005, 2010 International Business Machines and others.
+// Copyright (C) 2005, 2009 International Business Machines and others.
 // All Rights Reserved.
-// This code is published under the Eclipse Public License.
+// This code is published under the Common Public License.
 //
-// $Id: IpAlgTypes.hpp 1861 2010-12-21 21:34:47Z andreasw $
+// $Id: IpAlgTypes.hpp 1430 2009-04-20 20:58:25Z andreasw $
 //
 // Authors:  Carl Laird, Andreas Waechter     IBM    2005-07-19
 
@@ -35,8 +35,7 @@ namespace Ipopt
     TOO_FEW_DEGREES_OF_FREEDOM,
     INVALID_OPTION,
     OUT_OF_MEMORY,
-    INTERNAL_ERROR,
-    UNASSIGNED
+    INTERNAL_ERROR
   };
   //@}
 

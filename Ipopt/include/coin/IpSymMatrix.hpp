@@ -1,8 +1,8 @@
 // Copyright (C) 2004, 2008 International Business Machines and others.
 // All Rights Reserved.
-// This code is published under the Eclipse Public License.
+// This code is published under the Common Public License.
 //
-// $Id: IpSymMatrix.hpp 2161 2013-01-01 20:39:05Z stefan $
+// $Id: IpSymMatrix.hpp 1280 2008-08-10 21:19:31Z andreasw $
 //
 // Authors:  Carl Laird, Andreas Waechter     IBM    2004-08-13
 
@@ -27,7 +27,6 @@ namespace Ipopt
     //@{
     /** Constructor, taking the owner_space.
      */
-    inline
     SymMatrix(const SymMatrixSpace* owner_space);
 
     /** Destructor */
@@ -38,11 +37,9 @@ namespace Ipopt
     /** @name Information about the size of the matrix */
     //@{
     /** Dimension of the matrix (number of rows and columns) */
-    inline
     Index Dim() const;
     //@}
 
-    inline
     SmartPtr<const SymMatrixSpace> OwnerSymMatrixSpace() const;
 
   protected:

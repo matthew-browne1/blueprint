@@ -1,8 +1,8 @@
 // Copyright (C) 2004, 2006 International Business Machines and others.
 // All Rights Reserved.
-// This code is published under the Eclipse Public License.
+// This code is published under the Common Public License.
 //
-// $Id: IpOptionsList.hpp 1861 2010-12-21 21:34:47Z andreasw $
+// $Id: IpOptionsList.hpp 956 2007-04-03 17:24:28Z andreasw $
 //
 // Authors:  Carl Laird, Andreas Waechter     IBM    2004-08-13
 
@@ -160,7 +160,7 @@ namespace Ipopt
     {}
 
     /** Overloaded Equals Operator */
-    virtual void operator=(const OptionsList& source)
+    void operator=(const OptionsList& source)
     {
       options_ = source.options_;
       reg_options_ = source.reg_options_;
@@ -169,70 +169,70 @@ namespace Ipopt
     //@}
 
     /** Method for clearing all previously set options */
-    virtual void clear()
+    void clear()
     {
       options_.clear();
     }
 
     /** @name Get / Set Methods */
     //@{
-    virtual void SetRegisteredOptions(const SmartPtr<RegisteredOptions> reg_options)
+    void SetRegisteredOptions(const SmartPtr<RegisteredOptions> reg_options)
     {
       reg_options_ = reg_options;
     }
-    virtual void SetJournalist(const SmartPtr<Journalist> jnlst)
+    void SetJournalist(const SmartPtr<Journalist> jnlst)
     {
       jnlst_ = jnlst;
     }
     //@}
     /** @name Methods for setting options */
     //@{
-    virtual bool SetStringValue(const std::string& tag, const std::string& value,
-                                bool allow_clobber = true, bool dont_print = false);
-    virtual bool SetNumericValue(const std::string& tag, Number value,
-                                 bool allow_clobber = true, bool dont_print = false);
-    virtual bool SetIntegerValue(const std::string& tag, Index value,
-                                 bool allow_clobber = true, bool dont_print = false);
+    bool SetStringValue(const std::string& tag, const std::string& value,
+                        bool allow_clobber = true, bool dont_print = false);
+    bool SetNumericValue(const std::string& tag, Number value,
+                         bool allow_clobber = true, bool dont_print = false);
+    bool SetIntegerValue(const std::string& tag, Index value,
+                         bool allow_clobber = true, bool dont_print = false);
     //@}
 
     /** @name Methods for setting options only if they have not been
      *  set before*/
     //@{
-    virtual bool SetStringValueIfUnset(const std::string& tag, const std::string& value,
-                                       bool allow_clobber = true, bool dont_print = false);
-    virtual bool SetNumericValueIfUnset(const std::string& tag, Number value,
-                                        bool allow_clobber = true, bool dont_print = false);
-    virtual bool SetIntegerValueIfUnset(const std::string& tag, Index value,
-                                        bool allow_clobber = true, bool dont_print = false);
+    bool SetStringValueIfUnset(const std::string& tag, const std::string& value,
+                               bool allow_clobber = true, bool dont_print = false);
+    bool SetNumericValueIfUnset(const std::string& tag, Number value,
+                                bool allow_clobber = true, bool dont_print = false);
+    bool SetIntegerValueIfUnset(const std::string& tag, Index value,
+                                bool allow_clobber = true, bool dont_print = false);
     //@}
 
     /** @name Methods for retrieving values from the options list.  If
      *  a tag is not found, the methods return false, and value is set
      *  to the default value defined in the registered options. */
     //@{
-    virtual bool GetStringValue(const std::string& tag, std::string& value,
-                                const std::string& prefix) const;
-    virtual bool GetEnumValue(const std::string& tag, Index& value,
-                              const std::string& prefix) const;
-    virtual bool GetBoolValue(const std::string& tag, bool& value,
-                              const std::string& prefix) const;
-    virtual bool GetNumericValue(const std::string& tag, Number& value,
-                                 const std::string& prefix) const;
-    virtual bool GetIntegerValue(const std::string& tag, Index& value,
-                                 const std::string& prefix) const;
+    bool GetStringValue(const std::string& tag, std::string& value,
+                        const std::string& prefix) const;
+    bool GetEnumValue(const std::string& tag, Index& value,
+                      const std::string& prefix) const;
+    bool GetBoolValue(const std::string& tag, bool& value,
+                      const std::string& prefix) const;
+    bool GetNumericValue(const std::string& tag, Number& value,
+                         const std::string& prefix) const;
+    bool GetIntegerValue(const std::string& tag, Index& value,
+                         const std::string& prefix) const;
     //@}
 
     /** Get a string with the list of all options (tag, value, counter) */
-    virtual void PrintList(std::string& list) const;
+    void PrintList(std::string& list) const;
 
     /** Get a string with the list of all options set by the user
      *  (tag, value, use/notused).  Here, options with dont_print flag
      *  set to true are not printed. */
-    virtual void PrintUserOptions(std::string& list) const;
+    void PrintUserOptions(std::string& list) const;
 
     /** Read options from the stream is.  Returns false if
      *  an error was encountered. */
-    virtual bool ReadFromStream(const Journalist& jnlst, std::istream& is);
+    bool ReadFromStream(const Journalist& jnlst, std::istream& is);
 
   private:
     /**@name Default Compiler Generated Methods

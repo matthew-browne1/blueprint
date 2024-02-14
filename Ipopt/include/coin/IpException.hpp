@@ -1,8 +1,8 @@
 // Copyright (C) 2004, 2006 International Business Machines and others.
 // All Rights Reserved.
-// This code is published under the Eclipse Public License.
+// This code is published under the Common Public License.
 //
-// $Id: IpException.hpp 2023 2011-06-18 18:49:49Z stefan $
+// $Id: IpException.hpp 1019 2007-06-24 03:52:34Z andreasw $
 //
 // Authors:  Carl Laird, Andreas Waechter     IBM    2004-08-13
 
@@ -118,8 +118,6 @@ namespace Ipopt
     std::string type_;
   };
 
-} // namespace Ipopt
-
 #define THROW_EXCEPTION(__except_type, __msg) \
   throw __except_type( (__msg), (__FILE__), (__LINE__) );
 
@@ -132,16 +130,18 @@ namespace Ipopt
   }
 
 #define DECLARE_STD_EXCEPTION(__except_type) \
-    class __except_type : public Ipopt::IpoptException \
+    class __except_type : public IpoptException \
     { \
     public: \
-      __except_type(std::string msg, std::string fname, Ipopt::Index line) \
- : Ipopt::IpoptException(msg,fname,line, #__except_type) {} \
+      __except_type(std::string msg, std::string fname, Index line) \
+ : IpoptException(msg,fname,line, #__except_type) {} \
       __except_type(const __except_type& copy) \
- : Ipopt::IpoptException(copy) {} \
+ : IpoptException(copy) {} \
     private: \
        __except_type(); \
        void operator=(const __except_type&); \
     }
+
+} // namespace Ipopt
 
 #endif

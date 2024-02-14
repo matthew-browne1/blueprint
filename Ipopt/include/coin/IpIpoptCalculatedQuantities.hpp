@@ -1,8 +1,8 @@
-// Copyright (C) 2004, 2011 International Business Machines and others.
+// Copyright (C) 2004, 2008 International Business Machines and others.
 // All Rights Reserved.
-// This code is published under the Eclipse Public License.
+// This code is published under the Common Public License.
 //
-// $Id: IpIpoptCalculatedQuantities.hpp 2020 2011-06-16 20:46:16Z andreasw $
+// $Id: IpIpoptCalculatedQuantities.hpp 1521 2009-07-15 22:26:15Z andreasw $
 //
 // Authors:  Carl Laird, Andreas Waechter     IBM    2004-08-13
 
@@ -140,13 +140,13 @@ namespace Ipopt
     /** @name Objective function */
     //@{
     /** Value of objective function (at current point) */
-    virtual Number curr_f();
+    Number curr_f();
     /** Unscaled value of the objective function (at the current point) */
-    virtual Number unscaled_curr_f();
+    Number unscaled_curr_f();
     /** Value of objective function (at trial point) */
-    virtual Number trial_f();
+    Number trial_f();
     /** Unscaled value of the objective function (at the trial point) */
-    virtual Number unscaled_trial_f();
+    Number unscaled_trial_f();
     /** Gradient of objective function (at current point) */
     SmartPtr<const Vector> curr_grad_f();
     /** Gradient of objective function (at trial point) */
@@ -158,11 +158,11 @@ namespace Ipopt
     /** Barrier Objective Function Value
      * (at current iterate with current mu)
      */
-    virtual Number curr_barrier_obj();
+    Number curr_barrier_obj();
     /** Barrier Objective Function Value
      * (at trial point with current mu)
      */
-    virtual Number trial_barrier_obj();
+    Number trial_barrier_obj();
 
     /** Gradient of barrier objective function with respect to x
      * (at current point with current mu) */
@@ -187,8 +187,6 @@ namespace Ipopt
     SmartPtr<const Vector> unscaled_curr_c();
     /** c(x) (at trial point) */
     SmartPtr<const Vector> trial_c();
-    /** unscaled c(x) (at trial point) */
-    SmartPtr<const Vector> unscaled_trial_c();
     /** d(x) (at current point) */
     SmartPtr<const Vector> curr_d();
     /** unscaled d(x) (at current point) */
@@ -240,23 +238,19 @@ namespace Ipopt
     /** Constraint Violation (at current iterate). This value should
      *  be used in the line search, and not curr_primal_infeasibility().
      *  What type of norm is used depends on constr_viol_normtype */
-    virtual Number curr_constraint_violation();
+    Number curr_constraint_violation();
     /** Constraint Violation (at trial point). This value should
      *  be used in the line search, and not curr_primal_infeasibility().
      *  What type of norm is used depends on constr_viol_normtype */
-    virtual Number trial_constraint_violation();
+    Number trial_constraint_violation();
     /** Real constraint violation in a given norm (at current
      *  iterate).  This considers the inequality constraints without
      *  slacks. */
-    virtual Number curr_nlp_constraint_violation(ENormType NormType);
+    Number curr_nlp_constraint_violation(ENormType NormType);
     /** Unscaled real constraint violation in a given norm (at current
      *  iterate).  This considers the inequality constraints without
      *  slacks. */
-    virtual Number unscaled_curr_nlp_constraint_violation(ENormType NormType);
-    /** Unscaled real constraint violation in a given norm (at trial
-     *  iterate).  This considers the inequality constraints without
-     *  slacks. */
-    virtual Number unscaled_trial_nlp_constraint_violation(ENormType NormType);
+    Number unscaled_curr_nlp_constraint_violation(ENormType NormType);
     //@}
 
     /** @name Hessian matrices */
@@ -307,26 +301,26 @@ namespace Ipopt
     SmartPtr<const Vector> curr_relaxed_compl_s_U();
 
     /** Primal infeasibility in a given norm (at current iterate). */
-    virtual Number curr_primal_infeasibility(ENormType NormType);
+    Number curr_primal_infeasibility(ENormType NormType);
     /** Primal infeasibility in a given norm (at trial point) */
-    virtual Number trial_primal_infeasibility(ENormType NormType);
+    Number trial_primal_infeasibility(ENormType NormType);
 
     /** Dual infeasibility in a given norm (at current iterate) */
-    virtual Number curr_dual_infeasibility(ENormType NormType);
+    Number curr_dual_infeasibility(ENormType NormType);
     /** Dual infeasibility in a given norm (at trial iterate) */
-    virtual Number trial_dual_infeasibility(ENormType NormType);
+    Number trial_dual_infeasibility(ENormType NormType);
     /** Unscaled dual infeasibility in a given norm (at current iterate) */
-    virtual Number unscaled_curr_dual_infeasibility(ENormType NormType);
+    Number unscaled_curr_dual_infeasibility(ENormType NormType);
 
     /** Complementarity (for all complementarity conditions together)
      *  in a given norm (at current iterate) */
-    virtual Number curr_complementarity(Number mu, ENormType NormType);
+    Number curr_complementarity(Number mu, ENormType NormType);
     /** Complementarity (for all complementarity conditions together)
      *  in a given norm (at trial iterate) */
-    virtual Number trial_complementarity(Number mu, ENormType NormType);
+    Number trial_complementarity(Number mu, ENormType NormType);
     /** Complementarity (for all complementarity conditions together)
      *  in a given norm (at current iterate) without NLP scaling. */
-    virtual Number unscaled_curr_complementarity(Number mu, ENormType NormType);
+    Number unscaled_curr_complementarity(Number mu, ENormType NormType);
 
     /** Centrality measure (in spirit of the -infinity-neighborhood. */
     Number CalcCentralityMeasure(const Vector& compl_x_L,
@@ -334,22 +328,22 @@ namespace Ipopt
                                  const Vector& compl_s_L,
                                  const Vector& compl_s_U);
     /** Centrality measure at current point */
-    virtual Number curr_centrality_measure();
+    Number curr_centrality_measure();
 
     /** Total optimality error for the original NLP at the current
      *  iterate, using scaling factors based on multipliers.  Note
      *  that here the constraint violation is measured without slacks
      *  (nlp_constraint_violation) */
-    virtual Number curr_nlp_error();
+    Number curr_nlp_error();
     /** Total optimality error for the original NLP at the current
      *  iterate, but using no scaling based on multipliers, and no
      *  scaling for the NLP.  Note that here the constraint violation
      *  is measured without slacks (nlp_constraint_violation) */
-    virtual Number unscaled_curr_nlp_error();
+    Number unscaled_curr_nlp_error();
 
     /** Total optimality error for the barrier problem at the
      *  current iterate, using scaling factors based on multipliers. */
-    virtual Number curr_barrier_error();
+    Number curr_barrier_error();
 
     /** Norm of the primal-dual system for a given mu (at current
      *  iterate).  The norm is defined as the sum of the 1-norms of
@@ -357,14 +351,14 @@ namespace Ipopt
      *  all divided by the number of elements of the vectors of which
      *  the norm is taken.
      */
-    virtual Number curr_primal_dual_system_error(Number mu);
+    Number curr_primal_dual_system_error(Number mu);
     /** Norm of the primal-dual system for a given mu (at trial
      *  iterate).  The norm is defined as the sum of the 1-norms of
      *  dual infeasibiliy, primal infeasibility, and complementarity,
      *  all divided by the number of elements of the vectors of which
      *  the norm is taken.
      */
-    virtual Number trial_primal_dual_system_error(Number mu);
+    Number trial_primal_dual_system_error(Number mu);
     //@}
 
     /** @name Computing fraction-to-the-boundary step sizes */
@@ -507,8 +501,6 @@ namespace Ipopt
     /** Flag indicating whether the TNLP with identical structure has
      *  already been solved before. */
     bool warm_start_same_structure_;
-    /** Desired value of the barrier parameter */
-    Number mu_target_;
     //@}
 
     /** @name Caches for slacks */
@@ -567,7 +559,6 @@ namespace Ipopt
     CachedResults<Number> trial_constraint_violation_cache_;
     CachedResults<Number> curr_nlp_constraint_violation_cache_;
     CachedResults<Number> unscaled_curr_nlp_constraint_violation_cache_;
-    CachedResults<Number> unscaled_trial_nlp_constraint_violation_cache_;
     //@}
 
     /** Cache for the exact Hessian */

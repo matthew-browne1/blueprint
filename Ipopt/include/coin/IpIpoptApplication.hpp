@@ -1,25 +1,13 @@
-// Copyright (C) 2004, 2010 International Business Machines and others.
+// Copyright (C) 2004, 2009 International Business Machines and others.
 // All Rights Reserved.
-// This code is published under the Eclipse Public License.
+// This code is published under the Common Public License.
 //
-// $Id: IpIpoptApplication.hpp 2173 2013-03-30 17:25:39Z stefan $
+// $Id: IpIpoptApplication.hpp 1522 2009-07-15 23:32:57Z andreasw $
 //
 // Authors:  Carl Laird, Andreas Waechter     IBM    2004-08-13
 
 #ifndef __IPIPOPTAPPLICATION_HPP__
 #define __IPIPOPTAPPLICATION_HPP__
-
-#ifndef IPOPT_EXPORT
-#ifdef _MSC_VER
-#ifdef IPOPT_DLL
-#define IPOPT_EXPORT(type) __declspec(dllexport) type __cdecl
-#else
-#define IPOPT_EXPORT(type) type __cdecl
-#endif
-#else
-#define IPOPT_EXPORT(type) type
-#endif
-#endif
 
 #include <iostream>
 
@@ -61,7 +49,7 @@ namespace Ipopt
     /** Method for creating a new IpoptApplication that uses the same
      *  journalist and registered options, and a copy of the options
     list. */
-    virtual SmartPtr<IpoptApplication> clone();
+    SmartPtr<IpoptApplication> clone();
 
     /** Initialize method. This method reads the params file and
      *  initializes the journalists. You should call this method at
@@ -70,88 +58,82 @@ namespace Ipopt
      *  It returns something other than Solve_Succeeded if there was a
      *  problem in the initialization (such as an invalid option).
      */
-    virtual ApplicationReturnStatus Initialize(std::string params_file = "ipopt.opt");
-    virtual ApplicationReturnStatus Initialize(std::istream& is);
+    ApplicationReturnStatus Initialize(std::string params_file = "ipopt.opt");
+    ApplicationReturnStatus Initialize(std::istream& is);
 
     /**@name Solve methods */
     //@{
     /** Solve a problem that inherits from TNLP */
-    virtual ApplicationReturnStatus OptimizeTNLP(const SmartPtr<TNLP>& tnlp);
+    ApplicationReturnStatus OptimizeTNLP(const SmartPtr<TNLP>& tnlp);
 
     /** Solve a problem that inherits from NLP */
-    virtual ApplicationReturnStatus OptimizeNLP(const SmartPtr<NLP>& nlp);
+    ApplicationReturnStatus OptimizeNLP(const SmartPtr<NLP>& nlp);
 
     /** Solve a problem that inherits from NLP */
-    virtual ApplicationReturnStatus OptimizeNLP(const SmartPtr<NLP>& nlp, SmartPtr<AlgorithmBuilder>& alg_builder);
+    ApplicationReturnStatus OptimizeNLP(const SmartPtr<NLP>& nlp, SmartPtr<AlgorithmBuilder>& alg_builder);
 
     /** Solve a problem (that inherits from TNLP) for a repeated time.
      *  The OptimizeTNLP method must have been called before.  The
      *  TNLP must be the same object, and the structure (number of
      *  variables and constraints and position of nonzeros in Jacobian
      *  and Hessian must be the same). */
-    virtual ApplicationReturnStatus ReOptimizeTNLP(const SmartPtr<TNLP>& tnlp);
+    ApplicationReturnStatus ReOptimizeTNLP(const SmartPtr<TNLP>& tnlp);
 
     /** Solve a problem (that inherits from NLP) for a repeated time.
      *  The OptimizeNLP method must have been called before.  The
      *  NLP must be the same object, and the structure (number of
      *  variables and constraints and position of nonzeros in Jacobian
      *  and Hessian must be the same). */
-    virtual ApplicationReturnStatus ReOptimizeNLP(const SmartPtr<NLP>& nlp);
+    ApplicationReturnStatus ReOptimizeNLP(const SmartPtr<NLP>& nlp);
     //@}
 
     /** Method for opening an output file with given print_level.
      *  Returns false if there was a problem. */
-    virtual bool OpenOutputFile(std::string file_name, EJournalLevel print_level);
+    bool OpenOutputFile(std::string file_name, EJournalLevel print_level);
 
     /**@name Accessor methods */
     //@{
     /** Get the Journalist for printing output */
-    virtual SmartPtr<Journalist> Jnlst()
+    SmartPtr<Journalist> Jnlst()
     {
       return jnlst_;
     }
 
     /** Get a pointer to RegisteredOptions object to
      *  add new options */
-    virtual SmartPtr<RegisteredOptions> RegOptions()
+    SmartPtr<RegisteredOptions> RegOptions()
     {
       return reg_options_;
     }
 
     /** Get the options list for setting options */
-    virtual SmartPtr<OptionsList> Options()
+    SmartPtr<OptionsList> Options()
     {
       return options_;
     }
 
     /** Get the options list for setting options (const version) */
-    virtual SmartPtr<const OptionsList> Options() const
+    SmartPtr<const OptionsList> Options() const
     {
       return ConstPtr(options_);
     }
 
     /** Get the object with the statistics about the most recent
      *  optimization run. */
-    virtual SmartPtr<SolveStatistics> Statistics();
+    SmartPtr<SolveStatistics> Statistics();
 
     /** Get the IpoptNLP Object */
-    virtual SmartPtr<IpoptNLP> IpoptNLPObject();
+    SmartPtr<IpoptNLP> IpoptNLPObject();
 
     /** Get the IpoptData Object */
     SmartPtr<IpoptData> IpoptDataObject();
 
     /** Get the IpoptCQ Object */
-    virtual SmartPtr<IpoptCalculatedQuantities> IpoptCQObject();
+    SmartPtr<IpoptCalculatedQuantities> IpoptCQObject();
 
     /** Get the Algorithm Object */
     SmartPtr<IpoptAlgorithm> AlgorithmObject();
     //@}
-
-    /** Method for printing Ipopt copyright message now instead of
-     *  just before the optimization.  If you want to have the copy
-     *  right message printed earlier than by default, call this
-     *  method at the convenient time.  */
-    void PrintCopyrightMessage();
 
     /** @name Methods for IpoptTypeInfo */
     //@{
@@ -233,11 +215,12 @@ namespace Ipopt
     /** Flag indicating if all bounds should be replaced by inequality
      *  constraints.  This is necessary for the inexact algorithm. */
     bool replace_bounds_;
+    /** Flag indicating if the NLP:FinalizeSolution method should not
+     *  be called after optimization. */
+    bool skip_finalize_solution_call_;
     //@}
   };
 
 } // namespace Ipopt
-
-extern "C" IPOPT_EXPORT(class Ipopt::IpoptApplication *) IpoptApplicationFactory();
 
 #endif

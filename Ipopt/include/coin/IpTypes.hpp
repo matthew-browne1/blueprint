@@ -1,15 +1,13 @@
 // Copyright (C) 2004, 2006 International Business Machines and others.
 // All Rights Reserved.
-// This code is published under the Eclipse Public License.
+// This code is published under the Common Public License.
 //
-// $Id: IpTypes.hpp 2005 2011-06-06 12:55:16Z stefan $
+// $Id: IpTypes.hpp 735 2006-06-04 06:10:05Z andreasw $
 //
 // Authors:  Carl Laird, Andreas Waechter     IBM    2004-08-13
 
 #ifndef __IPTYPES_HPP__
 #define __IPTYPES_HPP__
-
-#include "IpoptConfig.h"
 
 namespace Ipopt
 {
@@ -21,8 +19,5 @@ namespace Ipopt
   typedef int Int;
 
 } // namespace Ipopt
-
-/* Type of Fortran integer translated into C */
-typedef FORTRAN_INTEGER_TYPE ipfint;
 
 #endif

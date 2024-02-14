@@ -1,8 +1,8 @@
 // Copyright (C) 2004, 2006 International Business Machines and others.
 // All Rights Reserved.
-// This code is published under the Eclipse Public License.
+// This code is published under the Common Public License.
 //
-// $Id: IpNLP.hpp 1861 2010-12-21 21:34:47Z andreasw $
+// $Id: IpNLP.hpp 1312 2008-08-29 22:21:40Z andreasw $
 //
 // Authors:  Carl Laird, Andreas Waechter     IBM    2004-08-13
 

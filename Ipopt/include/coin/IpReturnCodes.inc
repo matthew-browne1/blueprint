@@ -1,8 +1,8 @@
 C Copyright (C) 2005, 2009 International Business Machines and others.
 C All Rights Reserved.
-C This code is published under the Eclipse Public License.
+C This code is published under the Common Public License.
 C
-C    $Id: IpReturnCodes.inc 1861 2010-12-21 21:34:47Z andreasw $
+C    $Id: IpReturnCodes.inc 1430 2009-04-20 20:58:25Z andreasw $
 C
 C Author:   Andreas Waechter    IBM      2005-08-11
 C

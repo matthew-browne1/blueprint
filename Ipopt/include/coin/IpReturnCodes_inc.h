@@ -1,15 +1,15 @@
 /***********************************************************************
 // Copyright (C) 2004, 2009 International Business Machines and others.
 // All Rights Reserved.
-// This code is published under the Eclipse Public License.
+// This code is published under the Common Public License.
 //
-// $Id: IpReturnCodes_inc.h 2216 2013-04-14 17:06:00Z stefan $
+// $Id: IpReturnCodes_inc.h 1430 2009-04-20 20:58:25Z andreasw $
 //
 // Authors:  Carl Laird, Andreas Waechter     IBM    2004-08-13
 ************************************************************************/
 
 /* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
-/* !!!!!!!!! REMEMBER TO UPDATE IpReturnCodes.inc and Ipopt.java !!!!!!!! */
+/* !!!!!!!!!!!!!!!! REMEMBER TO UPDATE IpReturnCodes.inc !!!!!!!!!!!!!!!! */
 /* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!! */
 
 /** Return codes for the Optimize call for an application */

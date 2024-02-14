@@ -1,8 +1,8 @@
 // Copyright (C) 2004, 2006 International Business Machines and others.
 // All Rights Reserved.
-// This code is published under the Eclipse Public License.
+// This code is published under the Common Public License.
 //
-// $Id: IpReferenced.hpp 2182 2013-03-30 20:02:18Z stefan $
+// $Id: IpReferenced.hpp 1019 2007-06-24 03:52:34Z andreasw $
 //
 // Authors:  Carl Laird, Andreas Waechter     IBM    2004-08-13
 
@@ -13,10 +13,6 @@
 #include "IpDebug.hpp"
 
 #include <list>
-
-#if COIN_IPOPT_CHECKLEVEL > 3
-  #define IP_DEBUG_REFERENCED
-#endif
 
 namespace Ipopt
 {
@@ -103,7 +99,7 @@ namespace Ipopt
    *    \verbatim
    *    if (GetRawPtr(smrt_ptr) == ptr) // Don't use this
    *    \endverbatim
-   *  SmartPtr's, as currently implemented, do NOT handle circular references.
+   * SmartPtr's, as currently implemented, do NOT handle circular references.
    *    For example: consider a higher level object using SmartPtrs to point to 
    *    A and B, but A and B also point to each other (i.e. A has a SmartPtr 
    *    to B and B has a SmartPtr to A). In this scenario, when the higher
@@ -153,10 +149,6 @@ namespace Ipopt
    *        it and, in its destructor, tell these pointers that it is
    *        dying. They could then set themselves to NULL, or set an
    *        internal flag to detect usage past this point.
-   *
-   *   For every most derived object only one ReferencedObject may exist,
-   *   that is multiple inheritance requires virtual inheritance, see also
-   *   the 2nd point in ticket #162.
    * 
    * Comments on Non-Intrusive Design:
    * In a non-intrusive design, the reference count is stored somewhere other
@@ -184,21 +176,19 @@ namespace Ipopt
       DBG_ASSERT(reference_count_ == 0);
     }
 
-    inline
     Index ReferenceCount() const;
 
-    inline
     void AddRef(const Referencer* referencer) const;
 
-    inline
     void ReleaseRef(const Referencer* referencer) const;
 
   private:
     mutable Index reference_count_;
 
-#   ifdef IP_DEBUG_REFERENCED
+#     ifdef REF_DEBUG
+
     mutable std::list<const Referencer*> referencers_;
-#   endif
+#     endif
 
   };
 
@@ -217,9 +207,10 @@ namespace Ipopt
     //    DBG_START_METH("ReferencedObject::AddRef(const Referencer* referencer)", 0);
     reference_count_++;
     //    DBG_PRINT((1, "New reference_count_ = %d\n", reference_count_));
-#   ifdef IP_DEBUG_REFERENCED
+#     ifdef REF_DEBUG
+
     referencers_.push_back(referencer);
-#   endif
+#     endif
 
   }
 
@@ -231,7 +222,7 @@ namespace Ipopt
     reference_count_--;
     //    DBG_PRINT((1, "New reference_count_ = %d\n", reference_count_));
 
-#   ifdef IP_DEBUG_REFERENCED
+#     ifdef REF_DEBUG
 
     bool found = false;
     std::list<const Referencer*>::iterator iter;
@@ -248,7 +239,7 @@ namespace Ipopt
     if (found) {
       referencers_.erase(iter);
     }
-#   endif
+#     endif
 
   }
 

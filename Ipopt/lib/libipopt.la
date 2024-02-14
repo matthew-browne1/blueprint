@@ -11,15 +11,15 @@ dlname=''
 library_names=''
 
 # The name of the static archive.
-old_library='libipopt.lib'
+old_library='libipopt.a'
 
 # Libraries that this one depends upon.
-dependency_libs=''
+dependency_libs=' -ldl /usr/local/lib/../lib64/libstdc++.la'
 
 # Version information for libipopt.
-current=10
-age=9
-revision=1
+current=0
+age=0
+revision=0
 
 # Is this an already installed library?
 installed=yes
@@ -32,4 +32,4 @@ dlopen=''
 dlpreopen=''
 
 # Directory that this library needs to be installed in:
-libdir='/home/distrib32/stefan/Ipopt-3.11.1/build64/lib'
+libdir='/home/svigerske/BuildDir/Ipopt/releases-3.7.1-shared-no-static-yes/lib'

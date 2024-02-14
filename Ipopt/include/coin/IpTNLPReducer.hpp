@@ -1,8 +1,8 @@
 // Copyright (C) 2008 International Business Machines and others.
 // All Rights Reserved.
-// This code is published under the Eclipse Public License.
+// This code is published under the Common Public License.
 //
-// $Id: IpTNLPReducer.hpp 1861 2010-12-21 21:34:47Z andreasw $
+// $Id: IpTNLPReducer.hpp 1324 2008-09-16 14:19:26Z andreasw $
 //
 // Authors:  Andreas Waechter                  IBM    2008-08-10
 

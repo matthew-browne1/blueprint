@@ -29,9 +29,7 @@ from pyomo.environ import *
 from pyomo.opt import SolverFactory
 import statsmodels as sm
 import io
-import pyutilib.subprocess.GlobalData
 
-# pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 
 class Optimiser:
 
@@ -545,7 +543,7 @@ class Optimiser:
             return model.revenue_expr[stream] / model.stream_budget[stream] >= 0.00001
         model.min_roi_constraints = Constraint(streams, rule=min_roi_constraint_rule)
 
-        solver = SolverFactory('ipopt', executable = '/home/site/wwwroot/Ipopt/bin/ipopt')
+        solver = SolverFactory('ipopt', executable = '/Ipopt/bin/ipopt')
         results = solver.solve(model, tee=True)
 
         if results.solver.termination_condition == TerminationCondition.optimal:

@@ -1,8 +1,8 @@
-// Copyright (C) 2004, 2011 International Business Machines and others.
+// Copyright (C) 2004, 2007 International Business Machines and others.
 // All Rights Reserved.
-// This code is published under the Eclipse Public License.
+// This code is published under the Common Public License.
 //
-// $Id: IpSmartPtr.hpp 2182 2013-03-30 20:02:18Z stefan $
+// $Id: IpSmartPtr.hpp 1019 2007-06-24 03:52:34Z andreasw $
 //
 // Authors:  Carl Laird, Andreas Waechter     IBM    2004-08-13
 
@@ -14,13 +14,6 @@
 #include "IpDebug.hpp"
 #if COIN_IPOPT_CHECKLEVEL > 2
 # define IP_DEBUG_SMARTPTR
-#endif
-#ifndef IPOPT_UNUSED
-# if defined(__GNUC__)
-#   define IPOPT_UNUSED __attribute__((unused))
-# else
-#   define IPOPT_UNUSED
-# endif
 #endif
 
 namespace Ipopt
@@ -172,19 +165,15 @@ namespace Ipopt
   class SmartPtr : public Referencer
   {
   public:
-#define ipopt_dbg_smartptr_verbosity 0
+#define dbg_smartptr_verbosity 0
 
     /**@name Constructors/Destructors */
     //@{
     /** Default constructor, initialized to NULL */
     SmartPtr();
 
-    /** Copy constructor, initialized from copy of type T */
+    /** Copy constructor, initialized from copy */
     SmartPtr(const SmartPtr<T>& copy);
-
-    /** Copy constructor, initialized from copy of type U */
-    template <class U>
-    SmartPtr(const SmartPtr<U>& copy);
 
     /** Constructor, initialized from T* ptr */
     SmartPtr(T* ptr);
@@ -213,12 +202,6 @@ namespace Ipopt
      * set the value of the SmartPtr from another 
      * SmartPtr */
     SmartPtr<T>& operator=(const SmartPtr<T>& rhs);
-
-    /** Overloaded equals operator, allows the user to
-     * set the value of the SmartPtr from another
-     * SmartPtr of a different type */
-    template <class U>
-    SmartPtr<T>& operator=(const SmartPtr<U>& rhs);
 
     /** Overloaded equality comparison operator, allows the
      * user to compare the value of two SmartPtrs */
@@ -255,12 +238,6 @@ namespace Ipopt
     template <class U1, class U2>
     friend
     bool operator!=(U1* lhs, const SmartPtr<U2>& raw_rhs);
-
-    /** Overloaded less-than comparison operator, allows the
-     * user to compare the value of two SmartPtrs */
-    template <class U>
-    friend
-    bool operator<(const SmartPtr<U>& lhs, const SmartPtr<U>& rhs);
     //@}
 
     /**@name friend method declarations. */
@@ -360,14 +337,17 @@ namespace Ipopt
   template <class T>
   SmartPtr<T>::SmartPtr()
       :
-      ptr_(0)
+      ptr_(NULL)
   {
 #ifdef IP_DEBUG_SMARTPTR
-    DBG_START_METH("SmartPtr<T>::SmartPtr()", ipopt_dbg_smartptr_verbosity);
+    DBG_START_METH("SmartPtr<T>::SmartPtr()", dbg_smartptr_verbosity);
 #endif
 
-#ifndef NDEBUG
-    const ReferencedObject* IPOPT_UNUSED trying_to_use_SmartPtr_with_an_object_that_does_not_inherit_from_ReferencedObject_ = ptr_;
+#ifdef CHECK_SMARTPTR
+
+    const ReferencedObject* trying_to_use_SmartPtr_with_an_object_that_does_not_inherit_from_ReferencedObject_
+    = ptr_;
+    trying_to_use_SmartPtr_with_an_object_that_does_not_inherit_from_ReferencedObject_ = NULL;
 #endif
 
   }
@@ -376,14 +356,17 @@ namespace Ipopt
   template <class T>
   SmartPtr<T>::SmartPtr(const SmartPtr<T>& copy)
       :
-      ptr_(0)
+      ptr_(NULL)
   {
 #ifdef IP_DEBUG_SMARTPTR
-    DBG_START_METH("SmartPtr<T>::SmartPtr(const SmartPtr<T>& copy)", ipopt_dbg_smartptr_verbosity);
+    DBG_START_METH("SmartPtr<T>::SmartPtr(const SmartPtr<T>& copy)", dbg_smartptr_verbosity);
 #endif
 
-#ifndef NDEBUG
-    const ReferencedObject* IPOPT_UNUSED trying_to_use_SmartPtr_with_an_object_that_does_not_inherit_from_ReferencedObject_ = ptr_;
+#ifdef CHECK_SMARTPTR
+
+    const ReferencedObject* trying_to_use_SmartPtr_with_an_object_that_does_not_inherit_from_ReferencedObject_
+    = ptr_;
+    trying_to_use_SmartPtr_with_an_object_that_does_not_inherit_from_ReferencedObject_ = NULL;
 #endif
 
     (void) SetFromSmartPtr_(copy);
@@ -391,34 +374,19 @@ namespace Ipopt
 
 
   template <class T>
-  template <class U>
-  SmartPtr<T>::SmartPtr(const SmartPtr<U>& copy)
-      :
-      ptr_(0)
-  {
-#ifdef IP_DEBUG_SMARTPTR
-    DBG_START_METH("SmartPtr<T>::SmartPtr(const SmartPtr<U>& copy)", ipopt_dbg_smartptr_verbosity);
-#endif
-
-#ifndef NDEBUG
-    const ReferencedObject* IPOPT_UNUSED trying_to_use_SmartPtr_with_an_object_that_does_not_inherit_from_ReferencedObject_ = ptr_;
-#endif
-
-    (void) SetFromSmartPtr_(GetRawPtr(copy));
-  }
-
-
-  template <class T>
   SmartPtr<T>::SmartPtr(T* ptr)
       :
-      ptr_(0)
+      ptr_(NULL)
   {
 #ifdef IP_DEBUG_SMARTPTR
-    DBG_START_METH("SmartPtr<T>::SmartPtr(T* ptr)", ipopt_dbg_smartptr_verbosity);
+    DBG_START_METH("SmartPtr<T>::SmartPtr(T* ptr)", dbg_smartptr_verbosity);
 #endif
 
-#ifndef NDEBUG
-    const ReferencedObject* IPOPT_UNUSED trying_to_use_SmartPtr_with_an_object_that_does_not_inherit_from_ReferencedObject_ = ptr_;
+#ifdef CHECK_SMARTPTR
+
+    const ReferencedObject* trying_to_use_SmartPtr_with_an_object_that_does_not_inherit_from_ReferencedObject_
+    = ptr_;
+    trying_to_use_SmartPtr_with_an_object_that_does_not_inherit_from_ReferencedObject_ = NULL;
 #endif
 
     (void) SetFromRawPtr_(ptr);
@@ -428,7 +396,7 @@ namespace Ipopt
   SmartPtr<T>::~SmartPtr()
   {
 #ifdef IP_DEBUG_SMARTPTR
-    DBG_START_METH("SmartPtr<T>::~SmartPtr(T* ptr)", ipopt_dbg_smartptr_verbosity);
+    DBG_START_METH("SmartPtr<T>::~SmartPtr(T* ptr)", dbg_smartptr_verbosity);
 #endif
 
     ReleasePointer_();
@@ -439,11 +407,12 @@ namespace Ipopt
   T* SmartPtr<T>::operator->() const
   {
 #ifdef IP_DEBUG_SMARTPTR
-    DBG_START_METH("T* SmartPtr<T>::operator->()", ipopt_dbg_smartptr_verbosity);
+    DBG_START_METH("T* SmartPtr<T>::operator->()", dbg_smartptr_verbosity);
 #endif
 
     // cannot deref a null pointer
 #if COIN_IPOPT_CHECKLEVEL > 0
+
     assert(ptr_);
 #endif
 
@@ -455,11 +424,12 @@ namespace Ipopt
   T& SmartPtr<T>::operator*() const
   {
 #ifdef IP_DEBUG_SMARTPTR
-    DBG_START_METH("T& SmartPtr<T>::operator*()", ipopt_dbg_smartptr_verbosity);
+    DBG_START_METH("T& SmartPtr<T>::operator*()", dbg_smartptr_verbosity);
 #endif
 
     // cannot dereference a null pointer
 #if COIN_IPOPT_CHECKLEVEL > 0
+
     assert(ptr_);
 #endif
 
@@ -471,7 +441,7 @@ namespace Ipopt
   SmartPtr<T>& SmartPtr<T>::operator=(T* rhs)
   {
 #ifdef IP_DEBUG_SMARTPTR
-    DBG_START_METH("SmartPtr<T>& SmartPtr<T>::operator=(T* rhs)", ipopt_dbg_smartptr_verbosity);
+    DBG_START_METH("SmartPtr<T>& SmartPtr<T>::operator=(T* rhs)", dbg_smartptr_verbosity);
 #endif
 
     return SetFromRawPtr_(rhs);
@@ -484,24 +454,10 @@ namespace Ipopt
 #ifdef IP_DEBUG_SMARTPTR
     DBG_START_METH(
       "SmartPtr<T>& SmartPtr<T>::operator=(const SmartPtr<T>& rhs)",
-      ipopt_dbg_smartptr_verbosity);
+      dbg_smartptr_verbosity);
 #endif
 
     return SetFromSmartPtr_(rhs);
-  }
-
-
-  template <class T>
-  template <class U>
-  SmartPtr<T>& SmartPtr<T>::operator=(const SmartPtr<U>& rhs)
-  {
-#ifdef IP_DEBUG_SMARTPTR
-    DBG_START_METH(
-      "SmartPtr<T>& SmartPtr<T>::operator=(const SmartPtr<U>& rhs)",
-      ipopt_dbg_smartptr_verbosity);
-#endif
-
-    return SetFromSmartPtr_(GetRawPtr(rhs));
   }
 
 
@@ -510,16 +466,16 @@ namespace Ipopt
   {
 #ifdef IP_DEBUG_SMARTPTR
     DBG_START_METH(
-      "SmartPtr<T>& SmartPtr<T>::SetFromRawPtr_(T* rhs)", ipopt_dbg_smartptr_verbosity);
+      "SmartPtr<T>& SmartPtr<T>::SetFromRawPtr_(T* rhs)", dbg_smartptr_verbosity);
 #endif
-
-    if (rhs != 0)
-      rhs->AddRef(this);
 
     // Release any old pointer
     ReleasePointer_();
 
-    ptr_ = rhs;
+    if (rhs != NULL) {
+      rhs->AddRef(this);
+      ptr_ = rhs;
+    }
 
     return *this;
   }
@@ -530,10 +486,16 @@ namespace Ipopt
 #ifdef IP_DEBUG_SMARTPTR
     DBG_START_METH(
       "SmartPtr<T>& SmartPtr<T>::SetFromSmartPtr_(const SmartPtr<T>& rhs)",
-      ipopt_dbg_smartptr_verbosity);
+      dbg_smartptr_verbosity);
 #endif
 
-    SetFromRawPtr_(GetRawPtr(rhs));
+    T* ptr = GetRawPtr(rhs);
+    /* AW: I changed this so that NULL is correctly copied from the
+       right hand side */
+    //     if (ptr != NULL) {
+    //       SetFromRawPtr_(ptr);
+    //     }
+    SetFromRawPtr_(ptr);
 
     return (*this);
   }
@@ -545,13 +507,15 @@ namespace Ipopt
 #ifdef IP_DEBUG_SMARTPTR
     DBG_START_METH(
       "void SmartPtr<T>::ReleasePointer()",
-      ipopt_dbg_smartptr_verbosity);
+      dbg_smartptr_verbosity);
 #endif
 
     if (ptr_) {
       ptr_->ReleaseRef(this);
-      if (ptr_->ReferenceCount() == 0)
+      if (ptr_->ReferenceCount() == 0) {
         delete ptr_;
+      }
+      ptr_ = NULL;
     }
   }
 
@@ -590,7 +554,7 @@ namespace Ipopt
       0);
 #endif
 
-    return (smart_ptr.ptr_ == 0);
+    return (smart_ptr.ptr_ == NULL);
   }
 
 
@@ -600,17 +564,25 @@ namespace Ipopt
 #ifdef IP_DEBUG_SMARTPTR
     DBG_START_FUN(
       "bool ComparePtrs(const U1* lhs, const U2* rhs)",
-      ipopt_dbg_smartptr_verbosity);
+      dbg_smartptr_verbosity);
 #endif
+
+    if (lhs == rhs) {
+      return true;
+    }
 
     // Even if lhs and rhs point to the same object
     // with different interfaces U1 and U2, we cannot guarantee that
     // the value of the pointers will be equivalent. We can
-    // guarantee this if we convert to ReferencedObject* (see also #162)
-    const ReferencedObject* v_lhs = lhs;
-    const ReferencedObject* v_rhs = rhs;
+    // guarantee this if we convert to void*
+    const void* v_lhs = static_cast<const void*>(lhs);
+    const void* v_rhs = static_cast<const void*>(rhs);
+    if (v_lhs == v_rhs) {
+      return true;
+    }
 
-    return v_lhs == v_rhs;
+    // They must not be the same
+    return false;
   }
 
   template <class U1, class U2>
@@ -619,7 +591,7 @@ namespace Ipopt
 #ifdef IP_DEBUG_SMARTPTR
     DBG_START_FUN(
       "bool operator==(const SmartPtr<U1>& lhs, const SmartPtr<U2>& rhs)",
-      ipopt_dbg_smartptr_verbosity);
+      dbg_smartptr_verbosity);
 #endif
 
     U1* raw_lhs = GetRawPtr(lhs);
@@ -633,7 +605,7 @@ namespace Ipopt
 #ifdef IP_DEBUG_SMARTPTR
     DBG_START_FUN(
       "bool operator==(SmartPtr<U1>& lhs, U2* rhs)",
-      ipopt_dbg_smartptr_verbosity);
+      dbg_smartptr_verbosity);
 #endif
 
     U1* raw_lhs = GetRawPtr(lhs);
@@ -646,7 +618,7 @@ namespace Ipopt
 #ifdef IP_DEBUG_SMARTPTR
     DBG_START_FUN(
       "bool operator==(U1* raw_lhs, SmartPtr<U2>& rhs)",
-      ipopt_dbg_smartptr_verbosity);
+      dbg_smartptr_verbosity);
 #endif
 
     const U2* raw_rhs = GetRawPtr(rhs);
@@ -659,7 +631,7 @@ namespace Ipopt
 #ifdef IP_DEBUG_SMARTPTR
     DBG_START_FUN(
       "bool operator!=(const SmartPtr<U1>& lhs, const SmartPtr<U2>& rhs)",
-      ipopt_dbg_smartptr_verbosity);
+      dbg_smartptr_verbosity);
 #endif
 
     bool retValue = operator==(lhs, rhs);
@@ -672,7 +644,7 @@ namespace Ipopt
 #ifdef IP_DEBUG_SMARTPTR
     DBG_START_FUN(
       "bool operator!=(SmartPtr<U1>& lhs, U2* rhs)",
-      ipopt_dbg_smartptr_verbosity);
+      dbg_smartptr_verbosity);
 #endif
 
     bool retValue = operator==(lhs, raw_rhs);
@@ -685,50 +657,14 @@ namespace Ipopt
 #ifdef IP_DEBUG_SMARTPTR
     DBG_START_FUN(
       "bool operator!=(U1* raw_lhs, SmartPtr<U2>& rhs)",
-      ipopt_dbg_smartptr_verbosity);
+      dbg_smartptr_verbosity);
 #endif
 
     bool retValue = operator==(raw_lhs, rhs);
     return !retValue;
   }
 
-  template <class T>
-  void swap(SmartPtr<T>& a, SmartPtr<T>& b)
-  {
-#ifdef IP_DEBUG_REFERENCED
-    SmartPtr<T> tmp(a);
-    a = b;
-    b = tmp;
-#else
-    std::swap(a.prt_, b.ptr_);
-#endif
-  }
-
-  template <class T>
-  bool operator<(const SmartPtr<T>& lhs, const SmartPtr<T>& rhs)
-  {
-    return lhs.ptr_ < rhs.ptr_;
-  }
-
-  template <class T>
-  bool operator> (const SmartPtr<T>& lhs, const SmartPtr<T>& rhs)
-  {
-    return rhs < lhs;
-  }
-
-  template <class T> bool
-  operator<=(const SmartPtr<T>& lhs, const SmartPtr<T>& rhs)
-  {
-    return !( rhs < lhs );
-  }
-
-  template <class T> bool
-  operator>=(const SmartPtr<T>& lhs, const SmartPtr<T>& rhs)
-  {
-    return !( lhs < rhs );
-  }
 } // namespace Ipopt
 
-#undef ipopt_dbg_smartptr_verbosity
-
 #endif
+

@@ -1,8 +1,8 @@
 // Copyright (C) 2004, 2009 International Business Machines and others.
 // All Rights Reserved.
-// This code is published under the Eclipse Public License.
+// This code is published under the Common Public License.
 //
-// $Id: IpJournalist.hpp 2204 2013-04-13 13:49:26Z stefan $
+// $Id: IpJournalist.hpp 1479 2009-06-22 22:32:29Z andreasw $
 //
 // Authors:  Carl Laird, Andreas Waechter     IBM    2004-08-13
 
@@ -20,17 +20,7 @@
 # ifdef HAVE_STDARG_H
 #  include <stdarg.h>
 # else
-#  include <cstdarg>  // if this header is included by someone who does not define HAVE_CSTDARG or HAVE_STDARG, let's hope that cstdarg is available
-# endif
-#endif
-
-#ifdef HAVE_CSTDIO
-# include <cstdio>
-#else
-# ifdef HAVE_STDIO_H
-#  include <stdio.h>
-# else
-#  include <cstdio>  // if this header is included by someone who does not define HAVE_CSTDIO or HAVE_STDIO, let's hope that cstdio is available
+#  error "don't have header file for stdarg"
 # endif
 #endif
 
@@ -149,8 +139,8 @@ namespace Ipopt
      */
     //@{
     /** Method to print a formatted string */
-    virtual void Printf(EJournalLevel level, EJournalCategory category,
-                        const char* format, ...) const;
+    void Printf(EJournalLevel level, EJournalCategory category,
+                const char* format, ...) const;
 
     /** Method to print a long string including indentation.  The
      *  string is printed starting at the current position.  If the
@@ -159,30 +149,30 @@ namespace Ipopt
      *  spaces are printed before the string is continued.  This is
      *  for example used during the printing of the option
      *  documentation. */
-    virtual void PrintStringOverLines(EJournalLevel level, EJournalCategory category,
-                                      Index indent_spaces, Index max_length,
-                                      const std::string& line) const;
+    void PrintStringOverLines(EJournalLevel level, EJournalCategory category,
+                              Index indent_spaces, Index max_length,
+                              const std::string& line) const;
 
     /** Method to print a formatted string with indentation */
-    virtual void PrintfIndented(EJournalLevel level,
-                                EJournalCategory category,
-                                Index indent_level,
-                                const char* format, ...) const;
+    void PrintfIndented(EJournalLevel level,
+                        EJournalCategory category,
+                        Index indent_level,
+                        const char* format, ...) const;
 
     /** Method to print a formatted string
      * using the va_list argument. */
-    virtual void VPrintf(EJournalLevel level,
-                         EJournalCategory category,
-                         const char* pformat,
-                         va_list ap) const;
+    void VPrintf(EJournalLevel level,
+                 EJournalCategory category,
+                 const char* pformat,
+                 va_list ap) const;
 
     /** Method to print a formatted string with indentation,
      * using the va_list argument. */
-    virtual void VPrintfIndented(EJournalLevel level,
-                                 EJournalCategory category,
-                                 Index indent_level,
-                                 const char* pformat,
-                                 va_list ap) const;
+    void VPrintfIndented(EJournalLevel level,
+                         EJournalCategory category,
+                         Index indent_level,
+                         const char* pformat,
+                         va_list ap) const;
 
     /** Method that returns true if there is a Journal that would
      *  write output for the given JournalLevel and JournalCategory.
@@ -190,15 +180,15 @@ namespace Ipopt
      *  a particular output.  The author code can check with this
      *  method if the computations are indeed required.
      */
-    virtual bool ProduceOutput(EJournalLevel level,
-                               EJournalCategory category) const;
+    bool ProduceOutput(EJournalLevel level,
+                       EJournalCategory category) const;
 
 
     /** Method that flushes the current buffer for all Journalists.
      Calling this method after one optimization run helps to avoid
      cluttering output with that produced by other parts of the
      program (e.g. written in Fortran) */
-    virtual void FlushBuffer() const;
+    void FlushBuffer() const;
     //@}
 
     /**@name Reader Methods.
@@ -219,7 +209,7 @@ namespace Ipopt
      *  The default_level is
      *  used to initialize the * printing level for all categories.
      */
-    virtual bool AddJournal(const SmartPtr<Journal> jrnl);
+    bool AddJournal(const SmartPtr<Journal> jrnl);
 
     /** Add a new FileJournal. fname is the name
      *  of the * file to which this Journal corresponds.  Use
@@ -228,19 +218,19 @@ namespace Ipopt
      *  set specific acceptance criteria.  It returns NULL if there
      *  was a problem creating a new Journal.    
      */
-    virtual SmartPtr<Journal> AddFileJournal(
-      const std::string& location_name,        /**< journal identifier */
-      const std::string& fname,                /**< file name */
-      EJournalLevel default_level = J_WARNING  /**< default journal level */
+    SmartPtr<Journal> AddFileJournal(
+      const std::string& location_name,    /** identifier */
+      const std::string& fname,
+      EJournalLevel default_level = J_WARNING
     );
 
     /** Get an existing journal.  You can use this method to change
      *  the acceptance criteria at runtime.
      */
-    virtual SmartPtr<Journal> GetJournal(const std::string& location_name);
+    SmartPtr<Journal> GetJournal(const std::string& location_name);
 
     /** Delete all journals curently known by the journalist. */
-    virtual void DeleteAllJournals();
+    void DeleteAllJournals();
     //@}
 
   private:
@@ -280,15 +270,15 @@ namespace Ipopt
     virtual ~Journal();
 
     /** Get the name of the Journal */
-    virtual std::string Name();
+    std::string Name();
 
     /** Set the print level for a particular category. */
-    virtual void SetPrintLevel(
+    void SetPrintLevel(
       EJournalCategory category, EJournalLevel level
     );
 
     /** Set the print level for all category. */
-    virtual void SetAllPrintLevels(
+    void SetAllPrintLevels(
       EJournalLevel level
     );
 
@@ -303,26 +293,26 @@ namespace Ipopt
     /** Ask if a particular print level/category is accepted by the
      * journal.
      */
-    virtual bool IsAccepted(
+    bool IsAccepted(
       EJournalCategory category, EJournalLevel level
     ) const;
 
     /** Print to the designated output location */
-    virtual void Print(EJournalCategory category, EJournalLevel level,
-                       const char* str)
+    void Print(EJournalCategory category, EJournalLevel level,
+               const char* str)
     {
       PrintImpl(category, level, str);
     }
 
     /** Printf to the designated output location */
-    virtual void Printf(EJournalCategory category, EJournalLevel level,
-                        const char* pformat, va_list ap)
+    void Printf(EJournalCategory category, EJournalLevel level,
+                const char* pformat, va_list ap)
     {
       PrintfImpl(category, level, pformat, ap);
     }
 
     /** Flush output buffer.*/
-    virtual void FlushBuffer()
+    void FlushBuffer()
     {
       FlushBufferImpl();
     }
@@ -392,7 +382,7 @@ namespace Ipopt
      *  Return code is false only if the file with the given name
      *  could not be opened.
      */
-    virtual bool Open(const char* fname);
+    bool Open(const char* fname);
 
   protected:
     /**@name Implementation version of Print methods - Overloaded from
