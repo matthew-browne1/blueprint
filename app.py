@@ -31,7 +31,7 @@ import statsmodels as sm
 import io
 import pyutilib.subprocess.GlobalData
 
-pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
+# pyutilib.subprocess.GlobalData.DEFINE_SIGNAL_HANDLERS_DEFAULT = False
 
 class Optimiser:
 
@@ -544,10 +544,8 @@ class Optimiser:
         def min_roi_constraint_rule(model, stream):
             return model.revenue_expr[stream] / model.stream_budget[stream] >= 0.00001
         model.min_roi_constraints = Constraint(streams, rule=min_roi_constraint_rule)
-      
-        ipopt_executable = os.path.join('/home/site/wwwroot/Ipopt/bin/ipopt')
 
-        solver = SolverFactory('ipopt', executable = ipopt_executable)
+        solver = SolverFactory('ipopt', executable = '/home/site/wwwroot/Ipopt/bin/ipopt')
         results = solver.solve(model, tee=True)
 
         if results.solver.termination_condition == TerminationCondition.optimal:
