@@ -67,11 +67,6 @@ jobs:
       - name: Unzip artifact for deployment
         run: unzip release.zip
       
-      - name: Install libgfortran3
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libgfortran3
-      
       - name: Login to Azure
         uses: azure/login@v1
         with:
