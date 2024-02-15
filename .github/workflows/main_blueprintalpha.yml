@@ -69,8 +69,8 @@ jobs:
       
       - name: Install libgfortran3
         run: |
-          apt-get update
-          apt-get install -y libgfortran3
+          sudo apt-get update
+          sudo apt-get install -y libgfortran3
       
       - name: Login to Azure
         uses: azure/login@v1
