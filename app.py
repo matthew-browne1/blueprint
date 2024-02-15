@@ -28,7 +28,7 @@ from logging.handlers import RotatingFileHandler
 from pyomo.environ import *
 from pyomo.opt import SolverFactory
 import statsmodels as sm
-import io
+from scipy.optimize import minimize
 
 
 class Optimiser:
@@ -569,6 +569,129 @@ class Optimiser:
             print(f"solution failed using budget input of: {max_budget} with max total spend cap of: {sum(spend_cap_list)}")
 
         return opt_budgets_dict
+
+def rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dict, beta_dict, recorded_impressions, seas_dict, num_weeks):
+    cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
+    allocation = budget / cost_per_stream
+
+    pct_laydown = np.array(recorded_impressions[stream]) / sum(recorded_impressions[stream]) if sum(recorded_impressions[stream]) != 0 else 0
+
+    pam = pct_laydown * allocation
+
+    carryover_list = np.zeros_like(pam)
+    carryover_list[0] = pam[0]
+
+    for i in range(1, len(pam)):
+        carryover_val = pam[i] + carryover_list[i - 1] * carryover_dict[stream]
+        carryover_list[i] = carryover_val
+
+    print("carryover_list:", carryover_list)
+
+    rev_list = beta_dict[stream] * ((1 - np.exp(-alpha_dict[stream] * carryover_list)))
+
+    print(stream)
+    print("beta dict:", beta_dict[stream])
+
+    indexed_vals = rev_list * seas_dict[stream]
+    total_rev = np.sum(indexed_vals)
+
+    infsum = np.sum(carryover_list[-1] * (1 - carryover_dict[stream]) ** np.arange(1, num_weeks))
+
+    total_rev += infsum
+    return total_rev
+
+
+def total_rev_per_stream(stream, budget, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict, LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict, recorded_impressions, seas_dict, num_weeks):
+    ST_rev = rev_per_stream(stream, budget, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,
+                            recorded_impressions, seas_dict, num_weeks)
+    LT_rev = rev_per_stream(stream, budget, LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict,
+                            recorded_impressions, seas_dict, num_weeks)
+    total_rev = ST_rev + LT_rev
+    return total_rev
+
+
+def profit_objective(budgets, *args):
+    streams, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict, \
+    LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict, recorded_impressions, seas_dict, num_weeks = args
+
+    total_rev = sum(
+        total_rev_per_stream(stream, budgets[i], ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,
+                             LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict,
+                             recorded_impressions, seas_dict, num_weeks) for i, stream in enumerate(streams))
+    total_budget = sum(budgets)
+
+    return -total_rev + total_budget
+
+
+def blended_profit_max_scipy(ST_input, LT_input, laydown, seas_index, max_budget, exh_budget="yes", num_weeks=1000):
+    streams = [entry['Channel'] for entry in ST_input]
+
+    spend_cap_list = [float(entry['Max_Spend_Cap']) for entry in ST_input]
+    spend_cap_dict = dict(zip(streams, spend_cap_list))
+
+    ST_cost_per_list = [float(entry['CPU']) for entry in ST_input]
+    ST_cost_per_dict = dict(zip(streams, ST_cost_per_list))
+    LT_cost_per_list = [float(entry['CPU']) for entry in LT_input]
+    LT_cost_per_dict = dict(zip(streams, LT_cost_per_list))
+
+    ST_carryover_list = [float(entry['Carryover']) for entry in ST_input]
+    ST_carryover_dict = dict(zip(streams, ST_carryover_list))
+    LT_carryover_list = [float(entry['Carryover']) for entry in LT_input]
+    LT_carryover_dict = dict(zip(streams, LT_carryover_list))
+
+    # ST_beta_list = [float(entry['Beta']) for entry in ST_input]
+    # ST_beta_dict = dict(zip(streams, ST_beta_list))
+    # LT_beta_list = [float(entry['Beta']) for entry in LT_input]
+    # LT_beta_dict = dict(zip(streams, LT_beta_list))
+
+    ST_beta_list = [float(entry['Beta']) if not pd.isna(entry['Beta']) and entry['Beta'] != np.inf else 0.0 for entry in ST_input]
+    ST_beta_dict = dict(zip(streams, ST_beta_list))
+
+    LT_beta_list = [float(entry['Beta']) if not pd.isna(entry['Beta']) and entry['Beta'] != np.inf else 0.0 for entry in LT_input]
+    LT_beta_dict = dict(zip(streams, LT_beta_list))
+
+    # ST_alpha_list = [float(entry['Alpha']) for entry in ST_input]
+    # ST_alpha_dict = dict(zip(streams, ST_alpha_list))
+    # LT_alpha_list = [float(entry['Alpha']) for entry in LT_input]
+    # LT_alpha_dict = dict(zip(streams, LT_alpha_list))
+    
+    ST_alpha_list = [float(entry['Alpha']) if not pd.isna(entry['Alpha']) and entry['Alpha'] != np.inf else 0.0 for entry in ST_input]
+    ST_alpha_dict = dict(zip(streams, ST_beta_list))
+
+    LT_alpha_list = [float(entry['Alpha']) if not pd.isna(entry['Alpha']) and entry['Alpha'] != np.inf else 0.0 for entry in LT_input]
+    LT_alpha_dict = dict(zip(streams, LT_beta_list))
+
+    recorded_impressions = {}
+    for x in laydown.columns:
+        recorded_impressions[x] = laydown[x].to_list()
+
+    seas_dict = {}
+    for x in seas_index.columns:
+        seas_dict[x] = seas_index[x].to_list()
+
+    args = (streams, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,
+            LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict,
+            recorded_impressions, seas_dict, num_weeks)
+
+    initial_budgets = [min(spend_cap_dict[stream], max_budget / len(streams)) for stream in streams]
+
+    bounds = [(0, spend_cap_dict[stream]) for stream in streams]
+
+    result = minimize(profit_objective, initial_budgets, args=args, bounds=bounds,
+                      constraints=({'type': 'eq', 'fun': lambda budgets: sum(budgets) - max_budget},))
+
+    opt_budgets_dict = dict(zip(streams, result.x))
+
+    if result.success:
+        print("Optimal Solution Found:")
+        for stream in streams:
+            print(f"{stream} Budget: {opt_budgets_dict[stream]}")
+        print(f"Maximized Profit: {-result.fun}")
+    else:
+        print("Solver did not find an optimal solution.")
+        print(f"Solution failed using budget input of: {max_budget} with max total spend cap of: {sum(spend_cap_list)}")
+
+    return opt_budgets_dict
 
 app = Flask(__name__)
 azure_host = "blueprintalpha.postgres.database.azure.com"
