@@ -1034,7 +1034,7 @@ def optimise():
 
     if blend.lower() == "blend":
         if obj_func.lower() == "profit":
-            blended_profit_max_scipy(ST_input=ST_header_dict, LT_input=LT_header_dict, laydown=laydown, seas_index=seas_index, exh_budget='yes', max_budget=bud)
+            blended_profit_max_scipy(ST_input=ST_header_dict, LT_input=LT_header_dict, laydown=laydown, seas_index=seas_index_fetched, exh_budget='yes', max_budget=bud)
             # results[table_id] = Optimiser.blended_profit_max(ST_input = ST_header_dict, LT_input=LT_header_dict, laydown=laydown, seas_index=seas_index_fetched, exh_budget='yes', max_budget=max_budget, num_weeks=num_weeks)
             # app.logger.info(results[table_id])
         elif obj_func.lower() == 'revenue':
