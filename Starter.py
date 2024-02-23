@@ -395,9 +395,21 @@ def chart_data():
 def chart_response():
     try:
         fpath = 'C:/Users/adedoyin.showunmi/PycharmProjects/blueprint/optimiser output data'
-        csv_data = pd.read_csv(fpath + '/response_curve_data v2.csv')
+        csv_data = pd.read_csv(fpath + '/response_curve_data.csv')
         chart_response = csv_data.to_dict(orient='records')
         return jsonify(chart_response)
+
+    except Exception as e:
+        print('Error reading CSV file:', str(e))
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+@app.route('/chart_budget', methods = ['GET'])
+def chart_budget():
+    try:
+        fpath = 'C:/Users/adedoyin.showunmi/PycharmProjects/blueprint/optimiser output data'
+        csv_data = pd.read_csv(fpath + '/budget_curve_data.csv')
+        chart_budget = csv_data.to_dict(orient='records')
+        return jsonify(chart_budget)
 
     except Exception as e:
         print('Error reading CSV file:', str(e))
