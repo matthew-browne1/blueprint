@@ -80,48 +80,33 @@ function initializeDataTable(tableID) {
            dataSrc: tableID.toString(),
          },
          columns: [
+           { data: "Region" },
+           { data: "Brand" },
            { data: "Channel" },
-           { data: "Carryover" },
-           { data: "Alpha" },
            {
-             data: "Beta",
-             render: $.fn.DataTable.render.number(",", ".", 0, ""),
-           },
-           {
-             data: "Current_Budget",
+             data: "Current Budget",
              render: $.fn.DataTable.render.number(",", ".", 0, "£"),
            },
            {
-             data: "Min_Spend_Cap",
+             data: "Min Spend Cap",
              render: $.fn.DataTable.render.number(",", ".", 0, "£"),
            },
            {
-             data: "Max_Spend_Cap",
+             data: "Max Spend Cap",
              render: $.fn.DataTable.render.number(",", ".", 0, "£"),
-           },
-           {
-             data: null,
-             defaultContent:
-               '<div class="toggle-button-cover"><div class="button-cover"><div class="button r" id="lock-button"><input type="checkbox" class="checkbox" /><div class="knobs"></div><div class="layer"></div></div></div></div>',
            },
            {
              data: "Laydown",
              render: function (data, type, row, meta) {
-               var sparklineID = "sparkline" + tableID;
                return type === "display"
-                 ? '<span class="' +
-                     sparklineID +
-                     '" id="' +
-                     sparklineID +
-                     '">' +
-                     data.toString() +
-                     "</span>"
+                 ? '<span class="sparkline'+tableID+'">' + data.toString() + "</span>"
                  : data;
              },
            },
          ],
          select: {
            style: "os",
+           selector: "td:not(:nth-child(5)):not(:nth-child(6))",
          },
          autoWidth: false,
          columnDefs: [
@@ -129,19 +114,69 @@ function initializeDataTable(tableID) {
            { width: "80px", targets: 1 }, // Set width for the second column (Carryover)
            { width: "80px", targets: 2 }, // Set width for the third column (Alpha)
            { width: "80px", targets: 3 }, // Set width for the fourth column (Beta)
-           { width: "80px", targets: 4 }, // Set width for the fourth column (Beta)
+           { width: "80px", targets: 4 }, // Set width for the fifth column (Max Spend Cap)
            { width: "80px", targets: 5 }, // Set width for the fifth column (Max Spend Cap)
-           { width: "80px", targets: 6 }, // Set width for the fifth column (Max Spend Cap)
-           { width: "40px", targets: 7 }, // Set width for the fifth column (Max Spend Cap)
-           { width: "250px", targets: 8 }, // Set width for the fifth column (Max Spend Cap)
+           { width: "250px", targets: 6 }, // Set width for the fifth column (Max Spend Cap)
          ],
          drawCallback: function () {
            $(".sparkline" + tableID).sparkline("html", {
              type: "line",
              width: "250px",
            });
-         }
+         },
        });
+         var channelEditorTab = new $.fn.dataTable.Editor({
+           ajax: {
+             type: "POST",
+             url: "/table_data_editor",
+             contentType: "application/json", // Set the content type to JSON
+             data: function (d) {
+               d.tableId = tableID;
+               return JSON.stringify(d); // Convert the data to JSON string
+             }
+           },
+           table: "#channel" + tableID,
+           fields: [
+             {
+               label: "Min Spend Cap:",
+               name: "Min Spend Cap",
+             },
+             {
+               label: "Max Spend Cap:",
+               name: "Max Spend Cap",
+             },
+           ],
+           idSrc: "row_id",
+         });
+         $("#channel" + tableID).on(
+           "mouseenter",
+           "tbody td:nth-child(5), tbody td:nth-child(6)",
+           function (e) {
+             $(this).css({
+               cursor: "text",
+               userSelect: "none",
+             });
+           }
+         );
+
+         $("#channel" + tableID).on(
+           "mouseleave",
+           "tbody td:nth-child(5), tbody td:nth-child(6)",
+           function (e) {
+             $(this).css({
+               cursor: "default",
+               userSelect: "auto",
+             });
+           }
+         );
+
+         $("#channel" + tableID).on(
+           "click",
+           "tbody td:nth-child(5), tbody td:nth-child(6)",
+           function (e) {
+             channelEditorTab.inline(this);
+           }
+         );
      },
      error: function (error) {
        console.error("Error creating copy of data:", error);
@@ -151,18 +186,13 @@ function initializeDataTable(tableID) {
   $("#channel" + tableID).DataTable().on("page.dt", function () {
     $("#channel" + tableID).DataTable().ajax.reload(null, false);
   });
+  // $("#channel" + tableID).DataTable().on("order.dt", function () {
+  //   $("#channel" + tableID).DataTable().ajax.reload(null, false);
+  // });
 
   attachButtonListenersToDataTable(tableID);
-  redrawAllSparklines(tableID);
-  // initializeToggleAllButton(tableID);
-    $(document).on("change", ".checkbox.main"+tableID, function () {
-      if ($(this).is(":checked")) {
-        // If the static checkbox is checked, set all dynamically added checkboxes to checked
-        $("#channel" + tableID + " tbody .checkbox").prop("checked", true);
-      } else {
-        $("#channel" + tableID + " tbody .checkbox").prop("checked", false);
-      }
-    });
+
+
 }
 
 function initializeButtons(setID) {
@@ -206,20 +236,6 @@ function initializeButtons(setID) {
       },
     });
   });
-}
-
-function redrawAllSparklines(tableID) {
-  for (var i = 1; i < tableID; i++) {
-    var currentTableID = i;
-    $("#sparkline" + currentTableID).each(function () {
-      var $sparkline = $(this);
-      var sparklineData = $sparkline.text();
-      $sparkline.empty().sparkline(sparklineData, {
-        type: "line",
-        width: "250px",
-      });
-    });
-  }
 }
 
 function redrawAllTables(tableID) {

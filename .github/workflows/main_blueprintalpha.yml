@@ -33,11 +33,13 @@ jobs:
       - name: Add files to the ZIP artifact
         run: |
           zip -r release.zip \
+            Procfile
             data \
             static \
             templates \
             Ipopt \
-            app.py \
+            app.py
+            optimiser.py
             requirements.txt
 
       - name: List contents of the ZIP artifact

@@ -29,726 +29,36 @@ from pyomo.environ import *
 from pyomo.opt import SolverFactory
 import statsmodels as sm
 from scipy.optimize import minimize
-
-
-class Optimiser:
-
-    # channel_input = dictionary 
-    # laydown = dataframe
-    # obj_func = string
-    # exh_budget = string yes or no
-    # max_budget = integer
-
-    def profit_max(channel_input, laydown, seas_index, max_budget, exh_budget="yes", num_weeks=1000):
-        print(laydown.columns)
-        #laydown.drop(columns="Time_Period", inplace=True)
-        model = ConcreteModel()
-        
-        streams = [entry['Channel'] for entry in channel_input]
-
-        spend_cap_list = [float(entry['Max_Spend_Cap']) for entry in channel_input]
-        spend_cap_dict = dict(zip(streams, spend_cap_list))
-      
-        cost_per_list = [float(entry['CPU']) for entry in channel_input]
-        cost_per_dict = dict(zip(streams, cost_per_list))
-  
-        carryover_list = [float(entry['Carryover']) for entry in channel_input]
-        carryover_dict = dict(zip(streams, carryover_list))
-       
-        beta_list = [float(entry['Beta']) for entry in channel_input]
-        beta_dict = dict(zip(streams, beta_list))
- 
-        alpha_list = [float(entry['Alpha']) for entry in channel_input]
-        alpha_dict = dict(zip(streams, alpha_list))
-        
-        recorded_impressions = {}
-        for x in laydown.columns:
-            recorded_impressions[x] = laydown[x].to_list()
-
-        seas_dict = {}
-        for x in seas_index.columns:
-            seas_dict[x] = seas_index[x].to_list()
-    
-        model.stream_budget = Var(streams, within=NonNegativeReals)
-
-        model.budget_constraints = ConstraintList()
-        for stream in streams:
-            model.budget_constraints.add(expr=model.stream_budget[stream] <= spend_cap_dict[stream])
-
-        model.non_zero_spend_constraints = ConstraintList()
-        for stream in streams:
-            model.non_zero_spend_constraints.add(model.stream_budget[stream] >= 1.0)
-
-        def rev_per_stream(stream, budget):
-            
-            cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
-            print("cpu:")
-            print(cost_per_stream)
-            allocation = budget / cost_per_stream
-            print('allocation:')
-            print(allocation)
-            pct_laydown = []
-            for x in range(len(recorded_impressions[stream])):
-                try:
-                    pct_laydown.append(recorded_impressions[stream][x]/sum(recorded_impressions[stream]))
-                except:
-                    pct_laydown.append(0)
-            print("pct_laydown:")
-            print(pct_laydown)
-            pam = [pct_laydown[i]*allocation for i in range(len(pct_laydown))]
-            carryover_list = []
-            carryover_list.append(pam[0])
-            for x in range(1,len(pam)):
-                carryover_val = pam[x] + carryover_list[x-1]*carryover_dict[stream]
-                carryover_list.append(carryover_val)
-            print("carryover list:")
-            print(carryover_list)
-            rev_list = []
-            for x in carryover_list:
-                rev_val = beta_dict[stream] * ((1 - exp(-alpha_dict[stream]*x))) 
-                rev_list.append(rev_val)
-            print("rev list")
-            print(rev_list)
-            indexed_vals = [a * b for a, b in zip(rev_list, seas_dict[stream])]
-            total_rev = sum(indexed_vals)
-            infsum = 0
-            for n in range(1, num_weeks):
-                infsum += carryover_list[-1] * (1-carryover_dict[stream])**n
-            total_rev = total_rev + infsum
-            return total_rev
-
-        def profit_expr(model):
-            total_rev = sum(model.revenue_expr[stream] for stream in streams)
-            total_budget = sum(model.stream_budget[stream] for stream in streams)
-            return total_rev - total_budget
-
-        model.revenue_expr = Expression(streams, rule=lambda model, stream: rev_per_stream(stream, model.stream_budget[stream]))
-        model.profit_expr = Expression(rule=profit_expr)
-        model.prof_max = Objective(expr=model.profit_expr, sense=maximize)
-
-        def use_entire_budget_rule(model):
-            return sum(model.stream_budget[stream] for stream in streams) == max_budget
-        
-        def budget_cap(model):
-            return sum(model.stream_budget[stream] for stream in streams) <= max_budget
-        model.budget_cap_constraint = Constraint(rule=budget_cap)
-        if exh_budget == "yes":
-            model.use_entire_budget_constraint = Constraint(rule=use_entire_budget_rule)
-
-        def min_roi_constraint_rule(model, stream):
-            return model.revenue_expr[stream] / model.stream_budget[stream] >= 0.00001
-        model.min_roi_constraints = Constraint(streams, rule=min_roi_constraint_rule)
-
-        solver = SolverFactory('ipopt', executable = r"C:\Ipopt\bin\ipopt.exe")
-
-        results = solver.solve(model)
-
-        if results.solver.termination_condition == TerminationCondition.optimal:
-            opt_budgets = [model.stream_budget[stream].value for stream in streams]
-            opt_budgets_dict = dict(zip(streams, opt_budgets))
-            print("Optimal Solution Found:")
-            for stream in streams:
-                print(f"{stream} Budget: {model.stream_budget[stream].value}")
-            print(f"Maximised Profit: {model.prof_max()}")
-        else:
-            print("Solver did not find an optimal solution.")
-            print(f"solution failed using budget input of: {max_budget} with max total spend cap of: {sum(spend_cap_list)}")
-
-        return opt_budgets_dict
-
-    def revenue_max(channel_input, laydown, exh_budget, max_budget, num_weeks=1000):
-        laydown.drop(columns="Time_Period", inplace=True)
-        model = ConcreteModel()
-
-        streams = [entry['Channel'] for entry in channel_input]
-
-        spend_cap_list = [float(entry['Max_Spend_Cap']) for entry in channel_input]
-        spend_cap_dict = dict(zip(streams, spend_cap_list))
-  
-        cost_per_list = [float(entry['CPU']) for entry in channel_input]
-        cost_per_dict = dict(zip(streams, cost_per_list))
-       
-        carryover_list = [float(entry['Carryover']) for entry in channel_input]
-        carryover_dict = dict(zip(streams, carryover_list))
-     
-        beta_list = [float(entry['Beta']) for entry in channel_input]
-        beta_dict = dict(zip(streams, beta_list))
-    
-        alpha_list = [float(entry['Alpha']) for entry in channel_input]
-        alpha_dict = dict(zip(streams, alpha_list))
-       
-        recorded_impressions = {}
-        for x in laydown.columns:
-            recorded_impressions[x] = laydown[x].to_list()
-       
-        model.stream_budget = Var(streams, within=NonNegativeReals)
-
-        model.budget_constraints = ConstraintList()
-        for stream in streams:
-            model.budget_constraints.add(expr=model.stream_budget[stream] <= spend_cap_dict[stream])
-
-        model.non_zero_spend_constraints = ConstraintList()
-        for stream in streams:
-            model.non_zero_spend_constraints.add(model.stream_budget[stream] >= 1.0)
-
-        def rev_per_stream(stream, budget):
-            
-            cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
-
-            allocation = budget / cost_per_stream
-            pct_laydown = []
-            for x in range(len(recorded_impressions[stream])):
-                try:
-                    pct_laydown.append(recorded_impressions[stream][x]/sum(recorded_impressions[stream]))
-                except:
-                    pct_laydown.append(0)
-            pam = [pct_laydown[i]*allocation for i in range(len(pct_laydown))]
-            carryover_list = []
-            carryover_list.append(pam[0])
-            for x in range(1,len(pam)):
-                carryover_val = pam[x] + carryover_list[x-1]*carryover_dict[stream]
-                carryover_list.append(carryover_val)
-
-            rev_list = []
-            for x in carryover_list:
-                rev_val = beta_dict[stream] * ((1 - exp(-alpha_dict[stream]*x)))
-                rev_list.append(rev_val)
-            total_rev = sum(rev_list)
-            infsum = 0
-            for n in range(1, num_weeks):
-                infsum += carryover_list[-1] * (1-carryover_dict[stream])**n
-            total_rev = total_rev + infsum
-            return total_rev
-
-        model.revenue_expr = Expression(streams, rule=lambda model, stream: rev_per_stream(stream, model.stream_budget[stream]))
-
-        model.rev_max = Objective(expr=sum(model.revenue_expr[stream] for stream in streams), sense=maximize)  
-
-        def use_entire_budget_rule(model):
-            return sum(model.stream_budget[stream] for stream in streams) == max_budget
-        def budget_cap(model):
-            return sum(model.stream_budget[stream] for stream in streams) <= max_budget
-        model.budget_cap_constraint = Constraint(rule=budget_cap)
-        
-        if exh_budget == "yes":
-            model.use_entire_budget_constraint = Constraint(rule=use_entire_budget_rule)
-
-        def min_roi_constraint_rule(model, stream):
-            return model.revenue_expr[stream] / model.stream_budget[stream] >= 0.00001
-        model.min_roi_constraints = Constraint(streams, rule=min_roi_constraint_rule)
-
-        solver = SolverFactory('ipopt', executable = r"C:\Ipopt\bin\ipopt.exe")
-
-        results = solver.solve(model)
-
-        if results.solver.termination_condition == TerminationCondition.optimal:
-            opt_budgets = [model.stream_budget[stream].value for stream in streams]
-            opt_budgets_dict = dict(zip(streams, opt_budgets))
-            print("Optimal Solution Found:")
-            for stream in streams:
-                print(f"{stream} Budget: {model.stream_budget[stream].value}")
-            print(f"Maximised Revenue: {model.rev_max()}")
-        else:
-            print("Solver did not find an optimal solution.")
-
-        return opt_budgets_dict
-
-    def roi_max(channel_input, laydown, exh_budget, max_budget, num_weeks=1000):
-        laydown.drop(columns="Time_Period", inplace=True)
-        model = ConcreteModel()
-
-        streams = [entry['Channel'] for entry in channel_input]
-
-        spend_cap_list = [float(entry['Max_Spend_Cap']) for entry in channel_input]
-        spend_cap_dict = dict(zip(streams, spend_cap_list))
-      
-        cost_per_list = [float(entry['CPU']) for entry in channel_input]
-        cost_per_dict = dict(zip(streams, cost_per_list))
-        
-        carryover_list = [float(entry['Carryover']) for entry in channel_input]
-        carryover_dict = dict(zip(streams, carryover_list))
-      
-        beta_list = [float(entry['Beta']) for entry in channel_input]
-        beta_dict = dict(zip(streams, beta_list))
- 
-        alpha_list = [float(entry['Alpha']) for entry in channel_input]
-        alpha_dict = dict(zip(streams, alpha_list))
-      
-        recorded_impressions = {}
-        for x in laydown.columns:
-            recorded_impressions[x] = laydown[x].to_list()
-    
-        model.stream_budget = Var(streams, within=NonNegativeReals)
-
-        model.budget_constraints = ConstraintList()
-        for stream in streams:
-            model.budget_constraints.add(expr=model.stream_budget[stream] <= spend_cap_dict[stream])
-
-        model.non_zero_spend_constraints = ConstraintList()
-        for stream in streams:
-            model.non_zero_spend_constraints.add(model.stream_budget[stream] >= 1.0)
-
-        def rev_per_stream(stream, budget):
-            
-            cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
-
-            allocation = budget / cost_per_stream
-            pct_laydown = []
-            for x in range(len(recorded_impressions[stream])):
-                try:
-                    pct_laydown.append(recorded_impressions[stream][x]/sum(recorded_impressions[stream]))
-                except:
-                    pct_laydown.append(0)
-            pam = [pct_laydown[i]*allocation for i in range(len(pct_laydown))]
-            carryover_list = []
-            carryover_list.append(pam[0])
-            for x in range(1,len(pam)):
-                carryover_val = pam[x] + carryover_list[x-1]*carryover_dict[stream]
-                carryover_list.append(carryover_val)
-            rev_list = []
-            for x in carryover_list:
-                rev_val = beta_dict[stream] * ((1 - exp(-alpha_dict[stream]*x)))
-                rev_list.append(rev_val)
-            total_rev = sum(rev_list)
-            infsum = 0
-            for n in range(1, num_weeks):
-                infsum += carryover_list[-1] * (1-carryover_dict[stream])**n
-            total_rev = total_rev + infsum
-            return total_rev
-
-        def roi_expr(model):
-            rev_list = np.array([model.revenue_expr[stream] for stream in streams])
-            budget_list = np.array([model.stream_budget[stream] for stream in streams])
-            return sum(rev_list/budget_list)
-
-        model.revenue_expr = Expression(streams, rule=lambda model, stream: rev_per_stream(stream, model.stream_budget[stream]))
-
-        model.roi_expr = Expression(rule=roi_expr)
-
-        model.roi_max = Objective(expr=model.roi_expr, sense=maximize)
-
-        def use_entire_budget_rule(model):
-            return sum(model.stream_budget[stream] for stream in streams) == max_budget
-        def budget_cap(model):
-            return sum(model.stream_budget[stream] for stream in streams) <= max_budget
-        model.budget_cap_constraint = Constraint(rule=budget_cap)
-        
-        if exh_budget == "yes":
-            model.use_entire_budget_constraint = Constraint(rule=use_entire_budget_rule)
-
-        def min_roi_constraint_rule(model, stream):
-            return model.revenue_expr[stream] / model.stream_budget[stream] >= 0.00001
-        model.min_roi_constraints = Constraint(streams, rule=min_roi_constraint_rule)
-
-        solver = SolverFactory('ipopt', executable = r"C:\Ipopt\bin\ipopt.exe")
-
-        results = solver.solve(model)
-
-        if results.solver.termination_condition == TerminationCondition.optimal:
-            opt_budgets = [model.stream_budget[stream].value for stream in streams]
-            opt_budgets_dict = dict(zip(streams, opt_budgets))
-            print("Optimal Solution Found:")
-            for stream in streams:
-                print(f"{stream} Budget: {model.stream_budget[stream].value}")
-            print(f"Maximised ROI: {model.roi_max()}")
-        else:
-            print("Solver did not find an optimal solution.")
-
-        return opt_budgets_dict
-    
-
-    def beta_opt(channel_input, laydown, num_weeks=1000):
-        laydown.drop(columns="Time_Period", inplace=True)
-        model = ConcreteModel()
-        print("initialising beta opt")
-        streams = [entry['Channel'] for entry in channel_input]
-
-        recorded_impressions = {}
-        for x in laydown.columns:
-            recorded_impressions[x] = [float(i) for i in laydown[x].to_list()]
-        
-        cost_per_list = [float(entry['CPU']) for entry in channel_input]
-        cost_per_dict = dict(zip(streams, cost_per_list))
-        
-        carryover_list = [float(entry['Carryover']) for entry in channel_input]
-        carryover_dict = dict(zip(streams, carryover_list))
-
-        alpha_list = [float(entry['Alpha']) for entry in channel_input]
-        alpha_dict = dict(zip(streams, alpha_list))
-
-        current_budget_list = [entry['Current_Budget'] for entry in channel_input]
-        current_budget_dict = dict(zip(streams, current_budget_list))
-
-        current_roi_list = [entry['Current_ROI'] for entry in channel_input]
-        current_roi_dict = dict(zip(streams, current_roi_list))
-
-        model.beta = Var(streams, within=NonNegativeReals)
-
-        def rev_per_stream(stream, beta):
-            print(f"calculating revenue per stream for {stream}")
-            cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
-            print(f"cpu: {cost_per_stream}")
-            allocation = current_budget_dict[stream] / cost_per_stream
-            print(f"allocation: {allocation}")
-            pct_laydown = []
-            for x in range(len(recorded_impressions[stream])):
-                try:
-                    pct_laydown.append(recorded_impressions[stream][x]/sum(recorded_impressions[stream]))
-                except:
-                    pct_laydown.append(0)
-            print(f"pct_laydown: {pct_laydown}")
-            pam = [pct_laydown[i]*allocation for i in range(len(pct_laydown))]
-            print(f"pam: {pam}")
-            carryover_list_str = []
-            carryover_list_str.append(pam[0])
-            for x in range(1,len(pam)):
-                carryover_val = pam[x] + carryover_list_str[x-1]*carryover_dict[stream]
-                carryover_list_str.append(carryover_val)
-            print(f"carryover_list: {carryover_list_str}")
-            rev_list = []
-            for x in carryover_list_str:
-                rev_val = beta * ((1 - exp(-alpha_dict[stream]*x)))
-                rev_list.append(rev_val)
-            print(f"rev_list: {rev_list}")
-            total_rev = sum(rev_list)
-            print(f"total revenue: {total_rev}")
-            infsum = 0
-            for n in range(1, num_weeks):
-                infsum += carryover_list_str[-1] * (carryover_dict[stream])**n
-            print(f"sum to infinity integer: {infsum} for stream: {stream}")
-            total_rev = total_rev + infsum
-            return total_rev
-
-        def calculated_roi_per_stream(stream, beta):
-
-            roi = rev_per_stream(stream, beta) / current_budget_dict[stream]
-            return roi
-        
-        # manually calcualte betas
-        # set betas to 1 and then find the revs
-
-        print(f"ROIs with beta = 1: {dict(zip(streams,[calculated_roi_per_stream(stream,1) for stream in streams]))}")
-        manual_betas = [a / b for a, b in zip(current_roi_list, [calculated_roi_per_stream(stream,1) for stream in streams])]
-        
-        return dict(zip(streams, manual_betas))
-    
-    def blended_profit_max(ST_input, LT_input, laydown, seas_index, max_budget, exh_budget="yes", num_weeks=1000):
-
-        model = ConcreteModel()
-        
-        streams = [entry['Channel'] for entry in ST_input]
-
-        spend_cap_list = [float(entry['Max_Spend_Cap']) for entry in ST_input]
-        spend_cap_dict = dict(zip(streams, spend_cap_list))
-      
-        ST_cost_per_list = [float(entry['CPU']) for entry in ST_input]
-        ST_cost_per_dict = dict(zip(streams, ST_cost_per_list))
-        LT_cost_per_list = [float(entry['CPU']) for entry in LT_input]
-        LT_cost_per_dict = dict(zip(streams, LT_cost_per_list))
-  
-        ST_carryover_list = [float(entry['Carryover']) for entry in ST_input]
-        ST_carryover_dict = dict(zip(streams, ST_carryover_list))
-        LT_carryover_list = [float(entry['Carryover']) for entry in LT_input]
-        LT_carryover_dict = dict(zip(streams, LT_carryover_list))
-       
-        ST_beta_list = [float(entry['Beta']) for entry in ST_input]
-        ST_beta_dict = dict(zip(streams, ST_beta_list))
-        LT_beta_list = [float(entry['Beta']) for entry in LT_input]
-        LT_beta_dict = dict(zip(streams, LT_beta_list))
- 
-        ST_alpha_list = [float(entry['Alpha']) for entry in ST_input]
-        ST_alpha_dict = dict(zip(streams, ST_alpha_list))
-        LT_alpha_list = [float(entry['Alpha']) for entry in LT_input]
-        LT_alpha_dict = dict(zip(streams, LT_alpha_list))
-        
-        app.logger.info(f"from within pyomo_opt method: spend cap dict: {spend_cap_dict}, ST cpu: {ST_cost_per_dict}, LT cpu: {LT_cost_per_dict}, ST carryover dict: {ST_carryover_dict}, LT carryover dict: {LT_carryover_dict}, ST beta dict: {ST_beta_dict}, LT beta dict: {LT_beta_dict}, ST alpha dict: {ST_alpha_dict}, LT alpha dict: {LT_alpha_dict}")
-
-        recorded_impressions = {}
-        for x in laydown.columns:
-            recorded_impressions[x] = laydown[x].to_list()
-
-        seas_dict = {}
-        for x in seas_index.columns:
-            seas_dict[x] = seas_index[x].to_list()
-    
-        model.stream_budget = Var(streams, within=NonNegativeReals)
-
-        model.budget_constraints = ConstraintList()
-        for stream in streams:
-            model.budget_constraints.add(expr=model.stream_budget[stream] <= spend_cap_dict[stream])
-
-        model.non_zero_spend_constraints = ConstraintList()
-        for stream in streams:
-            model.non_zero_spend_constraints.add(model.stream_budget[stream] >= 1.0)
-
-        def rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dict, beta_dict):
-            
-            cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
-            app.logger.info(f"cpu for {stream}: {cost_per_stream}")
-            allocation = budget / cost_per_stream
-            app.logger.info(f'allocation: {allocation}')
-            pct_laydown = []
-            for x in range(len(recorded_impressions[stream])):
-                try:
-                    pct_laydown.append(recorded_impressions[stream][x]/sum(recorded_impressions[stream]))
-                except:
-                    pct_laydown.append(0)
-            app.logger.info(f"pct_laydown: {pct_laydown}")
-            pam = [pct_laydown[i]*allocation for i in range(len(pct_laydown))]
-            carryover_list = []
-            carryover_list.append(pam[0])
-            for x in range(1,len(pam)):
-                carryover_val = pam[x] + carryover_list[x-1]*carryover_dict[stream]
-                carryover_list.append(carryover_val)
-            app.logger.info(f"carryover list: {carryover_list}")
-            rev_list = []
-            for x in carryover_list:
-                rev_val = beta_dict[stream] * ((1 - exp(-alpha_dict[stream]*x))) 
-                rev_list.append(rev_val)
-            app.logger.info(f"rev list: {rev_list}")
-            indexed_vals = [a * b for a, b in zip(rev_list, seas_dict[stream])]
-            total_rev = sum(indexed_vals)
-            infsum = 0
-            for n in range(1, num_weeks):
-                infsum += carryover_list[-1] * (1-carryover_dict[stream])**n
-            total_rev = total_rev + infsum
-            return total_rev
-
-        def profit_expr(model):
-            total_rev = sum(model.revenue_expr[stream] for stream in streams)
-            total_budget = sum(model.stream_budget[stream] for stream in streams)
-            return total_rev - total_budget
-
-        def total_rev_per_stream(stream, budget):
-            ST_rev = rev_per_stream(stream, budget, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict)
-            LT_rev = rev_per_stream(stream, budget, LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict)
-            total_rev = ST_rev + LT_rev
-            return total_rev
-
-        model.revenue_expr = Expression(streams, rule=lambda model, stream: total_rev_per_stream(stream, model.stream_budget[stream]))
-
-        model.profit_expr = Expression(rule=profit_expr)
-        model.prof_max = Objective(expr=model.profit_expr, sense=maximize)
-
-        def use_entire_budget_rule(model):
-            return sum(model.stream_budget[stream] for stream in streams) == max_budget
-        
-        def budget_cap(model):
-            return sum(model.stream_budget[stream] for stream in streams) <= max_budget
-        model.budget_cap_constraint = Constraint(rule=budget_cap)
-        if exh_budget == "yes":
-            model.use_entire_budget_constraint = Constraint(rule=use_entire_budget_rule)
-
-        def min_roi_constraint_rule(model, stream):
-            return model.revenue_expr[stream] / model.stream_budget[stream] >= 0.00001
-        model.min_roi_constraints = Constraint(streams, rule=min_roi_constraint_rule)
-
-
-
-        current_dir = os.getcwd()
-        ipopt_fp = os.path.join(current_dir, 'Ipopt/bin/ipopt')
-        print(ipopt_fp)
-
-        solver = SolverFactory('ipopt', executable = ipopt_fp)
-        results = solver.solve(model, tee=True)
-
-
-
-
-
-
-        if results.solver.termination_condition == TerminationCondition.optimal:
-            opt_budgets = [model.stream_budget[stream].value for stream in streams]
-            opt_budgets_dict = dict(zip(streams, opt_budgets))
-            app.logger.info("Optimal Solution Found:")
-            for stream in streams:
-                app.logger.info(f"{stream} Budget: {model.stream_budget[stream].value}")
-            app.logger.info(f"Maximised Profit: {model.prof_max()}")
-        else:
-            print("Solver did not find an optimal solution.")
-            print(f"solution failed using budget input of: {max_budget} with max total spend cap of: {sum(spend_cap_list)}")
-
-        return opt_budgets_dict
-
-def rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dict, beta_dict, recorded_impressions, seas_dict, num_weeks):
-    cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
-    allocation = budget / cost_per_stream
-
-    pct_laydown = np.array(recorded_impressions[stream]) / sum(recorded_impressions[stream]) if sum(recorded_impressions[stream]) != 0 else 0
-
-    pam = pct_laydown * allocation
-
-    carryover_list = np.zeros_like(pam)
-    carryover_list[0] = pam[0]
-
-    for i in range(1, len(pam)):
-        carryover_val = pam[i] + carryover_list[i - 1] * carryover_dict[stream]
-        carryover_list[i] = carryover_val
-
-    print("carryover_list:", carryover_list)
-
-    rev_list = beta_dict[stream] * ((1 - np.exp(-alpha_dict[stream] * carryover_list)))
-
-    print(stream)
-    print("beta dict:", beta_dict[stream])
-
-    indexed_vals = rev_list * seas_dict[stream]
-    total_rev = np.sum(indexed_vals)
-
-    infsum = np.sum(carryover_list[-1] * (1 - carryover_dict[stream]) ** np.arange(1, num_weeks))
-
-    total_rev += infsum
-    return total_rev
-
-
-def rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dict, beta_dict, recorded_impressions, seas_dict, num_weeks):
-    cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
-    allocation = budget / cost_per_stream
-
-    pct_laydown = np.array(recorded_impressions[stream]) / sum(recorded_impressions[stream]) if sum(recorded_impressions[stream]) != 0 else 0
-
-    pam = pct_laydown * allocation
-
-    carryover_list = np.zeros_like(pam)
-    carryover_list[0] = pam[0]
-
-    for i in range(1, len(pam)):
-        carryover_val = pam[i] + carryover_list[i - 1] * carryover_dict[stream]
-        carryover_list[i] = carryover_val
-
-    # print("carryover_list:", carryover_list)
-
-    rev_list = beta_dict[stream] * ((1 - np.exp(-alpha_dict[stream] * carryover_list)))
-
-    # print(stream)
-    # print("beta dict:", beta_dict[stream])
-
-    indexed_vals = rev_list * seas_dict[stream]
-    total_rev = np.sum(indexed_vals)
-
-    infsum = np.sum(carryover_list[-1] * (1 - carryover_dict[stream]) ** np.arange(1, num_weeks))
-
-    total_rev += infsum
-    return total_rev
-
-
-def total_rev_per_stream(stream, budget, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,
-                         LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict, recorded_impressions,
-                         seas_dict, num_weeks):
-    ST_rev = rev_per_stream(stream, budget, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,
-                            recorded_impressions, seas_dict, num_weeks)
-    LT_rev = rev_per_stream(stream, budget, LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict,
-                            recorded_impressions, seas_dict, num_weeks)
-    total_rev = ST_rev + LT_rev
-    return total_rev
-
-
-def profit_objective(budgets, *args):
-    streams, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict, \
-    LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict, recorded_impressions, seas_dict, num_weeks = args
-
-    total_rev = sum(
-        total_rev_per_stream(stream, budgets[i], ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,
-                             LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict,
-                             recorded_impressions, seas_dict, num_weeks) for i, stream in enumerate(streams))
-    total_budget = sum(budgets)
-
-    return -(total_rev - total_budget)
-
-
-def blended_profit_max_scipy(ST_input, LT_input, laydown, seas_index, max_budget, exh_budget="yes", num_weeks=1000):
-    streams = [entry['Channel'] for entry in ST_input]
-
-    spend_cap_list = [float(entry['Max_Spend_Cap']) for entry in ST_input]
-    spend_cap_dict = dict(zip(streams, spend_cap_list))
-
-    ST_cost_per_list = [float(entry['CPU']) for entry in ST_input]
-    ST_cost_per_dict = dict(zip(streams, ST_cost_per_list))
-    LT_cost_per_list = [float(entry['CPU']) for entry in LT_input]
-    LT_cost_per_dict = dict(zip(streams, LT_cost_per_list))
-
-    ST_carryover_list = [float(entry['Carryover']) for entry in ST_input]
-    ST_carryover_dict = dict(zip(streams, ST_carryover_list))
-    LT_carryover_list = [float(entry['Carryover']) for entry in LT_input]
-    LT_carryover_dict = dict(zip(streams, LT_carryover_list))
-
-    # ST_beta_list = [float(entry['Beta']) for entry in ST_input]
-    # ST_beta_dict = dict(zip(streams, ST_beta_list))
-    # LT_beta_list = [float(entry['Beta']) for entry in LT_input]
-    # LT_beta_dict = dict(zip(streams, LT_beta_list))
-
-    ST_beta_list = [float(entry['Beta']) if not pd.isna(entry['Beta']) and entry['Beta'] != np.inf else 0.0 for entry in ST_input]
-    ST_beta_dict = dict(zip(streams, ST_beta_list))
-
-    LT_beta_list = [float(entry['Beta']) if not pd.isna(entry['Beta']) and entry['Beta'] != np.inf else 0.0 for entry in LT_input]
-    LT_beta_dict = dict(zip(streams, LT_beta_list))
-
-    # ST_alpha_list = [float(entry['Alpha']) for entry in ST_input]
-    # ST_alpha_dict = dict(zip(streams, ST_alpha_list))
-    # LT_alpha_list = [float(entry['Alpha']) for entry in LT_input]
-    # LT_alpha_dict = dict(zip(streams, LT_alpha_list))
-
-    ST_alpha_list = [float(entry['Alpha']) if not pd.isna(entry['Alpha']) and entry['Alpha'] != np.inf else 0.0 for entry in ST_input]
-    ST_alpha_dict = dict(zip(streams, ST_beta_list))
-
-    LT_alpha_list = [float(entry['Alpha']) if not pd.isna(entry['Alpha']) and entry['Alpha'] != np.inf else 0.0 for entry in LT_input]
-    LT_alpha_dict = dict(zip(streams, LT_beta_list))
-
-    recorded_impressions = {}
-    for x in laydown.columns:
-        recorded_impressions[x] = laydown[x].to_list()
-
-    seas_dict = {}
-    for x in seas_index.columns:
-        seas_dict[x] = seas_index[x].to_list()
-
-    args = (streams, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,
-            LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict,
-            recorded_impressions, seas_dict, num_weeks)
-
-    initial_budgets = [min(spend_cap_dict[stream], max_budget / len(streams)) for stream in streams]
-
-    bounds = [(0, spend_cap_dict[stream]) for stream in streams]
-
-    result = minimize(profit_objective, initial_budgets, args=args, bounds=bounds,
-                      constraints=({'type': 'eq', 'fun': lambda budgets: sum(budgets) - max_budget},))
-
-    opt_budgets_dict = dict(zip(streams, result.x))
-
-    if result.success:
-        print("Optimal Solution Found:")
-        for stream in streams:
-            print(f"{stream} Budget: {opt_budgets_dict[stream]}")
-        print(f"Maximized Profit: {-result.fun}")
-    else:
-        print("Solver did not find an optimal solution.")
-        print(f"Solution failed using budget input of: {max_budget} with max total spend cap of: {sum(spend_cap_list)}")
-
-    return opt_budgets_dict
-
-
-# blend_res = {}
-
-# blend_res['1'] = blended_profit_max_scipy(ST_input=ST_header_dict, LT_input=LT_header_dict, laydown=laydown,
-#                                           seas_index=seas_index, exh_budget='yes', max_budget=bud)
+from optimiser import Optimise
+from pyomo_opt import Optimiser
+from io import BytesIO
+from concurrent.futures import ProcessPoolExecutor
+from copy import deepcopy
 
 app = Flask(__name__)
+
+executor = ProcessPoolExecutor()
+
+### TODO: WRITE A CLASS WHICH FETCHES CORRECT DB DETAILS
+
 azure_host = "blueprintalpha.postgres.database.azure.com"
 azure_user = "bptestadmin"
 azure_password = "Password!"
 azure_database = "postgres" 
 
+ra_server_uri = 'postgresql://postgres:'+urllib.parse.quote_plus("Gde3400@@")+'@192.168.1.2:5432/CPW Blueprint'
+
 # Create the new PostgreSQL URI for Azure
 azure_db_uri = f"postgresql://{azure_user}:{urllib.parse.quote_plus(azure_password)}@{azure_host}:5432/{azure_database}"
 
-app.config['SQLALCHEMY_DATABASE_URI'] = azure_db_uri
+app.config['SQLALCHEMY_DATABASE_URI'] = ra_server_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = secrets.token_hex()
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['PROPAGATE_EXCEPTIONS'] = True
 app.config['DEBUG'] = True
 
-engine = create_engine(azure_db_uri)
+engine = create_engine(ra_server_uri)
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
@@ -773,19 +83,20 @@ class Snapshot(db.Model):
     content = db.Column(db.String, nullable=False)
     table_ids = db.Column(db.String, nullable = False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    table_data = db.Column(db.Text, nullable=False)
 
-class DatabaseHandler(logging.Handler):
-    def emit(self, record):
-        try:
-            message = self.format(record)
-            db.session.add(Log(message=message))
-            db.session.commit()
-        except Exception:
-            self.handleError(record)
+# class DatabaseHandler(logging.Handler):
+#     def emit(self, record):
+#         try:
+#             message = self.format(record)
+#             db.session.add(Log(message=message))
+#             db.session.commit()
+#         except Exception:
+#             self.handleError(record)
 
-database_handler = DatabaseHandler()
-database_handler.setLevel(logging.DEBUG)
-app.logger.addHandler(database_handler)
+# database_handler = DatabaseHandler()
+# database_handler.setLevel(logging.DEBUG)
+# app.logger.addHandler(database_handler)
 
 class PyomoLogHandler(logging.Handler):
     def emit(self, record):
@@ -841,6 +152,7 @@ def save_snapshot():
     user_id = current_user.id
     content = request.json.get('content')
     current_table_ids = list(table_data.keys())
+    table_data_json = json.dumps(table_data)
 
     table_ids_str = ','.join(map(str, current_table_ids))
 
@@ -851,9 +163,10 @@ def save_snapshot():
         # Update the existing snapshot
         existing_snapshot.content = content
         existing_snapshot.table_ids = table_ids_str
+        existing_snapshot.table_data = table_data_json
     else:
         # Create a new snapshot
-        new_snapshot = Snapshot(name=snapshot_name, content=content, table_ids=table_ids_str, user_id=user_id)
+        new_snapshot = Snapshot(name=snapshot_name, content=content, table_ids=table_ids_str, user_id=user_id, table_data=table_data_json)
         db.session.add(new_snapshot)
 
     try:
@@ -870,6 +183,7 @@ def overwrite_save():
     user_id = current_user.id
     content = request.json.get('content')
     current_table_ids = list(table_data.keys())
+    table_data_json = json.dumps(table_data)
 
     table_ids_str = ','.join(map(str, current_table_ids))
 
@@ -879,6 +193,7 @@ def overwrite_save():
     existing_snapshot = Snapshot.query.filter_by(id=snapshot_id, user_id=user_id).first()
     existing_snapshot.content = content
     existing_snapshot.table_ids = table_ids_str
+    existing_snapshot.table_data = table_data_json
 
     try:
         db.session.commit()
@@ -890,9 +205,10 @@ def overwrite_save():
 @app.route('/load_snapshot')
 @login_required
 def load_snapshot():
+    global table_data
     user_id = current_user.id
     snapshot = Snapshot.query.filter_by(user_id=user_id).first()
-
+    table_data = json.loads(snapshot.table_data)
     content_list = snapshot.content
     table_ids_list = snapshot.table_ids
     app.logger.info(table_data.keys())    
@@ -909,7 +225,7 @@ def get_saves():
 
     for save in user_saves:
         save_info = {
-            'DT_RowId': save.id,  # Unique identifier for DataTables (required)
+            'DT_RowId': save.id,  
             'name': save.name,
             'table_ids': save.table_ids
         }
@@ -959,52 +275,259 @@ laydown_table_name = "laydown"
 # LT_header.to_sql(LT_db_table_name, con=engine, index=False, if_exists='replace')
 # laydown.to_sql(laydown_table_name, con=engine, index=False, if_exists='replace')
 
-laydown_query = 'select * FROM "laydown"'
-laydown_fetched = pd.read_sql(laydown_query, con=engine)
-ST_query = f'SELECT * FROM "ST_header"'
-ST_input_fetched = pd.read_sql(ST_query, con=engine)
-LT_query = f'SELECT * FROM "LT_header"'
-LT_input_fetched = pd.read_sql(LT_query, con=engine)
-si_query = f'SELECT * FROM "seas_index"'
-seas_index_fetched = pd.read_sql(si_query, con=engine)
+# laydown_query = 'select * FROM "laydown"'
+# laydown_fetched = pd.read_sql(laydown_query, con=engine)
+# ST_query = f'SELECT * FROM "ST_header"'
+# ST_input_fetched = pd.read_sql(ST_query, con=engine)
+# LT_query = f'SELECT * FROM "LT_header"'
+# LT_input_fetched = pd.read_sql(LT_query, con=engine)
+# si_query = f'SELECT * FROM "seas_index"'
+# seas_index_fetched = pd.read_sql(si_query, con=engine)
 
-bud = sum(ST_input_fetched['Current_Budget'].to_list())
+# bud = sum(ST_input_fetched['Current_Budget'].to_list())
+# streams = []
+# for stream in ST_input_fetched['Channel']:
+#     streams.append(str(stream))
+
+# laydown = laydown_fetched
+# ST_header_dict = ST_input_fetched.to_dict("records")
+# LT_header_dict = LT_input_fetched.to_dict("records")
+# seas_index = seas_index_fetched.to_dict("records")
+
+# laydown_dates = laydown['Time_Period']
+
+# ### TABLE DATA ###
+
+# table_df = ST_input_fetched.copy()
+
+# dataTable_cols = ['Channel', 'Carryover', 'Alpha', 'Beta', 'Current_Budget', 'Min_Spend_Cap', 'Max_Spend_Cap', 'Laydown']
+
+# for col in table_df.columns:
+#     if col not in dataTable_cols:
+#         table_df.drop(columns=col, inplace=True)
+
+# table_dict = table_df.to_dict("records")
+
+# table_data = {"1":table_dict}
+# for var in table_data["1"]:
+#     var['Laydown'] = laydown[var['Channel']].tolist()
+
+
+# seas_index = seas_index_fetched
+
+
+
+
+num_weeks = 1000
+
+def prep_rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dict, beta_dict):
+    cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
+    print("cpu:")
+    print(cost_per_stream)
+    allocation = budget / cost_per_stream
+    print('allocation:')
+    print(allocation)
+    pct_laydown = []
+    for x in range(len(recorded_impressions[stream])):
+        try:
+            pct_laydown.append(recorded_impressions[stream][x] / sum(recorded_impressions[stream]))
+        except:
+            pct_laydown.append(0)
+    print("pct_laydown:")
+    print(pct_laydown)
+    pam = [pct_laydown[i] * allocation for i in range(len(pct_laydown))]
+    carryover_list = []
+    carryover_list.append(pam[0])
+    for x in range(1, len(pam)):
+        carryover_val = pam[x] + carryover_list[x - 1] * carryover_dict[stream]
+        carryover_list.append(carryover_val)
+    print("carryover list:")
+    print(carryover_list)
+    rev_list = []
+    for x in carryover_list:
+        rev_val = beta_dict[stream] * (1 - np.exp(-alpha_dict[stream] * x))
+        rev_list.append(rev_val)
+    print("rev list")
+    print(rev_list)
+    indexed_vals = [a * b for a, b in zip(rev_list, seas_dict[stream])]
+    total_rev = sum(indexed_vals)
+    infsum = 0
+    for n in range(1, num_weeks):
+        infsum += carryover_list[-1] * (1 - carryover_dict[stream]) ** n
+    total_rev = total_rev + infsum
+    return rev_list
+
+def prep_total_rev_per_stream(stream, budget):
+    ST_rev = prep_rev_per_stream(stream, budget, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict)
+    LT_rev = prep_rev_per_stream(stream, budget, LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict)
+    total_rev = ST_rev + LT_rev
+    return total_rev
+
+results = {}
+
+ST_header = pd.read_sql_table('All_Channel_Inputs', engine)
+# Show column headers without underscores!
+ST_header.columns = [x.replace("_", " ") for x in ST_header.columns.tolist()]
+
+laydown = pd.read_sql_table('All_Laydown', engine)
+laydown.fillna(0)
+laydown.columns
+seas_index = pd.read_sql_table('All_Index', engine)
+
+for x in laydown.columns.tolist():
+    if x not in ST_header['Opt Channel'].tolist() and x != 'Date':
+        print(x)
+        laydown.drop(columns=[x], inplace=True)
+
 streams = []
-for stream in ST_input_fetched['Channel']:
+for stream in ST_header['Opt Channel']:
     streams.append(str(stream))
 
-laydown = laydown_fetched
-ST_header_dict = ST_input_fetched.to_dict("records")
-LT_header_dict = LT_input_fetched.to_dict("records")
-seas_index = seas_index_fetched.to_dict("records")
+laydown_dates = laydown['Date']
+print(f"current (incorrect) current budget: {ST_header['Current Budget']}")
 
-laydown_dates = laydown['Time_Period']
+for stream in streams:
+    ST_header.loc[ST_header['Opt Channel'] == stream, 'Current Budget'] = sum(laydown[stream])
 
-### TABLE DATA ###
+ST_header['ST Revenue'] = ST_header['Current Budget'] * ST_header['ST Current ROI']
 
-table_df = ST_input_fetched.copy()
+ST_header_dict = ST_header.to_dict("records")
 
-dataTable_cols = ['Channel', 'Carryover', 'Alpha', 'Beta', 'Current_Budget', 'Min_Spend_Cap', 'Max_Spend_Cap', 'Laydown']
+ST_cost_per_list = [float(entry['CPU']) for entry in ST_header_dict]
+ST_cost_per_dict = dict(zip(streams, ST_cost_per_list))
+
+ST_carryover_list = [float(entry['ST Carryover']) for entry in ST_header_dict]
+ST_carryover_dict = dict(zip(streams, ST_carryover_list))
+
+ST_beta_dict = dict(zip(streams, [1] * len(streams)))
+
+ST_alpha_list = [float(entry['ST Alpha']) for entry in ST_header_dict]
+ST_alpha_dict = dict(zip(streams, ST_alpha_list))
+raw_input_data = ST_header.to_dict("records")
+current_budget_list = [entry['Current Budget'] for entry in raw_input_data]
+current_budget_dict = dict(zip(streams, current_budget_list))
+
+seas_dict = seas_index
+
+recorded_impressions = {}
+for x in laydown.columns:
+    recorded_impressions[x] = laydown.fillna(0)[x].to_list()
+
+beta_calc_rev_dict_ST = {'Date': list(laydown.Date)}
+for stream in list(streams):
+    beta_calc_rev_dict_ST[stream] = prep_rev_per_stream(stream, current_budget_dict[stream], ST_cost_per_dict,
+                                                   ST_carryover_dict, ST_alpha_dict, ST_beta_dict)
+    sum(beta_calc_rev_dict_ST[stream])
+beta_calc_df = pd.DataFrame(beta_calc_rev_dict_ST)[list(streams)].sum().reset_index()
+beta_calc_df.columns = ['Opt Channel', 'Calc_Rev']
+beta_calc_df = pd.merge(beta_calc_df, ST_header[['Opt Channel', 'ST Revenue']], on='Opt Channel')
+beta_calc_df['ST Beta'] = np.where(beta_calc_df['Calc_Rev'] == 0, 0,
+                                   beta_calc_df['ST Revenue'] / beta_calc_df['Calc_Rev'])
+ST_opt_betas_dict = dict(zip(streams, beta_calc_df['ST Beta'].tolist()))
+
+ST_header['ST Beta'] = list(ST_opt_betas_dict.values())
+
+ST_header_dict = ST_header.to_dict("records")
+
+max_spend_cap = sum(ST_header['Max Spend Cap'])
+
+print(max_spend_cap)
+
+LT_header = pd.read_sql_table('All_Channel_Inputs', engine)
+# Show column headers without underscores!
+LT_header.columns = [x.replace("_", " ") for x in LT_header.columns.tolist()]
+
+laydown = pd.read_sql_table('All_Laydown', engine)
+laydown.fillna(0)
+laydown.columns
+seas_index = pd.read_sql_table('All_Index', engine)
+
+for x in laydown.columns.tolist():
+    if x not in LT_header['Opt Channel'].tolist() and x != 'Date':
+        print(x)
+        laydown.drop(columns=[x], inplace=True)
+
+streams = []
+for stream in LT_header['Opt Channel']:
+    streams.append(str(stream))
+
+laydown_dates = laydown['Date']
+print(f"current (incorrect) current budget: {LT_header['Current Budget']}")
+
+for stream in streams:
+    LT_header.loc[LT_header['Opt Channel'] == stream, 'Current Budget'] = sum(laydown[stream])
+
+LT_header['LT Revenue'] = LT_header['Current Budget'] * LT_header['LT Current ROI']
+
+LT_header_dict = LT_header.to_dict("records")
+
+LT_cost_per_list = [float(entry['CPU']) for entry in LT_header_dict]
+LT_cost_per_dict = dict(zip(streams, LT_cost_per_list))
+
+LT_carryover_list = [float(entry['LT Carryover']) for entry in LT_header_dict]
+LT_carryover_dict = dict(zip(streams, LT_carryover_list))
+
+LT_beta_dict = dict(zip(streams, [1] * len(streams)))
+
+LT_alpha_list = [float(entry['LT Alpha']) for entry in LT_header_dict]
+LT_alpha_dict = dict(zip(streams, LT_alpha_list))
+raw_input_data = LT_header.to_dict("records")
+current_budget_list = [entry['Current Budget'] for entry in raw_input_data]
+current_budget_dict = dict(zip(streams, current_budget_list))
+
+seas_dict = seas_index
+
+recorded_impressions = {}
+for x in laydown.columns:
+    recorded_impressions[x] = laydown.fillna(0)[x].to_list()
+
+beta_calc_rev_dict_LT = {'Date': list(laydown.Date)}
+#stream = 'ATLTVSuper FoodsBSBakersDog'
+for stream in list(streams):
+    beta_calc_rev_dict_ST[stream] = prep_rev_per_stream(stream, current_budget_dict[stream], LT_cost_per_dict,
+                                                   LT_carryover_dict, LT_alpha_dict, LT_beta_dict)
+    sum(beta_calc_rev_dict_ST[stream])
+beta_calc_df = pd.DataFrame(beta_calc_rev_dict_ST)[list(streams)].sum().reset_index()
+beta_calc_df.columns = ['Opt Channel', 'Calc_Rev']
+beta_calc_df = pd.merge(beta_calc_df, LT_header[['Opt Channel', 'LT Revenue']], on='Opt Channel')
+beta_calc_df['LT Beta'] = np.where(beta_calc_df['Calc_Rev'] == 0, 0,
+                                   beta_calc_df['LT Revenue'] / beta_calc_df['Calc_Rev'])
+LT_opt_betas_dict = dict(zip(streams, beta_calc_df['LT Beta'].tolist()))
+
+LT_header['LT Beta'] = list(LT_opt_betas_dict.values())
+ST_header['LT Beta'] = list(LT_opt_betas_dict.values())
+
+LT_header_dict = LT_header.to_dict("records")
+
+table_df = ST_header.copy()
+
+dataTable_cols = ['Region', 'Brand', 'Channel', 'Current Budget', 'Min Spend Cap', 'Max Spend Cap',
+                  #'ST Carryover', 'ST Alpha', 'ST Beta', 'LT Carryover', 'LT Alpha', 'LT Beta',
+                  'Laydown']
 
 for col in table_df.columns:
     if col not in dataTable_cols:
         table_df.drop(columns=col, inplace=True)
 
+table_df.insert(0, 'row_id', range(1, len(table_df)+1))
 table_dict = table_df.to_dict("records")
+for var in table_dict:
+    var['Laydown'] = laydown[var['Channel']+"_"+var['Region']+"_"+var['Brand']].tolist()
 
-table_data = {"1":table_dict}
-for var in table_data["1"]:
-    var['Laydown'] = laydown[var['Channel']].tolist()
+table_data = {"1": deepcopy(table_dict)}
+bud = sum(ST_header['Current Budget'].to_list())
 
 # %% --------------------------------------------------------------------------
 # 
 # -----------------------------------------------------------------------------
 
-@app.route('/optimise', methods = ['POST'])
-def optimise():
+def optimise(data):
 
-    if request.method == "POST":
-        data = request.json
+    ST_header_copy = deepcopy(ST_header)
+    LT_header_copy = deepcopy(LT_header)
+    laydown_copy = deepcopy(laydown)
+    seas_index_copy = deepcopy(seas_index)
+
     app.logger.info("REACHING OPT METHOD")
     table_id = str(data['tableID'])
     obj_func = data['objectiveValue']
@@ -1012,7 +535,28 @@ def optimise():
     max_budget = int(data['maxValue'])
     num_weeks = 1000
     blend = data['blendValue']
+    disabled_rows = list(data['disabledRows'])
+    print(f"disabled row ids: {disabled_rows}")
     
+    current_table_df = pd.DataFrame.from_records(deepcopy(table_data[table_id]))
+    removed_rows_df = current_table_df[current_table_df.row_id.isin(disabled_rows)].copy()
+    removed_rows_df['Opt Channel'] = removed_rows_df.apply(lambda row: '_'.join([str(row['Channel']), str(row['Region']), str(row['Brand'])]), axis=1)
+
+    disabled_opt_channels = list(removed_rows_df['Opt Channel'])
+
+    for col in current_table_df.columns:
+        ST_header_copy[col] = current_table_df[col]
+        LT_header_copy[col] = current_table_df[col]
+
+    ST_header_copy = ST_header_copy[~(ST_header_copy['Opt Channel'].isin(disabled_opt_channels))]
+    LT_header_copy = LT_header_copy[~(LT_header_copy['Opt Channel'].isin(disabled_opt_channels))]
+
+    laydown_copy = laydown_copy.drop(columns=disabled_opt_channels, errors='ignore')
+    seas_index_copy = seas_index_copy.drop(columns=disabled_opt_channels, errors='ignore')
+
+    ST_input = ST_header_copy.to_dict('records')
+    LT_input = LT_header_copy.to_dict('records')
+
     # if 'dates' in data:
     #     app.logger.info('dates found in data')
     #     start_date = data['dates'][0]
@@ -1021,61 +565,49 @@ def optimise():
     #     app.logger.info(start_date)
     #     app.logger.info(end_date)
 
-    app.logger.info(f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
+    print(f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
     
     # NEED TO ADD HANDLING SO THAT EDITS MADE TO TABLE DATA ARE ADDED TO THE ST_HEADER
 
-    app.logger.info(f"laydown = {laydown}")
-    app.logger.info(f"CPU = {[entry['CPU'] for entry in ST_header_dict]}")
+    print(f"laydown = {laydown_copy}")
+    print(f"CPU = {[entry['CPU'] for entry in ST_input]}")
 
-    global results
+    result = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy,
+                                          seas_index=seas_index_copy, return_type=blend, objective_type=obj_func, max_budget=max_budget,
+                                          exh_budget=exh_budget, method='SLSQP')
 
-    streams = [entry['Channel'] for entry in ST_header_dict]
+    # result = Optimiser.profit_max(channel_input=ST_header_dict, laydown=laydown, seas_index=seas_index, max_budget=max_budget, exh_budget=exh_budget, num_weeks=1000)
 
-    if blend.lower() == "blend":
-        if obj_func.lower() == "profit":
-            blended_profit_max_scipy(ST_input=ST_header_dict, LT_input=LT_header_dict, laydown=laydown, seas_index=seas_index_fetched, exh_budget='yes', max_budget=bud)
-            # results[table_id] = Optimiser.blended_profit_max(ST_input = ST_header_dict, LT_input=LT_header_dict, laydown=laydown, seas_index=seas_index_fetched, exh_budget='yes', max_budget=max_budget, num_weeks=num_weeks)
-            # app.logger.info(results[table_id])
-        elif obj_func.lower() == 'revenue':
-            ST_res = list(Optimiser.revenue_max(channel_input = ST_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
-            LT_res = list(Optimiser.revenue_max(channel_input = LT_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
-            blend_list = list(np.add(ST_res, LT_res))
-            blend_res = dict(zip(streams, blend_list))
-            results[table_id] = blend_res
-        elif obj_func.lower() == 'roi':
-            ST_res = list(Optimiser.roi_max(channel_input = ST_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
-            LT_res = list(Optimiser.roi_max(channel_input = LT_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks).values())
-            blend_list = list(np.add(ST_res, LT_res))
-            blend_res = dict(zip(streams, blend_list))
-            results[table_id] = blend_res
-        
-        return jsonify(results), 200
-    elif blend.lower() == "st":
-        if obj_func.lower() == "profit":
-            results[table_id] = Optimiser.profit_max(channel_input = ST_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks)
-        elif obj_func.lower() == 'revenue':
-            results[table_id] = Optimiser.revenue_max(channel_input = ST_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget)
-        elif obj_func.lower() == 'roi':
-            results[table_id] = Optimiser.roi_max(channel_input = ST_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget)
-        return jsonify(results), 200
-    elif blend.lower() == "lt":
-        if obj_func.lower() == "profit":
-            results[table_id] = Optimiser.profit_max(channel_input = LT_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget, num_weeks=num_weeks)
-        elif obj_func.lower() == 'revenue':
-            results[table_id] = Optimiser.revenue_max(channel_input = LT_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget)
-        elif obj_func.lower() == 'roi':
-            results[table_id] = Optimiser.roi_max(channel_input = LT_header_dict, laydown = laydown, exh_budget=exh_budget, max_budget=max_budget)
-        app.logger.info(results)
+    return result, table_id
 
-        return jsonify(results), 200
+@app.route('/optimise', methods = ['POST'])
+def run_optimise():
+    if request.method == "POST":
+        data = request.json
+    future = executor.submit(optimise, data)
+    future.add_done_callback(opt_callback)
+    return jsonify({'status': 'Task started in the background'})
+
+def opt_callback(future):
+    try:
+        result, table_id = future.result()
+
+        with app.app_context():
+            print(f"Task completed: {result}")
+            
+            results[table_id] = result
+            print(f"total results: {results}")
+    except Exception as e:
+        with app.app_context():
+            print(f"Error in task callback: {str(e)}")
+
 
 @app.route('/results_output', methods = ['POST'])
 def results_output():
 
     tab_names = dict(request.json)
 
-    raw_input_data = ST_input_fetched.to_dict("records")
+    raw_input_data = ST_header.to_dict("records")
     
     current_budget_list = [entry['Current_Budget'] for entry in raw_input_data]
     current_budget_dict = dict(zip(streams, current_budget_list))
@@ -1347,20 +879,13 @@ def create_copy():
     global table_data
 
     tableID = str(request.form.get('tableID'))
-    channel_dict = ST_input_fetched.to_dict("records")
-    for var in channel_dict:
-        var['Laydown'] = laydown[var['Channel']].tolist()
-    if tableID not in table_data.keys():
-        table_data[tableID] = table_dict
-    app.logger.info(table_data.keys())
-    return jsonify({"success": True, "table_id": tableID})
 
-@app.route('/channel', methods = ['GET', 'PUT'])
-def channel():
-    app.logger.info("reaching /channel")
-    if request.method == 'GET':
-        app.logger.info("getting")
-        return jsonify(table_data)
+    if tableID not in table_data.keys():
+        table_data[tableID] = deepcopy(table_dict)
+
+    app.logger.info(table_data.keys())
+
+    return jsonify({"success": True, "table_id": tableID})
 
 @app.route('/channel_delete', methods = ['POST'])
 def channel_delete():
@@ -1373,6 +898,32 @@ def channel_delete():
 def channel_main():
     app.logger.info(table_data.keys())    
     return jsonify(table_data)
+
+@app.route('/table_data_editor', methods = ['POST'])
+def table_data_editor():
+    global table_data
+    try:
+        data = request.get_json()
+        print(data)
+        table_id = str(data['tableId'])
+        print(table_id)
+        target_table = table_data[table_id]
+        if data['action'] == 'edit':
+            for row_id, changes in data['data'].items():
+                row_index = int(row_id) - 1
+                for field, new_value in changes.items():
+                    table_data[table_id][row_index][field] = new_value
+        print(table_data["1"][row_index])
+        print(table_data[table_id][row_index])
+        return jsonify(data=target_table)
+    except Exception as e:
+        print("error processing data:", str(e))
+        response = {
+            'data': 'error',
+            'status': 'error'
+        }
+    return jsonify(response)
+    
 
 @app.route('/')
 def welcome_page():
@@ -1423,6 +974,26 @@ def save_configurations(configurations):
 def logout():
     logout_user()
     return redirect(url_for('/home'))
+
+@app.route('/export_data')
+@login_required
+def export_data():
+    excel_buffer = BytesIO()
+    with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
+        all_input = pd.read_sql_table('All_Channel_Inputs', engine)
+        laydown= pd.read_sql_table('All_Laydown', engine)
+        all_index= pd.read_sql_table('All_Index', engine)
+        #ST_incr_rev= pd.read_sql_table('All_Incremental_Revenue_ST', engine)
+        #LT_incr_rev = pd.read_sql_table('All_Incremental_Revenue_LT', engine)
+        
+        all_input.to_excel(writer, sheet_name='All Inputs', index=False)
+        laydown.to_excel(writer, sheet_name='Laydown', index=False)
+        all_index.to_excel(writer, sheet_name='Seasonal Index', index=False)
+
+    excel_buffer.seek(0)
+
+    return send_file(excel_buffer, download_name=f'{current_user.id}_Input_File.xlsx', as_attachment=True)
+
 
 if __name__ == '__main__':
      with app.app_context():

@@ -97,7 +97,121 @@ function reloadSaveTable() {
     console.log("save table not initialized");
   }
 }
+function initializeInitialTable() {
+  var channelTable = $("#channel1").DataTable({
+    dom: "Blfrtip",
+    ajax: {
+      url: "/channel_main",
+      contentType: "application/json",
+      dataSrc: "1",
+    },
+    drawCallback: function () {
+      $(".sparkline1").sparkline("html", {
+        type: "line",
+        width: "250px",
+      });
+    },
+    columns: [
+      { data: "Region" },
+      { data: "Brand" },
+      { data: "Channel" },
+      // { data: "Beta", render: $.fn.DataTable.render.number(",", ".", 0, "") },
+      {
+        data: "Current Budget",
+        render: $.fn.DataTable.render.number(",", ".", 0, "£"),
+      },
+      {
+        data: "Min Spend Cap",
+        render: $.fn.DataTable.render.number(",", ".", 0, "£"),
+      },
+      {
+        data: "Max Spend Cap",
+        render: $.fn.DataTable.render.number(",", ".", 0, "£"),
+      },
 
+      {
+        data: "Laydown",
+        render: function (data, type, row, meta) {
+          return type === "display"
+            ? '<span class="sparkline1">' + data.toString() + "</span>"
+            : data;
+        },
+      },
+    ],
+    select: {
+      style: "os",
+      selector: "td:not(:nth-child(5)):not(:nth-child(6))",
+    },
+    autoWidth: false,
+    columnDefs: [
+      { width: "80px", targets: 0 },
+      { width: "80px", targets: 1 },
+      { width: "80px", targets: 2 },
+      { width: "80px", targets: 3 },
+      { width: "80px", targets: 4 },
+      { width: "80px", targets: 5 },
+      { width: "250px", targets: 6 },
+    ],
+    rowId: "row_id",
+  });
+  attachButtonListenersToDataTable();
+  var channelEditor = new $.fn.dataTable.Editor({
+    ajax: {
+      type: "POST",
+      url: "/table_data_editor",
+      contentType: "application/json", // Set the content type to JSON
+      data: function (d) {
+        d.tableId = "1";
+        return JSON.stringify(d); // Convert the data to JSON string
+      },
+    },
+    table: "#channel1",
+    fields: [
+      {
+        label: "Min Spend Cap:",
+        name: "Min Spend Cap",
+      },
+      {
+        label: "Max Spend Cap:",
+        name: "Max Spend Cap",
+      },
+    ],
+    idSrc: "row_id",
+  });
+
+  channelTable.on(
+    "mouseenter",
+    "tbody td:nth-child(5), tbody td:nth-child(6)",
+    function (e) {
+      $(this).css({
+        cursor: "text",
+        userSelect: "none",
+      });
+    }
+  );
+
+  channelTable.on(
+    "mouseleave",
+    "tbody td:nth-child(5), tbody td:nth-child(6)",
+    function (e) {
+      $(this).css({
+        cursor: "default",
+        userSelect: "auto",
+      });
+    }
+  );
+
+  channelTable.on(
+    "click",
+    "tbody td:nth-child(5), tbody td:nth-child(6)",
+    function (e) {
+      channelEditor.inline(this);
+    }
+  );
+  channelTable.on("page.dt", function () {
+    channelTable.ajax.reload(null, false);
+  });
+}
 
 function loadFunc() {
   var selectedRow = $("#load-table").DataTable().rows({ selected: true }).data()[0];

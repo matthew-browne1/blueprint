@@ -1,11 +1,19 @@
+
+
 $(document).ready(function() {
   sendTableIDsOnRefresh();
   newTabButtonInit();
   syncTabCounter();
+  var optAllBtn = document.getElementById("optimise-all");
+  optAllBtn.addEventListener("click", optAll);
 });
 
 var optResults = {};
+
+// ANY EDITS MADE TO THIS FUNCTION, REMEMBER TO ALSO CHANGE THEM IN THE IDENTICAL FUNCTION IN SAVEUI.JS
+
 function initializeInitialTable() {
+  
   var channelTable = $("#channel1").DataTable({
     dom: "Blfrtip",
     ajax: {
@@ -14,91 +22,198 @@ function initializeInitialTable() {
       dataSrc: "1",
     },
     drawCallback: function () {
-      $(".sparkline").sparkline("html", {
+      $(".sparkline1").sparkline("html", {
         type: "line",
         width: "250px",
       });
     },
     columns: [
+      { data: null },
+      { data: "Region" },
+      { data: "Brand" },
       { data: "Channel" },
-      { data: "Carryover" },
-      { data: "Alpha" },
-      { data: "Beta", render: $.fn.DataTable.render.number(",", ".", 0, "") },
+      // { data: "Beta", render: $.fn.DataTable.render.number(",", ".", 0, "") },
       {
-        data: "Current_Budget",
+        data: "Current Budget",
         render: $.fn.DataTable.render.number(",", ".", 0, "£"),
       },
       {
-        data: "Min_Spend_Cap",
+        data: "Min Spend Cap",
         render: $.fn.DataTable.render.number(",", ".", 0, "£"),
       },
       {
-        data: "Max_Spend_Cap",
+        data: "Max Spend Cap",
         render: $.fn.DataTable.render.number(",", ".", 0, "£"),
       },
-      {
-        data: null,
-        defaultContent:
-          '<div class="toggle-button-cover"><div class="button-cover"><div class="button r" id="lock-button"><input type="checkbox" class="checkbox" /><div class="knobs"></div><div class="layer"></div></div></div></div>',
-      },
+
       {
         data: "Laydown",
         render: function (data, type, row, meta) {
           return type === "display"
-            ? '<span class="sparkline">' + data.toString() + "</span>"
+            ? '<span class="sparkline1">' + data.toString() + "</span>"
             : data;
         },
       },
     ],
-    select: {
-      style: "os",
-    },
     autoWidth: false,
     columnDefs: [
-      { width: "80px", targets: 0 }, // Set width for the first column (Channel)
-      { width: "80px", targets: 1 }, // Set width for the second column (Carryover)
-      { width: "80px", targets: 2 }, // Set width for the third column (Alpha)
-      { width: "80px", targets: 3 }, // Set width for the fourth column (Beta)
-      { width: "80px", targets: 4 }, // Set width for the fourth column (Beta)
-      { width: "80px", targets: 5 }, // Set width for the fifth column (Max Spend Cap)
-      { width: "80px", targets: 6 }, // Set width for the fifth column (Max Spend Cap)
-      { width: "40px", targets: 7 }, // Set width for the fifth column (Max Spend Cap)
-      { width: "250px", targets: 8 }, // Set width for the fifth column (Max Spend Cap)
-    ]
+      { width: "50px", targets: 0 },
+      { width: "80px", targets: 1 },
+      { width: "80px", targets: 2 },
+      { width: "80px", targets: 3 },
+      { width: "80px", targets: 4 },
+      { width: "80px", targets: 5 },
+      { width: "80px", targets: 6 },
+      { width: "250px", targets: 7 },
+      {
+        targets: 0,
+        searchable: false,
+        orderable: false,
+        className: "dt-body-center",
+        render: function (data, type, full, meta) {
+          return (
+            '<input type="checkbox" name="id[]" checked value="' +
+            $("<div/>").text(data).html() +
+            '">'
+          );
+        },
+      },
+      { className: "dt-head-center", targets: [0,1,2,3,4,5,6,7]}
+    ],
+    rowId: "row_id",
   });
   attachButtonListenersToDataTable();
   var channelEditor = new $.fn.dataTable.Editor({
-    ajax: "/channel_editor",
+    ajax: {
+      type: 'POST',
+      url: '/table_data_editor',
+      contentType: 'application/json', // Set the content type to JSON
+      data: function (d) {
+        d.tableId = "1";
+        return JSON.stringify(d); // Convert the data to JSON string
+      }
+    },
     table: "#channel1",
     fields: [
       {
         label: "Min Spend Cap:",
-        name: "Min_Spend_Cap",
+        name: "Min Spend Cap",
       },
       {
         label: "Max Spend Cap:",
-        name: "Max_Spend_Cap",
+        name: "Max Spend Cap",
       },
     ],
-    idSrc: "DT_RowId",
+    idSrc: "row_id",
   });
 
-  channelTable.on(
-    "click",
-    "tbody td:nth-child(6), tbody td:nth-child(7)",
-    function (e) {
-      channelEditor.inline(this);
-    }
-  );
+channelTable.on(
+  "mouseenter",
+  "tbody td:nth-child(0), tbody td:nth-child(7), tbody td:nth-child(6)",
+  function (e) {
+    $(this).css({
+      cursor: "text",
+      userSelect: "none",
+    });
+  }
+);
 
-  channelTable.on("page.dt", function () {
-    channelTable.ajax.reload(null, false);
-  });
-}
+channelTable.on(
+  "mouseleave",
+  "tbody td:nth-child(0), tbody td:nth-child(7), tbody td:nth-child(6)",
+  function (e) {
+    $(this).css({
+      cursor: "default",
+      userSelect: "auto",
+    });
+  }
+);
 
-initializeInitialTable();
+channelTable.on(
+  "click",
+  "tbody td:nth-child(7), tbody td:nth-child(6)",
+  function (e) {
+    channelEditor.inline(this);
+  }
+);
+  // channelTable.on("page.dt", function () {
+  //   channelTable.ajax.reload(null, false);
+  // });
+   $("#example-select-all").on("click", function () {
+     // Get all rows with search applied
+     var rows = channelTable.rows({ search: "applied" }).nodes();
+     // Check/uncheck checkboxes for all rows in the table
+     $('input[type="checkbox"]', rows).prop("checked", this.checked);
+      if (!this.checked) {
+        $(rows).addClass("disabled");
+      } else {
+        $(rows).removeClass("disabled");
+      }
+   });
 
+   // Handle click on checkbox to set state of "Select all" control
+   $("#channel1 tbody").on("change", 'input[type="checkbox"]', function () {
+     // If checkbox is not checked
+     if (!this.checked) {
+       var el = $("#example-select-all").get(0);
+       // If "Select all" control is checked and has 'indeterminate' property
+       if (el && el.checked && "indeterminate" in el) {
+         // Set visual state of "Select all" control
+         // as 'indeterminate'
+         el.indeterminate = true;
+       }
+     }
+   });
 
+   // Handle form submission event
+   $("#frm-example").on("submit", function (e) {
+     var form = this;
+
+     // Iterate over all checkboxes in the table
+     channelTable.$('input[type="checkbox"]').each(function () {
+       // If checkbox doesn't exist in DOM
+       if (!$.contains(document, this)) {
+         // If checkbox is checked
+         if (this.checked) {
+           // Create a hidden element
+           $(form).append(
+             $("<input>")
+               .attr("type", "hidden")
+               .attr("name", this.name)
+               .val(this.value)
+           );
+         }
+       }
+     });
+   });
+
+   $("#channel1 tbody").on("change", 'input[type="checkbox"]', function () {
+     var row = $(this).closest("tr");
+     var rowId = channelTable.row(row).id();
+     var isChecked = $(this).prop("checked")
+     if (isChecked) {
+       channelTable.row(row).nodes().to$().removeClass("disabled");
+       console.log("removing class");
+     } else {
+       channelTable.row(row).nodes().to$().addClass("disabled");
+       console.log("adding class");
+     }
+   });
+
+  function getDisabledRowIds() {
+    var disabledRowIds = [];
+
+    channelTable
+      .rows(".disabled")
+      .data()
+      .each(function (row) {
+        var rowId = row.row_id;
+        disabledRowIds.push(rowId);
+      });
+
+    return disabledRowIds;
+  }
+  
 document.addEventListener("DOMContentLoaded", function () {
   var obj = document.getElementById("obj-input1");
   var exh = document.getElementById("exh-input1");
@@ -113,13 +228,15 @@ document.addEventListener("DOMContentLoaded", function () {
     var exhValue = exh.value;
     var maxValue = max.value;
     var blendValue = blend.value;
+    var disabledRowIds = getDisabledRowIds();
 
     var dataToSend = {
       objectiveValue: objValue,
       exhaustValue: exhValue,
       maxValue: maxValue,
       blendValue: blendValue,
-      tableID: 1
+      tableID: 1,
+      disabledRows: disabledRowIds
     };
     var dateButtonIsChecked = $("#date-filter-button1").prop("checked");
     var startDate = $("#start-date1").datepicker("getDate");
@@ -152,6 +269,9 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   });
 });
+}
+
+initializeInitialTable();
 
 function showResultsButton() {
   var div = document.getElementById("results-div");
@@ -341,4 +461,102 @@ $("#date-filter-button1").on("click", function () {
     dateContainers.removeClass("greyed-out");
   }
 });
+
+function optimiseSingle(setID) {
+  showLoadingOverlay(setID);
+  var obj = document.getElementById("obj-input" + setID);
+  var exh = document.getElementById("exh-input" + setID);
+  var max = document.getElementById("max-input" + setID);
+  var optButton = document.getElementById("opt-button" + setID);
+  var blend = document.getElementById("blend-input" + setID);
+    
+  var objValue = obj.value;
+  var exhValue = exh.value;
+  var maxValue = max.value;
+  var blendValue = blend.value;
+
+  var dataToSend = {
+    objectiveValue: objValue,
+    exhaustValue: exhValue,
+    maxValue: maxValue,
+    blendValue: blendValue,
+    tableID: setID,
+  };
+
+  // Use jQuery AJAX to send the data to the Flask endpoint
+  $.ajax({
+    type: "POST", // Use POST method
+    url: "/optimise", // Replace with your actual Flask endpoint URL
+    contentType: "application/json",
+    data: JSON.stringify(dataToSend), // Convert data to JSON format
+    success: function (response) {
+      // Handle the response from the Flask endpoint here
+      console.log(response);
+      optResults = response;
+      // alert(JSON.stringify(response))
+      hideLoadingOverlay(setID);
+    },
+    error: function (error) {
+      // Handle any errors that occur during the AJAX request
+      console.error("AJAX request error:", error);
+      hideLoadingOverlay(setID);
+    },
+  });
+
+}
+
+function optAll() {
+  $.ajax({
+    url: "get_table_ids",
+    method: "GET",
+    contentType: "application/json",
+    success: function (response) {
+      if (response && response.tableIds) {
+        console.log(response.tableIds);
+        var tableIds = response.tableIds;
+        tableIds.forEach(function (setID) {
+            showLoadingOverlay(setID);
+            var obj = document.getElementById("obj-input" + setID);
+            var exh = document.getElementById("exh-input" + setID);
+            var max = document.getElementById("max-input" + setID);
+            var optButton = document.getElementById("opt-button" + setID);
+            var blend = document.getElementById("blend-input" + setID);
+
+            var objValue = obj.value;
+            var exhValue = exh.value;
+            var maxValue = max.value;
+            var blendValue = blend.value;
+
+            var dataToSend = {
+              objectiveValue: objValue,
+              exhaustValue: exhValue,
+              maxValue: maxValue,
+              blendValue: blendValue,
+              tableID: setID,
+            };
+
+            // Use jQuery AJAX to send the data to the Flask endpoint
+            $.ajax({
+              type: "POST", // Use POST method
+              url: "/optimise", // Replace with your actual Flask endpoint URL
+              contentType: "application/json",
+              data: JSON.stringify(dataToSend), // Convert data to JSON format
+              success: function (response) {
+                // Handle the response from the Flask endpoint here
+                console.log(response);
+                optResults = response;
+                // alert(JSON.stringify(response))
+                hideLoadingOverlay(setID);
+              },
+              error: function (error) {
+                // Handle any errors that occur during the AJAX request
+                console.error("AJAX request error:", error);
+                hideLoadingOverlay(setID);
+              },
+            });
+        });
+      }
+    },
+  });
+}
 

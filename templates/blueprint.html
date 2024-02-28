@@ -21,6 +21,7 @@
         <img src="/static/images/RA Logo 1.png" class="logo">
     </div>
     <div class="nav-right">
+        <a href= "{{ url_for('export_data') }}" download="{{ current_user.user_info[0].id }}_Input_File.xlsx"class="button-4" id="export-data">Export Data  <i class="fa-solid fa-file-export"></i></a>
         <img src="/static/images/blueprint logo.png" class="logo">
         <div class="nav-user-icon" onclick="settingsMenuToggle()">
             <img src="/static/images/User Login.png">
@@ -115,7 +116,6 @@
       </div>
       <div class="content-sub">
          <div class="div-above-nav-bar" id="buttons-div1">
-
             <div class="nav-model-left" id="nav-bar">
                <div class="show-table">
                   <button class="button-4" role="button" id="show-table-btn1">Show/Hide Table</button>
@@ -163,15 +163,6 @@
                </div>
                <p>Enter Total Budget:</p>
                <input type="number" id="max-input1" value="0" step="5000" placeholder="Enter Max Budget">
-               <div class="toggle-button-cover">
-                  <div class="button-cover">
-                     <div class="button r" id="lock-all-button">
-                        <input type="checkbox" class="checkbox main1" />
-                        <div class="knobs"></div>
-                        <div class="layer"></div>
-                     </div>
-                  </div>
-               </div>
                <div class="date-cont" id="date-cont">
                   <div class="date-range-label">
                   <label for="end-date">Date Range Filter:</label>
@@ -201,14 +192,13 @@
          <table id="channel1" class="hover">
             <thead>
                <tr>
+               <th><input type="checkbox" name="select_all" value="1" id="example-select-all" checked></th>
+               <th>Region</th>
+               <th>Brand</th>
                <th>Channel</th>
-               <th>Carryover</th>
-               <th>Alpha</th>
-               <th>Beta</th>
                <th>Current Budget</th>
                <th>Min Spend Cap</th>
                <th>Max Spend Cap</th>
-               <th>Budget Lock</th>
                <th>Laydown</th>
                </tr>
             </thead>
@@ -266,9 +256,14 @@
    </div>
 </div>
 </div>
-<div class="snapshot-control-cont">
-   <button id="save-list" class="button-4">Save Current Snapshot</button>
-   <button id="load-list" class="button-4">Load from Saved Snapshots</button>
+<div class="button-footer">
+   <div class="snapshot-control-cont">
+      <button id="save-list" class="button-4">Save Current Snapshot</button>
+      <button id="load-list" class="button-4">Load from Saved Snapshots</button> 
+   </div>
+   <div class="right-buttons">
+      <button id="optimise-all" class="button-4">Optimise All</button>
+   </div>
 </div>
 <script>
    tabNames = {}
@@ -339,10 +334,12 @@
             console.log("Response from backend:", response);
             // Add any further handling based on the backend response
             sendTableIDsOnRefresh();
+            syncTabNames();
          },
          error: function (error) {
             console.error("error deleting tab:", error);
             sendTableIDsOnRefresh();
+            syncTabNames();
          },
          });
          tab.remove();
@@ -352,14 +349,31 @@
 
 
    function editButtonTabs(tabID) {
-   var setText = document.getElementById("button-text"+tabID);
-   var newText = prompt("Rename Tab:")
+      var setText = document.getElementById("button-text"+tabID);
+      var newText = prompt("Rename Tab:")
 
-   if (newText !== null) {
-         setText.textContent = newText;
-         tabNames[tabID] = newText;
-         console.log(tabNames);
-      }
+      if (newText !== null) {
+            setText.textContent = newText;
+            tabNames[tabID] = newText;
+            console.log(tabNames);
+         }
+      syncTabNames();
+   }
+
+   function syncTabNames() {
+      $.ajax({
+         url: '/get_table_ids',
+         method: "GET",
+         contentType: "application/json",
+         success: function (response) {
+            if (response && response.tableIds) {
+               var tableIds = response.tableIds;
+               const idsToRemove = Object.keys(tabNames).filter((key) => !tableIds.includes(key));
+               idsToRemove.forEach((key) => delete tabNames[key]);
+               console.log("successfully removed:"+idsToRemove);
+            }
+         }
+      });
    }
 
    initializeInitialButton();
@@ -467,16 +481,7 @@ function newTabButtonInit() {
                      </div>
                   </div>  
                      <p>Enter Total Budget:</p>
-                     <input type="number" id="max-input${tabCounter}" value="0" step="5000" placeholder="Enter Max Budget">
-                     <div class="toggle-button-cover">
-                        <div class="button-cover">
-                           <div class="button r" id="lock-all-button">
-                              <input type="checkbox" class="checkbox main${tabCounter}" />
-                              <div class="knobs"></div>
-                              <div class="layer"></div>
-                           </div>
-                        </div>
-                     </div>
+                     <input type="number" id="max-input${tabCounter}" value="0" step="5000" placeholder="Enter Max Budget">W
                      <div class="date-cont" id="date-cont">
                   <div class="date-range-label">
                      <label for="end-date">Date Range Filter:</label>
@@ -499,22 +504,20 @@ function newTabButtonInit() {
                <div class="opt-cont-parent" id="opt-button-cont">
                   <button class="button-4" role="button" id="opt-button${tabCounter}">Optimise</button>
                </div>
-                     </div>
+                    
                   </div>
                </div>
                <div class="bo-container" id="channel-container${tabCounter}">
                <table id="channel${tabCounter}" class="hover">
                   <thead>
                      <tr>
-                     <th>Channel</th>
-                     <th>Carryover</th>
-                     <th>Alpha</th>
-                     <th>Beta</th>
-                     <th>Current Budget</th>
-                     <th>Min Spend Cap</th>
-                     <th>Max Spend Cap</th>
-                     <th>Budget Lock</th>
-                     <th>Laydown</th>
+                        <th>Region</th>
+                        <th>Brand</th>
+                        <th>Channel</th>
+                        <th>Current Budget</th>
+                        <th>Min Spend Cap</th>
+                        <th>Max Spend Cap</th>
+                        <th>Laydown</th>
                      </tr>
                   </thead>
                </table>
@@ -524,7 +527,7 @@ function newTabButtonInit() {
                </div>
                </div>
        `;
-       
+      
        var mainCont = document.getElementById("main-container");
        mainCont.appendChild(tabContent);
        initializeCollapsibleButtons(tabCounter);
@@ -540,7 +543,7 @@ function newTabButtonInit() {
             width: "250px",
          });
       });
-      redrawAllTables(tabCounter);
+      // redrawAllTables(tabCounter);
       var buttonName = document.getElementById("button-text"+tabCounter);
       tabNames[tabCounter] = buttonName.textContent;
       console.log(tabNames);

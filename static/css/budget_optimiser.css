@@ -93,6 +93,11 @@
   .dropdown .dropdown-menu li:active {
       background-color: #e2e2e2
   }
+
+  .fa-chevron-left {
+    margin-left: 5px;
+  }
+
   input[type="number"] {
     font-size: 15px;
     height: 36.8px;
@@ -108,7 +113,7 @@
     .content {
 
       overflow: hidden;
-      transition: max-height 0.5s ease-in-out, opacity 0.5s ease-in-out;
+      /* transition: max-height 0.5s ease-in-out, opacity 0.5s ease-in-out; */
       align-items: center;
       justify-content: space-between;
       background: #ffffff;
@@ -140,7 +145,7 @@
     display: flex;
     border: solid #523be4;
     border-radius: 10px;
-    cursor: pointer;
+    
     padding: 18px;
     width: 100%;
     border: none;
@@ -149,10 +154,11 @@
     font-size: 15px;
     align-items: center;
   }
+
+.fa-pen-to-square {
+  cursor: pointer;
+}
   
-  .active, .collapsible:hover {
-    background-color: #ADD8E6;
-  }
 
 .nav-model-left, .nav-model-right{
     display: flex;
@@ -704,4 +710,28 @@ tr {
 
 .snapshot-control-cont {
   padding: 10px;
+}
+
+#export-data {
+  margin-right: 20px;
+}
+
+.right-buttons {
+  text-align: right;
+  padding: 10px;
+}
+
+.button-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  margin: 0;
+}
+
+.sparkline {
+  width:100%;
+}
+
+tbody tr.disabled {
+  color: #eee;
 }
