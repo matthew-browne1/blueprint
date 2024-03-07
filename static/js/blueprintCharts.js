@@ -5,17 +5,17 @@ var chartsSocket = io.connect(window.location.origin);
 chartsSocket.on("connect", function () {
   console.log("connected to server");
 });
-
 chartsSocket.emit("collect_data");
-
 chartsSocket.on('chart_data', function(data) {
   var chartData = data.chartData;
   console.log("fetched chart data from back end");
   //console.log(chartData);
-  generateCharts(chartData);
+  generateChartsA(chartData);
+//  generateChartsB(chartData);
+//  generateChartsC(chartData);
 });
 
-function generateCharts(data) {
+function generateChartsA(data) {
     console.log("reaching generateCharts method");
     //console.log("Raw Data:", data); // Log the raw data
    // Process data for scenario charts
@@ -456,7 +456,8 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
       plugins: [ChartDataLabels],
       options: roi_scenario_chartOptions,
     });
-
+}
+function generateChartsB(data) {
 // Process data for channel charts
      const processedDataPerChannel = data.reduce((acc, entry) => {
       const scenarioKey = entry.Scenario;
@@ -641,8 +642,6 @@ function getRandomColor() {
       data: budget_channel_chartData,
       options: budget_channel_chartOptions,
     });
-
-
 // 5. Revenue by Channel Chart
 // Function to handle dropdown selection
 function handleDropdownChange() {
@@ -769,9 +768,6 @@ const maxBarValue2 = Math.max(...totalRevenues);
       data: revenue_channel_chartData,
       options: revenue_channel_chartOptions,
     });
-
-
-
 // 6. ROI by Channel Chart
 function handleDropdownChange() {
   const selectedValue = document.getElementById('revenueFilter').value;
@@ -875,7 +871,8 @@ function handleDropdownChange() {
       data: roi_channel_chartData,
       options: roi_channel_chartOptions,
     });
-
+}
+function generateChartsC(data) {
 // Process data for laydown scenario charts
 const processedDataLaydown = data.reduce((acc, entry) => {
     const key = entry.Scenario;
@@ -1134,7 +1131,6 @@ const laydown_channel_chartData = {
       data: laydown_channel_chartData,
       options: laydown_channel_chartOptions,
     });
-
   }
 
 // //Response curve chart
