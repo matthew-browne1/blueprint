@@ -3,6 +3,8 @@
 #
 # -----------------------------------------------------------------------------
 from flask import Flask, render_template, send_file, jsonify, request, url_for, redirect, flash, session, current_app
+from flask_sse import sse
+from flask_socketio import SocketIO, emit
 import numpy as np
 import pandas as pd
 import seaborn as sns
@@ -34,10 +36,12 @@ from pyomo_opt import Optimiser
 from io import BytesIO
 from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
+from multiprocessing import Manager, freeze_support
 
 app = Flask(__name__)
+socketio = SocketIO(app)
 
-executor = ProcessPoolExecutor()
+#executor = ProcessPoolExecutor()
 
 ### TODO: WRITE A CLASS WHICH FETCHES CORRECT DB DETAILS
 
@@ -322,33 +326,33 @@ num_weeks = 1000
 
 def prep_rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dict, beta_dict):
     cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
-    print("cpu:")
-    print(cost_per_stream)
+    #print("cpu:")
+    #print(cost_per_stream)
     allocation = budget / cost_per_stream
-    print('allocation:')
-    print(allocation)
+    #print('allocation:')
+    #print(allocation)
     pct_laydown = []
     for x in range(len(recorded_impressions[stream])):
         try:
             pct_laydown.append(recorded_impressions[stream][x] / sum(recorded_impressions[stream]))
         except:
             pct_laydown.append(0)
-    print("pct_laydown:")
-    print(pct_laydown)
+    #print("pct_laydown:")
+    #print(pct_laydown)
     pam = [pct_laydown[i] * allocation for i in range(len(pct_laydown))]
     carryover_list = []
     carryover_list.append(pam[0])
     for x in range(1, len(pam)):
         carryover_val = pam[x] + carryover_list[x - 1] * carryover_dict[stream]
         carryover_list.append(carryover_val)
-    print("carryover list:")
-    print(carryover_list)
+    #print("carryover list:")
+    #print(carryover_list)
     rev_list = []
     for x in carryover_list:
         rev_val = beta_dict[stream] * (1 - np.exp(-alpha_dict[stream] * x))
         rev_list.append(rev_val)
-    print("rev list")
-    print(rev_list)
+    #print("rev list")
+    #print(rev_list)
     indexed_vals = [a * b for a, b in zip(rev_list, seas_dict[stream])]
     total_rev = sum(indexed_vals)
     infsum = 0
@@ -376,7 +380,7 @@ seas_index = pd.read_sql_table('All_Index', engine)
 
 for x in laydown.columns.tolist():
     if x not in ST_header['Opt Channel'].tolist() and x != 'Date':
-        print(x)
+        #print(x)
         laydown.drop(columns=[x], inplace=True)
 
 streams = []
@@ -384,7 +388,7 @@ for stream in ST_header['Opt Channel']:
     streams.append(str(stream))
 
 laydown_dates = laydown['Date']
-print(f"current (incorrect) current budget: {ST_header['Current Budget']}")
+
 
 for stream in streams:
     ST_header.loc[ST_header['Opt Channel'] == stream, 'Current Budget'] = sum(laydown[stream])
@@ -444,7 +448,7 @@ seas_index = pd.read_sql_table('All_Index', engine)
 
 for x in laydown.columns.tolist():
     if x not in LT_header['Opt Channel'].tolist() and x != 'Date':
-        print(x)
+        #print(x)
         laydown.drop(columns=[x], inplace=True)
 
 streams = []
@@ -452,7 +456,7 @@ for stream in LT_header['Opt Channel']:
     streams.append(str(stream))
 
 laydown_dates = laydown['Date']
-print(f"current (incorrect) current budget: {LT_header['Current Budget']}")
+
 
 for stream in streams:
     LT_header.loc[LT_header['Opt Channel'] == stream, 'Current Budget'] = sum(laydown[stream])
@@ -521,7 +525,29 @@ bud = sum(ST_header['Current Budget'].to_list())
 # 
 # -----------------------------------------------------------------------------
 
-def optimise(data):
+inputs_per_result = {}
+
+def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budget, exh_budget, ftol, ssize, table_id):
+    global results
+
+    result = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown, seas_index=seas_index, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', ftol=ftol, ssize=ssize)
+
+    # result = Optimiser.profit_max(channel_input=ST_header_dict, laydown=laydown, seas_index=seas_index, max_budget=max_budget, exh_budget=exh_budget, num_weeks=1000)
+    try:
+        with app.app_context():
+            print(f"Task completed: {result}")
+            results[table_id] = result
+            print(f"total results: {results}")
+            socketio.emit('opt_complete', {'data':table_id})
+    except Exception as e:
+        with app.app_context():
+            print(f"Error in task callback: {str(e)}")
+            socketio.emit('opt_complete', {'data':table_id})
+
+@socketio.on('optimise')
+def run_optimise(dataDict):
+    data = dict(dataDict.get('dataToSend'))
+    global inputs_per_result
 
     ST_header_copy = deepcopy(ST_header)
     LT_header_copy = deepcopy(LT_header)
@@ -533,6 +559,8 @@ def optimise(data):
     obj_func = data['objectiveValue']
     exh_budget = data['exhaustValue']
     max_budget = int(data['maxValue'])
+    ftol_input = float(data['ftolValue'])
+    ssize_input = float(data['ssizeValue'])
     num_weeks = 1000
     blend = data['blendValue']
     disabled_rows = list(data['disabledRows'])
@@ -572,197 +600,317 @@ def optimise(data):
     print(f"laydown = {laydown_copy}")
     print(f"CPU = {[entry['CPU'] for entry in ST_input]}")
 
-    result = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy,
-                                          seas_index=seas_index_copy, return_type=blend, objective_type=obj_func, max_budget=max_budget,
-                                          exh_budget=exh_budget, method='SLSQP')
+    inputs_dict = {'ST_input':ST_input,'LT_input':LT_input,'laydown':laydown_copy,'seas_index':seas_index_copy}
+    
+    print(f"inputs per result: {inputs_per_result}")
+    inputs_per_result[table_id] = deepcopy(inputs_dict)
 
-    # result = Optimiser.profit_max(channel_input=ST_header_dict, laydown=laydown, seas_index=seas_index, max_budget=max_budget, exh_budget=exh_budget, num_weeks=1000)
+    min_spend_cap_list = [float(entry['Min Spend Cap']) for entry in ST_input]
+    min_spend_cap_dict = dict(zip(streams, min_spend_cap_list))
 
-    return result, table_id
+    print(min_spend_cap_dict)
+    socketio.start_background_task(target=optimise, ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, ftol=ftol_input, ssize=ssize_input, table_id = table_id)
 
-@app.route('/optimise', methods = ['POST'])
-def run_optimise():
-    if request.method == "POST":
-        data = request.json
-    future = executor.submit(optimise, data)
-    future.add_done_callback(opt_callback)
     return jsonify({'status': 'Task started in the background'})
 
+@socketio.on('optimisation_completed')
 def opt_callback(future):
+    global results
     try:
         result, table_id = future.result()
 
         with app.app_context():
             print(f"Task completed: {result}")
-            
             results[table_id] = result
             print(f"total results: {results}")
+            socketio.emit('opt_complete', {'data':table_id})
     except Exception as e:
         with app.app_context():
             print(f"Error in task callback: {str(e)}")
-
+            socketio.emit('opt_complete', {'data':table_id})
 
 @app.route('/results_output', methods = ['POST'])
 def results_output():
-
+    global inputs_per_result
     tab_names = dict(request.json)
+    print(tab_names)
+    #print(inputs_per_result)
+    output = create_output(results_dict=results, inputs_per_result=inputs_per_result, tab_names=tab_names, include_current=True)
+    output.to_csv('output.csv')
 
-    raw_input_data = ST_header.to_dict("records")
-    
-    current_budget_list = [entry['Current_Budget'] for entry in raw_input_data]
-    current_budget_dict = dict(zip(streams, current_budget_list))
-
-    cost_per_list = [float(entry['CPU']) for entry in raw_input_data]
-    cost_per_dict = dict(zip(streams, cost_per_list))
-
-    current_budget_laydown_dict = {'Time_Period':list(laydown_dates)}
-    for stream in streams:
-        current_budget_laydown_dict[stream] = [i * cost_per_dict[stream] for i in list(laydown.fillna(0)[stream])]
-    laydown['Time_Period'] = laydown_dates
-    laydown.set_index("Time_Period", inplace=True)
-
-    stacked_df2 = pd.DataFrame(current_budget_laydown_dict)
-    stacked_df2.set_index('Time_Period', inplace=True)
-    stacked_df2 = stacked_df2.stack()
-    stacked_df2 = pd.DataFrame(stacked_df2)
-    stacked_df2['Scenario'] = "Current"
-    stacked_df2['Budget/Revenue'] = "Budget"
-    value_col = stacked_df2.pop(0)
-    stacked_df2.insert(2, "Value", value_col)
-    spend_cap_list = [float(entry['Max_Spend_Cap']) for entry in raw_input_data]
-    spend_cap_dict = dict(zip(streams, spend_cap_list))
-
-    carryover_list = [float(entry['Carryover']) for entry in raw_input_data]
-    carryover_dict = dict(zip(streams, carryover_list))
-
-    beta_list = [float(entry['Beta']) for entry in raw_input_data]
-    beta_dict = dict(zip(streams, beta_list))
-
-    alpha_list = [float(entry['Alpha']) for entry in raw_input_data]
-    alpha_dict = dict(zip(streams, alpha_list))
-
-    recorded_impressions = {}
-    for x in laydown.columns:
-        recorded_impressions[x] = laydown.fillna(0)[x].to_list()
-
-    def rev_per_stream(stream, budget):
-                
-        cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
-        allocation = budget / cost_per_stream
-        pct_laydown = []
-        for x in range(len(recorded_impressions[stream])):
-            try:
-                pct_laydown.append(recorded_impressions[stream][x]/sum(recorded_impressions[stream]))
-            except:
-                pct_laydown.append(0)
-    
-        pam = [pct_laydown[i]*allocation for i in range(len(pct_laydown))]
-        carryover_list = []
-        carryover_list.append(pam[0])
-        for x in range(1,len(pam)):
-            carryover_val = pam[x] + carryover_list[x-1]*carryover_dict[stream]
-            carryover_list.append(carryover_val)
-        rev_list = []
-        for x in carryover_list:
-            rev_val = beta_dict[stream] * ((1 - np.exp(-alpha_dict[stream]*x)))
-            rev_list.append(rev_val)
-        total_rev = sum(rev_list)
-        infsum = 0
-        for n in range(1, 1000):
-            infsum += carryover_list[-1] * (1-carryover_dict[stream])**n
-        total_rev = total_rev + infsum
-        return rev_list
-
-    current_rev_dict = {'Time_Period':list(laydown.index)}
-
-    for stream in streams:
-        current_rev_dict[stream] = rev_per_stream(stream, current_budget_dict[stream])
-
-    stacked_df3 = pd.DataFrame(current_rev_dict)
-    stacked_df3.set_index('Time_Period', inplace=True)
-    stacked_df3 = stacked_df3.stack()
-    stacked_df3 = pd.DataFrame(stacked_df3)
-    stacked_df3['Scenario'] = "Current"
-    stacked_df3['Budget/Revenue'] = "Revenue"
-    value_col = stacked_df3.pop(0)
-    stacked_df3.insert(2, "Value", value_col)
-
-    stacked_df2.reset_index(inplace=True)
-    stacked_df3.reset_index(inplace=True)
-
-    stacked_df2.rename(columns={'level_1':'Channel'}, inplace=True)
-    stacked_df3.rename(columns={'level_1':'Channel'}, inplace=True)
-
-    concat_df = pd.concat([stacked_df2, stacked_df3])
-    for key, value in results.items():
-
-        opt_budget_dict = value
-        app.logger.info(f"results from optimiser:{results}")
-        opt_rev_dict = {'Time_Period':list(laydown.index)}
-        for stream in streams:
-            opt_rev_dict[stream] = rev_per_stream(stream, current_budget_dict[stream])
-
-        def daily_budget_from_pct_laydown(stream):
-        
-            pct_laydown = []
-            for x in range(len(recorded_impressions[stream])):
-                try:
-                    pct_laydown.append(recorded_impressions[stream][x]/sum(recorded_impressions[stream]))
-                except:
-                    pct_laydown.append(0)
-            return pct_laydown
-
-        opt_budget_laydown_dict = {'Time_Period':list(laydown.index)}
-        for stream in list(streams):
-            opt_budget_laydown_dict[stream] = [i * opt_budget_dict[stream] for i in daily_budget_from_pct_laydown(stream)]
-
-        stacked_df4 = pd.DataFrame(opt_budget_laydown_dict)
-        stacked_df4.set_index('Time_Period', inplace=True)
-        stacked_df4 = stacked_df4.stack()
-        stacked_df4 = pd.DataFrame(stacked_df4)
-        stacked_df4['Scenario'] = str(tab_names[key])
-        stacked_df4['Budget/Revenue'] = "Budget"
-        value_col = stacked_df4.pop(0)
-        stacked_df4.insert(2, "Value", value_col)
-
-        stacked_df4.reset_index(inplace=True)
-
-        stacked_df4.rename(columns={'level_1':'Channel'}, inplace=True)
-
-        concat_df = pd.concat([concat_df, stacked_df4])
-
-        opt_rev_dict = {'Time_Period':list(laydown.index)}
-        for stream in streams:
-            opt_rev_dict[stream] = rev_per_stream(stream, opt_budget_dict[stream])
-
-        stacked_df5 = pd.DataFrame(opt_rev_dict)
-        stacked_df5.set_index('Time_Period', inplace=True)
-        stacked_df5 = stacked_df5.stack()
-        stacked_df5 = pd.DataFrame(stacked_df5)
-        stacked_df5['Scenario'] = str(tab_names[key])
-        stacked_df5['Budget/Revenue'] = "Revenue"
-        value_col = stacked_df5.pop(0)
-        stacked_df5.insert(2, "Value", value_col)
-
-        stacked_df5.reset_index(inplace=True)
-
-        stacked_df5.rename(columns={'level_1':'Channel'}, inplace=True)
-
-        concat_df = pd.concat([concat_df, stacked_df5])
-    
-    concat_df['Time_Period'] = pd.to_datetime(concat_df['Time_Period'], format="%Y/%m/%d").dt.date
-
-    app.logger.info(concat_df.info())
     try:
-        concat_df.to_sql('Optimised CSV', engine, if_exists='replace', index=False)
+        output.to_sql('Optimised CSV', engine, if_exists='replace', index=False)
         app.logger.info("csv uploaded to db successfully")
     except:
         app.logger.info("csv db upload failed")
 
     return jsonify({"message":"csv exported successfully"})
 
+def create_output(results_dict, inputs_per_result, tab_names, include_current=True):
+
+    def output_rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dict, beta_dict, recorded_impressions, seas_dict, num_weeks):
+        cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
+        allocation = budget / cost_per_stream
+
+        pct_laydown = np.array(recorded_impressions[stream]) / sum(recorded_impressions[stream]) if sum(recorded_impressions[stream]) != 0 else 0
+        # print(sum(pct_laydown))
+
+        pam = pct_laydown * allocation
+        # print(sum(pam))
+        # carryover_list = np.zeros_like(pam)
+        # carryover_list[0] = pam[0]
+        # print(stream)
+        carryover_list = Optimise.adstock(pam, carryover_dict[stream])
+        # print(sum(carryover_list))
+        # for i in range(1, len(pam)):
+        #     carryover_val = pam[i] + carryover_list[i - 1] * carryover_dict[stream]
+        #     carryover_list[i] = carryover_val
+        # print(sum(carryover_list))
+        # print("carryover_list:", carryover_list)
+
+        rev_list = Optimise.dim_returns(alpha_dict[stream], beta_dict[stream], carryover_list)
+        # rev_list = beta_dict[stream] * ((1 - np.exp(-alpha_dict[stream] * carryover_list)))
+
+        # print(stream)
+        # print(sum(rev_list))
+        # print("beta dict:", beta_dict[stream])
+
+        indexed_vals = rev_list * seas_dict[stream]
+        # total_rev = np.sum(indexed_vals)
+        # print(total_rev)
+
+        # infsum = np.sum(carryover_list[-1] * carryover_dict[stream] ** np.arange(1, num_weeks))
+        #
+        # total_rev += infsum
+        return indexed_vals
+
+    global ST_header, laydown_dates, laydown, seas_index, streams, ST_header_dict, LT_header_dict
+    concat_df = pd.DataFrame()
+    raw_input_data = ST_header.to_dict("records")
+
+    current_budget_list = [entry['Current Budget'] for entry in raw_input_data]
+    current_budget_dict = dict(zip(streams, current_budget_list))
+
+    cost_per_list = [float(entry['CPU']) for entry in raw_input_data]
+    cost_per_dict = dict(zip(streams, cost_per_list))
+
+    current_budget_laydown_dict = {'Date': list(laydown_dates)}
+    for stream in streams:
+        current_budget_laydown_dict[stream] = [i * cost_per_dict[stream] for i in list(laydown.fillna(0)[stream])]
+    laydown['Date'] = laydown_dates.tolist()
+    laydown.set_index("Date", inplace=True)
+
+    stacked_df2 = pd.DataFrame(current_budget_laydown_dict)
+    stacked_df2.set_index('Date', inplace=True)
+    stacked_df2 = stacked_df2.stack()
+    stacked_df2 = pd.DataFrame(stacked_df2)
+    stacked_df2['Scenario'] = "Current"
+    stacked_df2['Budget/Revenue'] = "Budget"
+    value_col = stacked_df2.pop(0)
+    stacked_df2.insert(2, "Value", value_col)
+    spend_cap_list = [float(entry['Max Spend Cap']) for entry in raw_input_data]
+
+    ST_cost_per_list = [float(entry['CPU']) if 'CPU' in entry else 0.0 for entry in ST_header_dict]
+    ST_cost_per_dict = dict(zip(streams, ST_cost_per_list))
+    LT_cost_per_list = [float(entry['CPU']) if 'CPU' in entry else 0.0 for entry in LT_header_dict]
+    LT_cost_per_dict = dict(zip(streams, LT_cost_per_list))
+
+    ST_carryover_list = [float(entry['ST Carryover']) if 'ST Carryover' in entry else 0.0 for entry in ST_header_dict]
+    ST_carryover_dict = dict(zip(streams, ST_carryover_list))
+    LT_carryover_list = [float(entry['LT Carryover']) if 'LT Carryover' in entry else 0.0 for entry in LT_header_dict]
+    LT_carryover_dict = dict(zip(streams, LT_carryover_list))
+
+    ST_alpha_list = [float(entry['ST Alpha']) if 'ST Alpha' in entry else 0.0 for entry in ST_header_dict]
+    ST_alpha_dict = dict(zip(streams, ST_alpha_list))
+    LT_alpha_list = [float(entry['LT Alpha']) if 'LT Alpha' in entry else 0.0 for entry in LT_header_dict]
+    LT_alpha_dict = dict(zip(streams, LT_alpha_list))
+
+    ST_beta_list = [float(entry['ST Beta']) if 'ST Beta' in entry and not pd.isna(entry['ST Beta']) and entry['ST Beta'] != np.inf else 0.0 for entry in ST_header_dict]
+    ST_beta_dict = dict(zip(streams, ST_beta_list))
+    LT_beta_list = [float(entry['LT Beta']) if 'LT Beta' in entry and not pd.isna(entry['LT Beta']) and entry['LT Beta'] != np.inf else 0.0 for entry in LT_header_dict]
+    LT_beta_dict = dict(zip(streams, LT_beta_list))
+
+    seas_dict = seas_index
+
+    recorded_impressions = {}
+    for x in laydown.columns:
+        recorded_impressions[x] = laydown.fillna(0)[x].to_list()
+
+    if include_current:
+        current_rev_dict_ST = {'Date': list(laydown.index)}
+        current_rev_dict_LT = {'Date': list(laydown.index)}
+        
+        for stream in list(streams):
+            # current_rev_dict[stream] = total_rev_per_stream(stream, current_budget_dict[stream])
+
+            current_rev_dict_ST[stream] = output_rev_per_stream(stream, current_budget_dict[stream], ST_cost_per_dict,
+                                                         ST_carryover_dict, ST_alpha_dict, ST_beta_dict, recorded_impressions, seas_dict, num_weeks=1000)
+            current_rev_dict_LT[stream] = output_rev_per_stream(stream, current_budget_dict[stream], LT_cost_per_dict,
+                                                         LT_carryover_dict, LT_alpha_dict, LT_beta_dict, recorded_impressions, seas_dict, num_weeks=1000)
+
+        stacked_df3 = pd.DataFrame(current_rev_dict_ST)
+        stacked_df3.set_index('Date', inplace=True)
+        stacked_df3 = stacked_df3.stack()
+        stacked_df3 = pd.DataFrame(stacked_df3)
+        stacked_df3['Scenario'] = "Current"
+        stacked_df3['Budget/Revenue'] = "ST Revenue"
+        value_col = stacked_df3.pop(0)
+        stacked_df3.insert(2, "Value", value_col)
+
+        stacked_df2.reset_index(inplace=True)
+        stacked_df3.reset_index(inplace=True)
+
+        stacked_df2.rename(columns={'level_1': 'Opt Channel'}, inplace=True)
+        stacked_df3.rename(columns={'level_1': 'Opt Channel'}, inplace=True)
+
+        concat_df = pd.concat([stacked_df2, stacked_df3])
+
+        stacked_df3 = pd.DataFrame(current_rev_dict_LT)
+        stacked_df3.set_index('Date', inplace=True)
+        stacked_df3 = stacked_df3.stack()
+        stacked_df3 = pd.DataFrame(stacked_df3)
+        stacked_df3['Scenario'] = "Current"
+        stacked_df3['Budget/Revenue'] = "LT Revenue"
+        value_col = stacked_df3.pop(0)
+        stacked_df3.insert(2, "Value", value_col)
+
+        stacked_df2.reset_index(inplace=True)
+        stacked_df3.reset_index(inplace=True)
+
+        stacked_df2.rename(columns={'level_1': 'Opt Channel'}, inplace=True)
+        stacked_df3.rename(columns={'level_1': 'Opt Channel'}, inplace=True)
+
+        concat_df = pd.concat([concat_df, stacked_df3])
+        fill_df = concat_df.copy()
+
+    for key, value in results_dict.items():
+
+        table_id = key
+        opt_budget_dict = value
+        included_streams = list(opt_budget_dict.keys())
+        print(f"included streams list: {included_streams}")
+
+        curr_ST_input = inputs_per_result[table_id]['ST_input']
+        curr_LT_input = inputs_per_result[table_id]['LT_input']
+
+        curr_ST_cost_per_list = [float(entry['CPU']) if 'CPU' in entry else 0.0 for entry in curr_ST_input]
+        curr_ST_cost_per_dict = dict(zip(included_streams, curr_ST_cost_per_list))
+        curr_LT_cost_per_list = [float(entry['CPU']) if 'CPU' in entry else 0.0 for entry in curr_LT_input]
+        curr_LT_cost_per_dict = dict(zip(included_streams, curr_LT_cost_per_list))
+
+        curr_ST_carryover_list = [float(entry['ST Carryover']) if 'ST Carryover' in entry else 0.0 for entry in curr_ST_input]
+        curr_ST_carryover_dict = dict(zip(included_streams, curr_ST_carryover_list))
+        curr_LT_carryover_list = [float(entry['LT Carryover']) if 'LT Carryover' in entry else 0.0 for entry in curr_LT_input]
+        curr_LT_carryover_dict = dict(zip(included_streams, curr_LT_carryover_list))
+
+        curr_ST_alpha_list = [float(entry['ST Alpha']) if 'ST Alpha' in entry else 0.0 for entry in curr_ST_input]
+        curr_ST_alpha_dict = dict(zip(included_streams, curr_ST_alpha_list))
+        curr_LT_alpha_list = [float(entry['LT Alpha']) if 'LT Alpha' in entry else 0.0 for entry in curr_LT_input]
+        curr_LT_alpha_dict = dict(zip(included_streams, curr_LT_alpha_list))
+
+        curr_ST_beta_list = [float(entry['ST Beta']) if 'ST Beta' in entry and not pd.isna(entry['ST Beta']) and entry['ST Beta'] != np.inf else 0.0 for entry in curr_ST_input]
+        curr_ST_beta_dict = dict(zip(included_streams, curr_ST_beta_list))
+        curr_LT_beta_list = [float(entry['LT Beta']) if 'LT Beta' in entry and not pd.isna(entry['LT Beta']) and entry['LT Beta'] != np.inf else 0.0 for entry in curr_LT_input]
+        curr_LT_beta_dict = dict(zip(included_streams, curr_LT_beta_list))
+        
+        # print(f"results from optimiser:{results}")
+
+        # for stream in streams:
+        #     opt_rev_dict[stream] = rev_per_stream(stream, opt_budget_dict[stream])
+        curr_laydown = inputs_per_result[table_id]['laydown']
+        curr_seas_dict = inputs_per_result[table_id]['seas_index']
+
+        curr_budget_laydown_dict = {'Date': list(laydown_dates)}
+        for stream in included_streams:
+            curr_budget_laydown_dict[stream] = [i * cost_per_dict[stream] for i in list(curr_laydown.fillna(0)[stream])]
+        curr_laydown['Date'] = laydown_dates.tolist()
+        curr_laydown.set_index("Date", inplace=True)
+
+        curr_recorded_impressions = {}
+        for x in curr_laydown.columns:
+            curr_recorded_impressions[x] = curr_laydown.fillna(0)[x].to_list()
+
+        def daily_budget_from_pct_laydown(stream):
+
+            pct_laydown = []
+            for x in range(len(curr_recorded_impressions[stream])):
+                try:
+                    pct_laydown.append(curr_recorded_impressions[stream][x] / sum(curr_recorded_impressions[stream]))
+                except:
+                    pct_laydown.append(0)
+            return pct_laydown
+
+        opt_budget_laydown_dict = {'Date': list(curr_laydown.index)}
+        for stream in included_streams:
+            opt_budget_laydown_dict[stream] = [i * opt_budget_dict[stream] for i in daily_budget_from_pct_laydown(stream)]
+
+        stacked_df4 = pd.DataFrame(opt_budget_laydown_dict)
+        stacked_df4.set_index('Date', inplace=True)
+        stacked_df4 = stacked_df4.stack()
+        stacked_df4 = pd.DataFrame(stacked_df4)
+        stacked_df4.reset_index(inplace=True)
+
+        stacked_df4.rename(columns={'level_1': 'Opt Channel'}, inplace=True)
+
+        stacked_df4 = pd.merge(fill_df[["Date", "Opt Channel"]].drop_duplicates(), stacked_df4, on = ["Date", "Opt Channel"], how="left").fillna(0)
+        stacked_df4['Scenario'] = tab_names[key]
+        stacked_df4['Budget/Revenue'] = "Budget"
+        value_col = stacked_df4.pop(0)
+        stacked_df4.insert(2, "Value", value_col)
+        concat_df = pd.concat([concat_df, stacked_df4])
+
+        opt_rev_dict_ST = {'Date': list(curr_laydown.index)}
+        opt_rev_dict_LT = {'Date': list(curr_laydown.index)}
+        for inc_stream in included_streams:
+
+            opt_rev_dict_ST[inc_stream] = output_rev_per_stream(inc_stream, opt_budget_dict[inc_stream], curr_ST_cost_per_dict, curr_ST_carryover_dict, curr_ST_alpha_dict, curr_ST_beta_dict, curr_recorded_impressions, curr_seas_dict, num_weeks=1000)
+            opt_rev_dict_LT[inc_stream] = output_rev_per_stream(inc_stream, current_budget_dict[inc_stream], curr_LT_cost_per_dict, curr_LT_carryover_dict, curr_LT_alpha_dict, curr_LT_beta_dict, curr_recorded_impressions, curr_seas_dict, num_weeks=1000)
+       
+        stacked_df5 = pd.DataFrame(opt_rev_dict_ST)
+        stacked_df5.set_index('Date', inplace=True)
+        stacked_df5 = stacked_df5.stack()
+        stacked_df5 = pd.DataFrame(stacked_df5)
+        
+        stacked_df5.reset_index(inplace=True)
+
+        stacked_df5.rename(columns={'level_1': 'Opt Channel'}, inplace=True)
+        stacked_df5 = pd.merge(fill_df[["Date", "Opt Channel"]].drop_duplicates(), stacked_df5, on = ["Date", "Opt Channel"], how="left").fillna(0)
+        stacked_df5['Scenario'] = tab_names[key]
+        stacked_df5['Budget/Revenue'] = "ST Revenue"
+        value_col = stacked_df5.pop(0)
+        stacked_df5.insert(2, "Value", value_col)
+        concat_df = pd.concat([concat_df, stacked_df5])
+
+        stacked_df5 = pd.DataFrame(opt_rev_dict_LT)
+        stacked_df5.set_index('Date', inplace=True)
+        stacked_df5 = stacked_df5.stack()
+        stacked_df5 = pd.DataFrame(stacked_df5)
+        stacked_df5.reset_index(inplace=True)
+
+        stacked_df5.rename(columns={'level_1': 'Opt Channel'}, inplace=True)
+        stacked_df5 = pd.merge(fill_df[["Date", "Opt Channel"]].drop_duplicates(), stacked_df5, on = ["Date", "Opt Channel"], how="left").fillna(0)
+        stacked_df5['Scenario'] = tab_names[key]
+        stacked_df5['Budget/Revenue'] = "LT Revenue"
+        value_col = stacked_df5.pop(0)
+        stacked_df5.insert(2, "Value", value_col)
+        concat_df = pd.concat([concat_df, stacked_df5])
+
+    concat_df = pd.merge(concat_df, ST_header[['Opt Channel', 'Region', 'Brand', 'Channel Group', 'Channel']].drop_duplicates(), on="Opt Channel")
+    concat_df['Date'] = concat_df['Date'].astype(str)
+    return concat_df
+
 @app.route('/chart_data', methods = ['GET'])
 def chart_data():
+    # try:
+    #     fpath = 'C:/Users/matthew.browne/Documents/Blueprint/optimiser output data'
+    #     csv_data = pd.read_csv(fpath + '/optimiser results stacked v2.csv')
+    #     chart_data = csv_data.to_dict(orient='records')
+    #     return jsonify(chart_data)
+
+    # except Exception as e:
+    #     print('Error reading CSV file:', str(e))
+    #     return jsonify({'error': 'Internal Server Error'}), 500
+
     try:
         conn = engine.connect()
         query = text('SELECT * FROM "Optimised CSV";')
@@ -774,51 +922,43 @@ def chart_data():
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
             chart_data.append(a)
+            
        
         return jsonify(chart_data)
     
     except SQLAlchemyError as e:
-        app.logger.info('Error executing query:', str(e))
+        print('Error executing query:', str(e))
         return jsonify({'error': 'Internal Server Error'}), 500
 
     finally:
         if 'conn' in locals():
             conn.close()
 
-np.random.seed(42)  
+@app.route('/chart_response', methods = ['GET'])
+def chart_response():
+    try:
+        fpath = 'C:/Users/matthew.browne/Documents/Blueprint/optimiser output data'
+        csv_data = pd.read_csv(fpath + '/response_curve_data.csv')
+        chart_response = csv_data.to_dict(orient='records')
+        return jsonify(chart_response)
 
+    except Exception as e:
+        print('Error reading CSV file:', str(e))
+        return jsonify({'error': 'Internal Server Error'}), 500
 
-def poly_function(x,y,degree):
+@app.route('/chart_budget', methods = ['GET'])
+def chart_budget():
+    try:
+        fpath = 'C:/Users/matthew.browne/Documents/Blueprint/optimiser output data'
+        csv_data = pd.read_csv(fpath + '/budget_curve_data.csv')
+        chart_budget = csv_data.to_dict(orient='records')
+        return jsonify(chart_budget)
 
-    x_reshaped = x.reshape(-1, 1)
+    except Exception as e:
+        print('Error reading CSV file:', str(e))
+        return jsonify({'error': 'Internal Server Error'}), 500
 
-    poly_features = PolynomialFeatures(degree=degree)
-
-    x_poly = poly_features.fit_transform(x_reshaped)
-    model = LinearRegression(fit_intercept=False)
-
-    model.fit(x_poly, y)
-
-    return model.predict(x_poly)
-
-
-@app.route('/polynomial_data', methods=['GET'])
-def polynomial_data():
-    poly_x = np.random.uniform(0, 100, 20)
-    poly_y = np.random.uniform(2, 4, 20)
-    degree = 2
-    lobf = poly_function(poly_x, poly_y, degree)
-    app.logger.info(f"lobf={lobf}")
-    lobf_dict = dict(zip(poly_x, lobf))
-    data = {
-        "x": poly_x.tolist(),
-        "y": poly_y.tolist(),
-        "lobf": dict(sorted(lobf_dict.items()))
-    }
-    app.logger.info(data)
-    return jsonify(data)
-
-@app.route('/blueapp.logger.info_results')
+@app.route('/blueprint_results')
 @login_required
 def blueprint_results():
     return render_template('blueprint_results.html')
@@ -997,8 +1137,7 @@ def export_data():
 
 if __name__ == '__main__':
      with app.app_context():
-
         db.create_all()
         # for user in user_data:
         #     add_user(user)
-        app.run(host='0.0.0.0', port=os.environ.get('PORT', 5000), debug=True)
+        socketio.run(app=app, host='0.0.0.0', port=os.environ.get('PORT', 5000), debug=True)

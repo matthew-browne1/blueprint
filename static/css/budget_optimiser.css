@@ -126,9 +126,7 @@
       
    }
 
-   .content-sub {
-    margin: 10px;
-   }
+
 
 @keyframes drop-down {
   0% {
@@ -145,7 +143,7 @@
     display: flex;
     border: solid #523be4;
     border-radius: 10px;
-    
+    cursor: pointer;
     padding: 18px;
     width: 100%;
     border: none;
@@ -162,9 +160,12 @@
 
 .nav-model-left, .nav-model-right{
     display: flex;
-    align-items: center;   
-    gap: 20px;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 50px;
     margin-top: 20px;
+    margin-bottom: 20px;
 }
 
 .nav-model-left:after {
@@ -186,13 +187,11 @@
 }
 
 .bo-container {
-
     width: 100%;
     margin-top: 20px;
     margin: auto;
     text-align: center;
 }
-
 
 /* CSS */
 .button-4 {
@@ -415,7 +414,6 @@
   gap: 10px;
   align-items: center;
   text-align: center;
-  margin-bottom: 10px;
   border-radius: 10px;
   border: 2px solid #AFABAB;
   padding: 10px;
@@ -486,11 +484,13 @@
 
 .div-above-nav-bar {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
+  justify-content: center;
   text-align: center;
-  padding-bottom: 20px;
+  padding: 20px;
   overflow: visible;
+  gap: 20px;
 }
 
 .button-5 {
@@ -734,4 +734,24 @@ tr {
 
 tbody tr.disabled {
   color: #eee;
+}
+
+.split-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.top-half-nav {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  align-items: center;
+}
+
+.bottom-half-nav {
+  display: flex;
+  flex-direction: row;
+  gap: 20px;
+  align-items: center;
 }

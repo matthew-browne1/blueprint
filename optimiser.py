@@ -11,7 +11,6 @@ class Optimise:
             newdata[i] += a * newdata[i - 1]
         return newdata
 
-
     # Weighted diminishing returns
     @jit
     def dim_returns(alpha, beta, cv):
@@ -127,7 +126,7 @@ class Optimise:
             return max_budget - sum(budgets)
 
 
-    def blended_profit_max_scipy(ST_input, LT_input, laydown, seas_index, return_type, objective_type, max_budget, exh_budget, method, num_weeks=1000):
+    def blended_profit_max_scipy(ST_input, LT_input, laydown, seas_index, return_type, objective_type, max_budget, exh_budget, method, ftol=0.1, ssize=0.1, num_weeks=1000):
 
         streams = [entry['Opt Channel'] for entry in ST_input]
 
@@ -166,6 +165,7 @@ class Optimise:
         LT_beta_list = [float(entry['LT Beta']) if 'LT Beta' in entry and not pd.isna(entry['LT Beta']) and entry['LT Beta'] != np.inf else 0.0 for entry in LT_input]
         LT_beta_dict = dict(zip(streams, LT_beta_list))
 
+        print(min_spend_cap_dict)
 
         args = (streams, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,
                 LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict,
@@ -180,13 +180,13 @@ class Optimise:
             constraints.append({'type': 'eq', 'fun': lambda budgets: max_budget - sum(budgets)})
         else:
             constraints.append({'type': 'ineq', 'fun': lambda budgets:  sum(budgets) - max_budget})
-        print(constraints)
+        # print(constraints)
 
         # def optimization_callback(xk):
         #     # Add any relevant information you want to print or check at each iteration
         #     print("Current solution:", xk)
 
-        result = minimize(Optimise.profit_objective, initial_budgets, args=args, bounds=bounds, constraints=constraints, method=method, options={'disp': True, 'maxiter': 10000})
+        result = minimize(Optimise.profit_objective, initial_budgets, args=args, bounds=bounds, constraints=constraints, method=method, options={'disp': True, 'maxiter': 10000, 'ftol': ftol, 'eps':ssize})
 
         # result = minimize(profit_objective_with_penalty, initial_budgets, args=args, bounds=bounds, method='Powell')#, method=method)
 

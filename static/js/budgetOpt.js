@@ -1,5 +1,3 @@
-
-
 $(document).ready(function() {
   sendTableIDsOnRefresh();
   newTabButtonInit();
@@ -7,7 +5,10 @@ $(document).ready(function() {
   var optAllBtn = document.getElementById("optimise-all");
   optAllBtn.addEventListener("click", optAll);
 });
-
+var socket = io.connect(window.location.origin);
+socket.on("connect", function () {
+  console.log("connected to server");
+});
 var optResults = {};
 
 // ANY EDITS MADE TO THIS FUNCTION, REMEMBER TO ALSO CHANGE THEM IN THE IDENTICAL FUNCTION IN SAVEUI.JS
@@ -16,17 +17,22 @@ function initializeInitialTable() {
   
   var channelTable = $("#channel1").DataTable({
     dom: "Blfrtip",
+    destroy: true,
     ajax: {
       url: "/channel_main",
       contentType: "application/json",
       dataSrc: "1",
     },
     drawCallback: function () {
-      $(".sparkline1").sparkline("html", {
-        type: "line",
-        width: "250px",
-      });
-    },
+      $(".sparkline1")
+        .map(function() {
+        return $('canvas', this).length ? null : this;
+        })
+        .sparkline("html", {
+          type: "line",
+          width: "250px",
+        })
+      },
     columns: [
       { data: null },
       { data: "Region" },
@@ -220,14 +226,17 @@ document.addEventListener("DOMContentLoaded", function () {
   var max = document.getElementById("max-input1");
   var optButton = document.getElementById("opt-button1");
   var blend = document.getElementById("blend-input1");
+  var ftol = document.getElementById("ftol-input1");
+  var ssize = document.getElementById("step-size-input1");
 
   optButton.addEventListener("click", function () {
-    sendToggleStatesToBackend();
-    showLoadingOverlay();
+    showLoadingOverlay(1);
     var objValue = obj.value;
     var exhValue = exh.value;
     var maxValue = max.value;
     var blendValue = blend.value;
+    var ftolValue = ftol.value;
+    var ssizeValue = ssize.value;
     var disabledRowIds = getDisabledRowIds();
 
     var dataToSend = {
@@ -236,6 +245,8 @@ document.addEventListener("DOMContentLoaded", function () {
       maxValue: maxValue,
       blendValue: blendValue,
       tableID: 1,
+      ftolValue: ftolValue,
+      ssizeValue: ssizeValue,
       disabledRows: disabledRowIds
     };
     var dateButtonIsChecked = $("#date-filter-button1").prop("checked");
@@ -246,32 +257,51 @@ document.addEventListener("DOMContentLoaded", function () {
       dataToSend[dates] = dateTuple;
     }
     console.log(dataToSend);
-
+    socket.emit('optimise', { dataToSend : dataToSend });
     // Use jQuery AJAX to send the data to the Flask endpoint
-    $.ajax({
-      type: "POST", // Use POST method
-      url: "/optimise", // Replace with your actual Flask endpoint URL
-      contentType: "application/json",
-      data: JSON.stringify(dataToSend), // Convert data to JSON format
-      success: function (response) {
-        // Handle the response from the Flask endpoint here
-        console.log(response);
-        optResults = response;
-        // alert(JSON.stringify(response))
-        showResultsButton();
-        hideLoadingOverlay();
-      },
-      error: function (error) {
-        // Handle any errors that occur during the AJAX request
-        console.error("AJAX request error:", error);
-        hideLoadingOverlay();
-      },
-    });
+    // $.ajax({
+    //   type: "POST", // Use POST method
+    //   url: "/optimise", // Replace with your actual Flask endpoint URL
+    //   contentType: "application/json",
+    //   data: JSON.stringify(dataToSend), // Convert data to JSON format
+    //   success: function (response) {
+    //     // Handle the response from the Flask endpoint here
+    //     console.log(response);
+    //     optResults = response;
+    //     // alert(JSON.stringify(response))
+    //     showResultsButton();
+        
+    //   },
+    //   error: function (error) {
+    //     // Handle any errors that occur during the AJAX request
+    //     console.error("AJAX request error:", error);
+    //     hideLoadingOverlay();
+    //   },
+    // });
   });
+
 });
 }
 
 initializeInitialTable();
+
+function getDisabledRowIds(tableID) {
+  var disabledRowIds = [];
+
+  // Assuming DataTables is initialized on the table with the ID 'channel'+tableID
+  var dataTable = $("#channel" + tableID).DataTable();
+
+  // Use the DataTables API to get rows with the 'disabled' class
+  dataTable
+    .rows(".disabled")
+    .data()
+    .each(function (row) {
+      var rowId = row.row_id; // Make sure 'row_id' is a valid property of your data
+      disabledRowIds.push(rowId);
+    });
+
+  return disabledRowIds;
+}
 
 function showResultsButton() {
   var div = document.getElementById("results-div");
@@ -298,12 +328,12 @@ function showResultsButton() {
   }
 }
 
-function showLoadingOverlay() {
-  document.getElementById("loading-overlay1").style.display = "block";
+function showLoadingOverlay(tableID) {
+  document.getElementById("loading-overlay"+tableID).style.display = "block";
 }
 
-function hideLoadingOverlay() {
-  document.getElementById("loading-overlay1").style.display = "none";
+function hideLoadingOverlay(tableID) {
+  document.getElementById("loading-overlay"+tableID).style.display = "none";
 }
 
 $(".dropdown").click(function () {
@@ -462,49 +492,6 @@ $("#date-filter-button1").on("click", function () {
   }
 });
 
-function optimiseSingle(setID) {
-  showLoadingOverlay(setID);
-  var obj = document.getElementById("obj-input" + setID);
-  var exh = document.getElementById("exh-input" + setID);
-  var max = document.getElementById("max-input" + setID);
-  var optButton = document.getElementById("opt-button" + setID);
-  var blend = document.getElementById("blend-input" + setID);
-    
-  var objValue = obj.value;
-  var exhValue = exh.value;
-  var maxValue = max.value;
-  var blendValue = blend.value;
-
-  var dataToSend = {
-    objectiveValue: objValue,
-    exhaustValue: exhValue,
-    maxValue: maxValue,
-    blendValue: blendValue,
-    tableID: setID,
-  };
-
-  // Use jQuery AJAX to send the data to the Flask endpoint
-  $.ajax({
-    type: "POST", // Use POST method
-    url: "/optimise", // Replace with your actual Flask endpoint URL
-    contentType: "application/json",
-    data: JSON.stringify(dataToSend), // Convert data to JSON format
-    success: function (response) {
-      // Handle the response from the Flask endpoint here
-      console.log(response);
-      optResults = response;
-      // alert(JSON.stringify(response))
-      hideLoadingOverlay(setID);
-    },
-    error: function (error) {
-      // Handle any errors that occur during the AJAX request
-      console.error("AJAX request error:", error);
-      hideLoadingOverlay(setID);
-    },
-  });
-
-}
-
 function optAll() {
   $.ajax({
     url: "get_table_ids",
@@ -519,13 +506,17 @@ function optAll() {
             var obj = document.getElementById("obj-input" + setID);
             var exh = document.getElementById("exh-input" + setID);
             var max = document.getElementById("max-input" + setID);
-            var optButton = document.getElementById("opt-button" + setID);
             var blend = document.getElementById("blend-input" + setID);
+            var ftol = document.getElementById("ftol-input" + setID);
+            var ssize = document.getElementById("step-size-input" + setID);
 
             var objValue = obj.value;
             var exhValue = exh.value;
             var maxValue = max.value;
             var blendValue = blend.value;
+            var ftolValue = ftol.value;
+            var ssizeValue = ssize.value;
+            var disabledRowIds = getDisabledRowIds(setID);
 
             var dataToSend = {
               objectiveValue: objValue,
@@ -533,27 +524,13 @@ function optAll() {
               maxValue: maxValue,
               blendValue: blendValue,
               tableID: setID,
+              ftolValue: ftolValue,
+              ssizeValue: ssizeValue,
+              disabledRows: disabledRowIds,
             };
 
             // Use jQuery AJAX to send the data to the Flask endpoint
-            $.ajax({
-              type: "POST", // Use POST method
-              url: "/optimise", // Replace with your actual Flask endpoint URL
-              contentType: "application/json",
-              data: JSON.stringify(dataToSend), // Convert data to JSON format
-              success: function (response) {
-                // Handle the response from the Flask endpoint here
-                console.log(response);
-                optResults = response;
-                // alert(JSON.stringify(response))
-                hideLoadingOverlay(setID);
-              },
-              error: function (error) {
-                // Handle any errors that occur during the AJAX request
-                console.error("AJAX request error:", error);
-                hideLoadingOverlay(setID);
-              },
-            });
+            socket.emit("optimise", { dataToSend: dataToSend });
         });
       }
     },

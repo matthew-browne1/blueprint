@@ -116,53 +116,61 @@
       </div>
       <div class="content-sub">
          <div class="div-above-nav-bar" id="buttons-div1">
+           
             <div class="nav-model-left" id="nav-bar">
-               <div class="show-table">
-                  <button class="button-4" role="button" id="show-table-btn1">Show/Hide Table</button>
-               </div>
-               <div class="obj-func">       
-                  <div class="dropdown" id="dd-obj1">
-                     <div class="select">
-                        <span>Select KPI</span>
-                        <i class="fa fa-chevron-left"></i>
-                     </div>
-                     <input type="hidden" name="objective" id="obj-input1">
-                     <ul class="dropdown-menu">
-                        <li id="profit">Profit</li>
-                        <li id="revenue">Revenue</li>
-                        <li id="roi">ROI</li>
-                     </ul>
+               <div class="split-nav">
+                  <div class="top-half-nav">
+                     <div class="obj-func">
+                        <div class="dropdown" id="dd-obj1">
+                           <div class="select">
+                              <span>Select KPI</span>
+                              <i class="fa fa-chevron-left"></i>
+                           </div>
+                           <input type="hidden" name="objective" id="obj-input1">
+                           <ul class="dropdown-menu">
+                              <li id="profit">Profit</li>
+                              <li id="revenue">Revenue</li>
+                              <li id="roi">ROI</li>
+                           </ul>
+                        </div>
                   </div>
+                  <div class="blend">       
+                     <div class="dropdown" id="dd-blend1">
+                        <div class="select">
+                           <span>Objective Function</span>
+                           <i class="fa fa-chevron-left"></i>
+                        </div>
+                        <input type="hidden" name="blend" id="blend-input1">
+                        <ul class="dropdown-menu">
+                           <li id="blend">Blended</li>
+                           <li id="st">ST</li>
+                           <li id="lt">LT</li>
+                        </ul>
+                     </div>
+                     </div>
+                     <div class="exh-bud">       
+                        <div class="dropdown" id="dd-exh1">
+                           <div class="select">
+                              <span>Budget Exhaustion</span>
+                              <i class="fa fa-chevron-left"></i>
+                           </div>
+                           <input type="hidden" name="exhaust-budget" id="exh-input1">
+                           <ul class="dropdown-menu">
+                              <li id="yes">Exhaust Budget</li>
+                              <li id="no">Do Not Exhaust Budget</li>
+                           </ul>
+                        </div>
+                     </div>
+               </div>
+               <div class="bottom-half-nav">
+
+                  <input type="number" id="max-input1" step="5000" placeholder="Enter Max Budget">
+
+                  <input type="number" id="ftol-input1" step="0.1" placeholder="Enter Tolerance">
+
+                  <input type="number" id="step-size-input1" step="0.1" placeholder="Enter Step-Size">
+               </div>
             </div>
-            <div class="blend">       
-               <div class="dropdown" id="dd-blend1">
-                  <div class="select">
-                     <span>Objective Function</span>
-                     <i class="fa fa-chevron-left"></i>
-                  </div>
-                  <input type="hidden" name="blend" id="blend-input1">
-                  <ul class="dropdown-menu">
-                     <li id="blend">Blended</li>
-                     <li id="st">ST</li>
-                     <li id="lt">LT</li>
-                  </ul>
-               </div>
-               </div>
-               <div class="exh-bud">       
-                  <div class="dropdown" id="dd-exh1">
-                     <div class="select">
-                        <span>Budget Exhaustion</span>
-                        <i class="fa fa-chevron-left"></i>
-                     </div>
-                     <input type="hidden" name="exhaust-budget" id="exh-input1">
-                     <ul class="dropdown-menu">
-                        <li id="yes">Exhaust Budget</li>
-                        <li id="no">Do Not Exhaust Budget</li>
-                     </ul>
-                  </div>
-               </div>
-               <p>Enter Total Budget:</p>
-               <input type="number" id="max-input1" value="0" step="5000" placeholder="Enter Max Budget">
                <div class="date-cont" id="date-cont">
                   <div class="date-range-label">
                   <label for="end-date">Date Range Filter:</label>
@@ -266,10 +274,10 @@
    </div>
 </div>
 <script>
-   tabNames = {}
+   tabNames = {1:'Scenario 1'}
    function initializeInitialButton() {
      var content = document.getElementById("opt-tab1");
-     var coll = document.getElementById("show-table-btn1");
+     var coll = document.getElementById("col-btn1");
      var table = document.getElementById("channel-container1");
      var buttonsDiv = document.getElementById("buttons-div1");
       coll.addEventListener("click", function() {
@@ -295,7 +303,7 @@
 
    function initializeCollapsibleButtons(colID) {
      var content = document.getElementById("opt-tab"+colID);
-     var coll = document.getElementById("show-table-btn"+colID);
+     var coll = document.getElementById("col-btn"+colID);
      var table = document.getElementById("channel-container"+colID);
      var buttonsDiv = document.getElementById("buttons-div"+colID);
      console.log("col-btn"+tabCounter);
@@ -436,24 +444,23 @@ function newTabButtonInit() {
       <div class="content-sub">
          <div class="div-above-nav-bar" id="buttons-div${tabCounter}">
                <div class="nav-model-left">
-                  <div class="show-table">
-                     <button class="button-4" role="button" id="show-table-btn${tabCounter}">Show/Hide Table</button>
-                  </div>
-                  <div class="obj-func">       
-                     <div class="dropdown" id="dd-obj${tabCounter}">
-                        <div class="select">
-                           <span>Select KPI</span>
-                           <i class="fa fa-chevron-left"></i>
+                  <div class="split-nav">
+                     <div class="top-half-nav">
+                        <div class="obj-func">       
+                           <div class="dropdown" id="dd-obj${tabCounter}">
+                              <div class="select">
+                              <span>Select KPI</span>
+                              <i class="fa fa-chevron-left"></i>
+                           </div>
+                           <input type="hidden" name="objective" id="obj-input${tabCounter}">
+                           <ul class="dropdown-menu">
+                              <li id="profit">Profit</li>
+                              <li id="revenue">Revenue</li>
+                              <li id="roi">ROI</li>
+                           </ul>
                         </div>
-                        <input type="hidden" name="objective" id="obj-input${tabCounter}">
-                        <ul class="dropdown-menu">
-                           <li id="profit">Profit</li>
-                           <li id="revenue">Revenue</li>
-                           <li id="roi">ROI</li>
-                        </ul>
                      </div>
-               </div>
-                  <div class="blend">       
+                     <div class="blend">       
                      <div class="dropdown" id="dd-blend${tabCounter}">
                         <div class="select">
                            <span>Objective Function</span>
@@ -466,7 +473,7 @@ function newTabButtonInit() {
                            <li id="lt">LT</li>
                         </ul>
                      </div>
-               </div>
+                  </div>
                   <div class="exh-bud">       
                      <div class="dropdown" id="dd-exh${tabCounter}">
                         <div class="select">
@@ -479,18 +486,23 @@ function newTabButtonInit() {
                            <li id="no">Do Not Exhaust Budget</li>
                         </ul>
                      </div>
-                  </div>  
-                     <p>Enter Total Budget:</p>
-                     <input type="number" id="max-input${tabCounter}" value="0" step="5000" placeholder="Enter Max Budget">W
-                     <div class="date-cont" id="date-cont">
-                  <div class="date-range-label">
-                     <label for="end-date">Date Range Filter:</label>
-                     <div class="toggle-button-cover">
-                        <div class="button-cover">
-                           <div class="button d">
-                              <input type="checkbox" class="checkbox" id="date-filter-button1" />
-                              <div class="knobs"></div>
-                              <div class="layer"></div>
+                  </div>
+               </div>
+               <div class="bottom-half-nav">
+                  <input type="number" id="max-input${tabCounter}" step="5000" placeholder="Enter Max Budget">
+                  <input type="number" id="ftol-input${tabCounter}" step="0.1" placeholder="Enter Tolerance">
+                  <input type="number" id="step-size-input${tabCounter}" step="0.1" placeholder="Enter Step-Size">
+               </div>
+            </div>
+            <div class="date-cont" id="date-cont">
+               <div class="date-range-label">
+                  <label for="end-date">Date Range Filter:</label>
+                  <div class="toggle-button-cover">
+                     <div class="button-cover">
+                        <div class="button d">
+                           <input type="checkbox" class="checkbox" id="date-filter-button${tabCounter}" />
+                           <div class="knobs"></div>
+                           <div class="layer"></div>
                            </div>
                         </div>
                      </div>
@@ -501,38 +513,37 @@ function newTabButtonInit() {
                         <input type="text" name="end-date" class="end-date" id="end-date${tabCounter}" placeholder="End date" />
                      </div>
                   </div>
-               <div class="opt-cont-parent" id="opt-button-cont">
-                  <button class="button-4" role="button" id="opt-button${tabCounter}">Optimise</button>
-               </div>
-                    
+                  <div class="opt-cont-parent" id="opt-button-cont">
+                     <button class="button-4" role="button" id="opt-button${tabCounter}">Optimise</button>
                   </div>
                </div>
-               <div class="bo-container" id="channel-container${tabCounter}">
-               <table id="channel${tabCounter}" class="hover">
-                  <thead>
-                     <tr>
-                        <th>Region</th>
-                        <th>Brand</th>
-                        <th>Channel</th>
-                        <th>Current Budget</th>
-                        <th>Min Spend Cap</th>
-                        <th>Max Spend Cap</th>
-                        <th>Laydown</th>
+            </div>
+            <div class="bo-container" id="channel-container${tabCounter}">
+            <table id="channel${tabCounter}" class="hover">
+               <thead>
+                  <tr>
+                     <th><input type="checkbox" name="select_all" value="1" id="example-select-all${tabCounter}" checked></th>
+                     <th>Region</th>
+                     <th>Brand</th>
+                     <th>Channel</th>
+                     <th>Current Budget</th>
+                     <th>Min Spend Cap</th>
+                     <th>Max Spend Cap</th>
+                     <th>Laydown</th>
                      </tr>
                   </thead>
                </table>
-               
-               </div>
-               </div>
-               </div>
-               </div>
-       `;
+            </div>
+         </div>
+      </div>
+   </div>
+`;
       
        var mainCont = document.getElementById("main-container");
        mainCont.appendChild(tabContent);
        initializeCollapsibleButtons(tabCounter);
        initializeDataTable(tabCounter);
-       initializeButtons(tabCounter);
+       //initializeButtons(tabCounter);
        closeButtonTab(tabCounter);
        dropdownButtons(tabCounter);
        $(".sparkline").each(function () {
@@ -552,6 +563,7 @@ function newTabButtonInit() {
 newTabButtonInit();
    </script>
 
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js" integrity="sha384-Gr6Lu2Ajx28mzwyVR8CFkULdCU7kMlZ9UthllibdOSo6qAiN+yXNHqtgdTvFXMT4" crossorigin="anonymous"></script>
 <script type="module" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
 <script src="https://code.jquery.com/ui/1.12.1/jquery-ui.min.js"></script>
