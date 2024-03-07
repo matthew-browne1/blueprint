@@ -327,7 +327,7 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
        plugins: [ChartDataLabels],
       options: revenue_scenario_chartOptions,
     });
-  
+
 // 3. ROI by Scenario Chart
 // 3a. data block
     const roi_scenario_chartData = {
@@ -456,7 +456,7 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
       plugins: [ChartDataLabels],
       options: roi_scenario_chartOptions,
     });
-  
+
 // Process data for channel charts
      const processedDataPerChannel = data.reduce((acc, entry) => {
       const scenarioKey = entry.Scenario;
@@ -641,7 +641,7 @@ function getRandomColor() {
       data: budget_channel_chartData,
       options: budget_channel_chartOptions,
     });
-  
+
 
 // 5. Revenue by Channel Chart
 // Function to handle dropdown selection
@@ -875,7 +875,7 @@ function handleDropdownChange() {
       data: roi_channel_chartData,
       options: roi_channel_chartOptions,
     });
-  
+
 // Process data for laydown scenario charts
 const processedDataLaydown = data.reduce((acc, entry) => {
     const key = entry.Scenario;
@@ -1136,7 +1136,7 @@ const laydown_channel_chartData = {
     });
 
   }
-  
+
 // //Response curve chart
 // $.ajax({
 //   url: "/chart_response",
