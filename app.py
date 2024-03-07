@@ -613,21 +613,6 @@ def run_optimise(dataDict):
 
     return jsonify({'status': 'Task started in the background'})
 
-@socketio.on('optimisation_completed')
-def opt_callback(future):
-    global results
-    try:
-        result, table_id = future.result()
-
-        with app.app_context():
-            print(f"Task completed: {result}")
-            results[table_id] = result
-            print(f"total results: {results}")
-            socketio.emit('opt_complete', {'data':table_id})
-    except Exception as e:
-        with app.app_context():
-            print(f"Error in task callback: {str(e)}")
-            socketio.emit('opt_complete', {'data':table_id})
 
 @app.route('/results_output', methods = ['POST'])
 def results_output():
@@ -899,17 +884,8 @@ def create_output(results_dict, inputs_per_result, tab_names, include_current=Tr
     concat_df['Date'] = concat_df['Date'].astype(str)
     return concat_df
 
-@app.route('/chart_data', methods = ['GET'])
+@socketio.on("collect_data")
 def chart_data():
-    # try:
-    #     fpath = 'C:/Users/matthew.browne/Documents/Blueprint/optimiser output data'
-    #     csv_data = pd.read_csv(fpath + '/optimiser results stacked v2.csv')
-    #     chart_data = csv_data.to_dict(orient='records')
-    #     return jsonify(chart_data)
-
-    # except Exception as e:
-    #     print('Error reading CSV file:', str(e))
-    #     return jsonify({'error': 'Internal Server Error'}), 500
 
     try:
         conn = engine.connect()
@@ -919,17 +895,16 @@ def chart_data():
         #app.logger.info(tp_result.fetchall())
         chart_data = []
         col_names = db_result.keys()
+        print("worked")
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
             chart_data.append(a)
-            
-       
-        return jsonify(chart_data)
+        socketio.emit('chart_data', {'chartData':chart_data})
+        print("chart_data sent")
     
     except SQLAlchemyError as e:
         print('Error executing query:', str(e))
-        return jsonify({'error': 'Internal Server Error'}), 500
-
+       
     finally:
         if 'conn' in locals():
             conn.close()
