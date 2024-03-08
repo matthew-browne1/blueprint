@@ -14,8 +14,8 @@ chartsSocket.on('chart_data', function(data) {
   console.log("fetched chart data from back end");
   //console.log(chartData);
   generateChartsA(chartData);
-//  generateChartsB(chartData);
-//  generateChartsC(chartData);
+  generateChartsB(chartData);
+  generateChartsC(chartData);
 });
 
 function generateChartsA(data) {

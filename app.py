@@ -909,6 +909,7 @@ def chart_data():
         if 'conn' in locals():
             conn.close()
 @app.route('/filter_chart_data', methods=['GET'])
+@login_required
 def filter_chart_data():
     try:
         conn = engine.connect()
@@ -926,7 +927,7 @@ def filter_chart_data():
 
         for x in db_result.fetchall():
             for col_name, value in zip(col_names, x):
-                if col_name == 'Time_Period':
+                if col_name == 'Date':
                     date_value = pd.to_datetime(value)
                     if min_date is None or date_value < min_date:
                         min_date = date_value
@@ -957,7 +958,7 @@ def filter_chart_data():
     finally:
         if 'conn' in locals():
             conn.close()
-0
+
 @app.route('/chart_response', methods = ['GET'])
 def chart_response():
     try:
