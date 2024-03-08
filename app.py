@@ -585,13 +585,13 @@ def run_optimise(dataDict):
     ST_input = ST_header_copy.to_dict('records')
     LT_input = LT_header_copy.to_dict('records')
 
-    # if 'dates' in data:
-    #     app.logger.info('dates found in data')
-    #     start_date = data['dates'][0]
-    #     end_date = data['dates'][1]
-    #     laydown = laydown[(laydown["Time-Period"] >= start_date) & (laydown["Time-Period"] <= end_date)]
-    #     app.logger.info(start_date)
-    #     app.logger.info(end_date)
+    if 'dates' in data:
+        app.logger.info('dates found in data')
+        start_date = data['dates'][0]
+        end_date = data['dates'][1]
+        laydown_copy = laydown_copy[(laydown_copy["Date"] >= start_date) & (laydown_copy["Date"] <= end_date)]
+        app.logger.info(start_date)
+        app.logger.info(end_date)
 
     print(f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
     
@@ -892,7 +892,7 @@ def chart_data():
         query = text('SELECT * FROM "Optimised CSV";')
 
         db_result = conn.execute(query)
-        #app.logger.info(tp_result.fetchall())
+ 
         chart_data = []
         col_names = db_result.keys()
         print("worked")
@@ -904,7 +904,7 @@ def chart_data():
     
     except SQLAlchemyError as e:
         print('Error executing query:', str(e))
-       
+
     finally:
         if 'conn' in locals():
             conn.close()
