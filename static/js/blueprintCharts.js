@@ -1,6 +1,9 @@
 //// Fetch data from the Flask API using jQuery
 
-var chartsSocket = io.connect(window.location.origin);
+var chartsSocket = io.connect(window.location.origin,
+     { timeout: 500000
+}
+);
 
 chartsSocket.on("connect", function () {
   console.log("connected to server");
@@ -548,6 +551,20 @@ function getRandomColor() {
     color += letters[Math.floor(Math.random() * 16)];
   }
   return color;
+}
+function splitLabel(maxWords) {
+  return function(label) {
+    const words = label.split(/\s+/).filter(Boolean);
+    if (words.length <= maxWords) {
+      return label;
+    } else {
+      const chunks = [];
+      for (let i = 0; i < words.length; i += maxWords) {
+        chunks.push(words.slice(i, i + maxWords).join(' '));
+      }
+      return chunks;
+    }
+  };
 }
 // 4. Spend by Channel Chart
 // 4a. data block

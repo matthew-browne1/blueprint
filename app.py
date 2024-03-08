@@ -908,7 +908,56 @@ def chart_data():
     finally:
         if 'conn' in locals():
             conn.close()
+@app.route('/filter_chart_data', methods=['GET'])
+def filter_chart_data():
+    try:
+        conn = engine.connect()
+        query = text('SELECT * FROM "Optimised CSV";')
 
+        db_result = conn.execute(query)
+
+        if db_result is None:
+            return jsonify({'error': 'Internal Server Error'}), 500
+
+        col_names = db_result.keys()
+        min_date = None
+        max_date = None
+        data = {}
+
+        for x in db_result.fetchall():
+            for col_name, value in zip(col_names, x):
+                if col_name == 'Time_Period':
+                    date_value = pd.to_datetime(value)
+                    if min_date is None or date_value < min_date:
+                        min_date = date_value
+                    if max_date is None or date_value > max_date:
+                        max_date = date_value
+                elif col_name in ['Channel', 'Channel Group', 'Region', 'Country', 'Brand', 'Scenario', 'Optimisation Type', 'Budget/Revenue']:
+                    if col_name not in data:
+                        data[col_name] = []
+                    if value not in data[col_name]:
+                        data[col_name].append(value)
+
+        if not min_date or not max_date:
+            return jsonify({'error': 'Internal Server Error'}), 500
+
+        # Remove 'Budget' from revenue types
+        revenue_types = [rev_type for rev_type in data['Budget/Revenue'] if rev_type != 'Budget']
+        data['revenue_types'] = revenue_types
+
+        data['min_date'] = min_date.strftime('%Y-%m-%d')
+        data['max_date'] = max_date.strftime('%Y-%m-%d')
+
+        return jsonify(data)
+
+    except SQLAlchemyError as e:
+        print('Error executing query:', str(e))
+        return jsonify({'error': 'Internal Server Error'}), 500
+
+    finally:
+        if 'conn' in locals():
+            conn.close()
+0
 @app.route('/chart_response', methods = ['GET'])
 def chart_response():
     try:
