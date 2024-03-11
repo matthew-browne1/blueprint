@@ -183,6 +183,7 @@ function splitLabel(maxWords) {
     }
   },
   },
+  animation: false,
 };
 // 1c. render block
     const budget_scenario_chart = new Chart(document.getElementById("budget_scenario_chart"),
@@ -321,6 +322,7 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
     }
   },
   },
+  animation: false,
 };
 // 2c. render block
     const revenue_scenario_chart = new Chart(document.getElementById("revenue_scenario_chart"),
@@ -450,6 +452,7 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
     }
   },
   },
+  animation: false,
 };
 // 3c. render block
     const roi_scenario_chart = new Chart(document.getElementById("roi_scenario_chart"),
@@ -651,6 +654,7 @@ function splitLabel(maxWords) {
     }
   },
   },
+  animation: false,
 };
 // 4c. render block
     const budget_channel_chart = new Chart(document.getElementById("budget_channel_chart"),
@@ -777,6 +781,7 @@ const maxBarValue2 = Math.max(...totalRevenues);
     }
   },
   },
+  animation: false,
 };
 // 5c. render block
     const revenue_channel_chart = new Chart(document.getElementById("revenue_channel_chart"),
@@ -880,6 +885,7 @@ function handleDropdownChange() {
     }
   },
   },
+  animation: false,
 };
 // 6c. render block
     const roi_channel_chart = new Chart(document.getElementById("roi_channel_chart"),
@@ -1012,6 +1018,7 @@ laydown_scenario_labels.forEach(scenario => {
     }
   },
   },
+  animation: false,
 };
 // 7c. render block
     const laydown_scenario_chart = new Chart(document.getElementById("laydown_scenario_chart"),
@@ -1140,6 +1147,7 @@ const laydown_channel_chartData = {
     }
   },
   },
+  animation: false,
 };
 // 8c. render block
     const laydown_channel_chart = new Chart(document.getElementById("laydown_channel_chart"),

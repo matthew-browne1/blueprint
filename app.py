@@ -1,4 +1,3 @@
-
 # %% --------------------------------------------------------------------------
 #
 # -----------------------------------------------------------------------------
@@ -41,16 +40,16 @@ from multiprocessing import Manager, freeze_support
 app = Flask(__name__)
 socketio = SocketIO(app)
 
-#executor = ProcessPoolExecutor()
+# executor = ProcessPoolExecutor()
 
 ### TODO: WRITE A CLASS WHICH FETCHES CORRECT DB DETAILS
 
 azure_host = "blueprintalpha.postgres.database.azure.com"
 azure_user = "bptestadmin"
 azure_password = "Password!"
-azure_database = "postgres" 
+azure_database = "postgres"
 
-ra_server_uri = 'postgresql://postgres:'+urllib.parse.quote_plus("Gde3400@@")+'@192.168.1.2:5432/CPW Blueprint'
+ra_server_uri = 'postgresql://postgres:' + urllib.parse.quote_plus("Gde3400@@") + '@192.168.1.2:5432/CPW Blueprint'
 
 # Create the new PostgreSQL URI for Azure
 azure_db_uri = f"postgresql://{azure_user}:{urllib.parse.quote_plus(azure_password)}@{azure_host}:5432/{azure_database}"
@@ -69,11 +68,13 @@ bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
     user_info = db.relationship('UserInfo', backref='user', lazy=True)
+
 
 class UserInfo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -81,13 +82,15 @@ class UserInfo(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
+
 class Snapshot(db.Model):
     name = db.Column(db.String, nullable=False)
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String, nullable=False)
-    table_ids = db.Column(db.String, nullable = False)
+    table_ids = db.Column(db.String, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     table_data = db.Column(db.Text, nullable=False)
+
 
 # class DatabaseHandler(logging.Handler):
 #     def emit(self, record):
@@ -108,22 +111,28 @@ class PyomoLogHandler(logging.Handler):
         db.session.add(Log(message=log_message))
         db.session.commit()
 
+
 pyomo_logger = logging.getLogger('pyomo')
 pyomo_logger.addHandler(PyomoLogHandler())
+
 
 class Log(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
     message = db.Column(db.String, nullable=False)
 
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.options(joinedload(User.user_info)).get(int(user_id))
 
+
 user_data = [
-    {'username': 'mattbrowne1', 'password': 'password123', 'full_name': 'Matthew Browne', 'email': 'matthew.browne@retailalchemy.co.uk'},
+    {'username': 'mattbrowne1', 'password': 'password123', 'full_name': 'Matthew Browne',
+     'email': 'matthew.browne@retailalchemy.co.uk'},
     {'username': 'testuser', 'password': 'testpassword', 'full_name': 'John Doe', 'email': 'user2@example.com'},
 ]
+
 
 def add_user(user_data):
     existing_user = User.query.filter_by(username=user_data['username']).first()
@@ -143,10 +152,10 @@ def add_user(user_data):
         app.logger.info(f"User '{user_data['username']}' already exists.")
 
 
-@app.route('/get_user_id', methods = ['GET'])
+@app.route('/get_user_id', methods=['GET'])
 def get_user_id():
     user_id = current_user.id
-    return jsonify({'user_id':user_id})
+    return jsonify({'user_id': user_id})
 
 
 @app.route('/save_snapshot', methods=['POST'])
@@ -170,7 +179,8 @@ def save_snapshot():
         existing_snapshot.table_data = table_data_json
     else:
         # Create a new snapshot
-        new_snapshot = Snapshot(name=snapshot_name, content=content, table_ids=table_ids_str, user_id=user_id, table_data=table_data_json)
+        new_snapshot = Snapshot(name=snapshot_name, content=content, table_ids=table_ids_str, user_id=user_id,
+                                table_data=table_data_json)
         db.session.add(new_snapshot)
 
     try:
@@ -180,7 +190,8 @@ def save_snapshot():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
 
-@app.route('/overwrite_save', methods = ['POST'])
+
+@app.route('/overwrite_save', methods=['POST'])
 @login_required
 def overwrite_save():
     snapshot_id = request.json.get('selectedSaveId')
@@ -206,6 +217,7 @@ def overwrite_save():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
 
+
 @app.route('/load_snapshot')
 @login_required
 def load_snapshot():
@@ -215,10 +227,11 @@ def load_snapshot():
     table_data = json.loads(snapshot.table_data)
     content_list = snapshot.content
     table_ids_list = snapshot.table_ids
-    app.logger.info(table_data.keys())    
+    app.logger.info(table_data.keys())
     return jsonify({'content': content_list, 'table_ids': table_ids_list})
 
-@app.route('/get_saves', methods = ['GET'])
+
+@app.route('/get_saves', methods=['GET'])
 @login_required
 def get_saves():
     if not current_user.is_authenticated:
@@ -229,7 +242,7 @@ def get_saves():
 
     for save in user_saves:
         save_info = {
-            'DT_RowId': save.id,  
+            'DT_RowId': save.id,
             'name': save.name,
             'table_ids': save.table_ids
         }
@@ -237,35 +250,37 @@ def get_saves():
 
     return jsonify({'data': saves_data})
 
-@app.route('/toggle_states', methods = ['POST'])
+
+@app.route('/toggle_states', methods=['POST'])
 def toggle_states():
     try:
         data = request.json
-       
+
         return jsonify({"message": "Toggle states saved successfully"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/load_selected_row', methods = ['GET', 'POST'])
+@app.route('/load_selected_row', methods=['GET', 'POST'])
 @login_required
 def notify_selected_row():
     if request.method == 'POST':
         save_id = request.json.get('selectedSaveId')
         session['save_id'] = save_id
         return jsonify({'status': 'POST request procecssed successfully'})
-    
+
     elif request.method == 'GET':
         save_id = session.get('save_id')
         session.pop('save_id', None)
-        save = Snapshot.query.filter_by(id=save_id, user_id = current_user.id).first()
+        save = Snapshot.query.filter_by(id=save_id, user_id=current_user.id).first()
         if not save:
-            return jsonify({'error':'Unathorized access'}), 403
+            return jsonify({'error': 'Unathorized access'}), 403
         else:
             content_list = save.content
             table_ids_list = save.table_ids
-            app.logger.info(table_data.keys())    
+            app.logger.info(table_data.keys())
             return jsonify({'content': content_list, 'table_ids': table_ids_list})
+
 
 results = {}
 
@@ -320,39 +335,38 @@ laydown_table_name = "laydown"
 # seas_index = seas_index_fetched
 
 
-
-
 num_weeks = 1000
+
 
 def prep_rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dict, beta_dict):
     cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
-    #print("cpu:")
-    #print(cost_per_stream)
+    # print("cpu:")
+    # print(cost_per_stream)
     allocation = budget / cost_per_stream
-    #print('allocation:')
-    #print(allocation)
+    # print('allocation:')
+    # print(allocation)
     pct_laydown = []
     for x in range(len(recorded_impressions[stream])):
         try:
             pct_laydown.append(recorded_impressions[stream][x] / sum(recorded_impressions[stream]))
         except:
             pct_laydown.append(0)
-    #print("pct_laydown:")
-    #print(pct_laydown)
+    # print("pct_laydown:")
+    # print(pct_laydown)
     pam = [pct_laydown[i] * allocation for i in range(len(pct_laydown))]
     carryover_list = []
     carryover_list.append(pam[0])
     for x in range(1, len(pam)):
         carryover_val = pam[x] + carryover_list[x - 1] * carryover_dict[stream]
         carryover_list.append(carryover_val)
-    #print("carryover list:")
-    #print(carryover_list)
+    # print("carryover list:")
+    # print(carryover_list)
     rev_list = []
     for x in carryover_list:
         rev_val = beta_dict[stream] * (1 - np.exp(-alpha_dict[stream] * x))
         rev_list.append(rev_val)
-    #print("rev list")
-    #print(rev_list)
+    # print("rev list")
+    # print(rev_list)
     indexed_vals = [a * b for a, b in zip(rev_list, seas_dict[stream])]
     total_rev = sum(indexed_vals)
     infsum = 0
@@ -361,11 +375,13 @@ def prep_rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dic
     total_rev = total_rev + infsum
     return rev_list
 
+
 def prep_total_rev_per_stream(stream, budget):
     ST_rev = prep_rev_per_stream(stream, budget, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict)
     LT_rev = prep_rev_per_stream(stream, budget, LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict)
     total_rev = ST_rev + LT_rev
     return total_rev
+
 
 results = {}
 
@@ -380,7 +396,7 @@ seas_index = pd.read_sql_table('All_Index', engine)
 
 for x in laydown.columns.tolist():
     if x not in ST_header['Opt Channel'].tolist() and x != 'Date':
-        #print(x)
+        # print(x)
         laydown.drop(columns=[x], inplace=True)
 
 streams = []
@@ -388,7 +404,6 @@ for stream in ST_header['Opt Channel']:
     streams.append(str(stream))
 
 laydown_dates = laydown['Date']
-
 
 for stream in streams:
     ST_header.loc[ST_header['Opt Channel'] == stream, 'Current Budget'] = sum(laydown[stream])
@@ -420,7 +435,7 @@ for x in laydown.columns:
 beta_calc_rev_dict_ST = {'Date': list(laydown.Date)}
 for stream in list(streams):
     beta_calc_rev_dict_ST[stream] = prep_rev_per_stream(stream, current_budget_dict[stream], ST_cost_per_dict,
-                                                   ST_carryover_dict, ST_alpha_dict, ST_beta_dict)
+                                                        ST_carryover_dict, ST_alpha_dict, ST_beta_dict)
     sum(beta_calc_rev_dict_ST[stream])
 beta_calc_df = pd.DataFrame(beta_calc_rev_dict_ST)[list(streams)].sum().reset_index()
 beta_calc_df.columns = ['Opt Channel', 'Calc_Rev']
@@ -448,7 +463,7 @@ seas_index = pd.read_sql_table('All_Index', engine)
 
 for x in laydown.columns.tolist():
     if x not in LT_header['Opt Channel'].tolist() and x != 'Date':
-        #print(x)
+        # print(x)
         laydown.drop(columns=[x], inplace=True)
 
 streams = []
@@ -456,7 +471,6 @@ for stream in LT_header['Opt Channel']:
     streams.append(str(stream))
 
 laydown_dates = laydown['Date']
-
 
 for stream in streams:
     LT_header.loc[LT_header['Opt Channel'] == stream, 'Current Budget'] = sum(laydown[stream])
@@ -486,10 +500,10 @@ for x in laydown.columns:
     recorded_impressions[x] = laydown.fillna(0)[x].to_list()
 
 beta_calc_rev_dict_LT = {'Date': list(laydown.Date)}
-#stream = 'ATLTVSuper FoodsBSBakersDog'
+# stream = 'ATLTVSuper FoodsBSBakersDog'
 for stream in list(streams):
     beta_calc_rev_dict_ST[stream] = prep_rev_per_stream(stream, current_budget_dict[stream], LT_cost_per_dict,
-                                                   LT_carryover_dict, LT_alpha_dict, LT_beta_dict)
+                                                        LT_carryover_dict, LT_alpha_dict, LT_beta_dict)
     sum(beta_calc_rev_dict_ST[stream])
 beta_calc_df = pd.DataFrame(beta_calc_rev_dict_ST)[list(streams)].sum().reset_index()
 beta_calc_df.columns = ['Opt Channel', 'Calc_Rev']
@@ -506,31 +520,35 @@ LT_header_dict = LT_header.to_dict("records")
 table_df = ST_header.copy()
 
 dataTable_cols = ['Region', 'Brand', 'Channel', 'Current Budget', 'Min Spend Cap', 'Max Spend Cap',
-                  #'ST Carryover', 'ST Alpha', 'ST Beta', 'LT Carryover', 'LT Alpha', 'LT Beta',
+                  # 'ST Carryover', 'ST Alpha', 'ST Beta', 'LT Carryover', 'LT Alpha', 'LT Beta',
                   'Laydown']
 
 for col in table_df.columns:
     if col not in dataTable_cols:
         table_df.drop(columns=col, inplace=True)
 
-table_df.insert(0, 'row_id', range(1, len(table_df)+1))
+table_df.insert(0, 'row_id', range(1, len(table_df) + 1))
 table_dict = table_df.to_dict("records")
 for var in table_dict:
-    var['Laydown'] = laydown[var['Channel']+"_"+var['Region']+"_"+var['Brand']].tolist()
+    var['Laydown'] = laydown[var['Channel'] + "_" + var['Region'] + "_" + var['Brand']].tolist()
 
 table_data = {"1": deepcopy(table_dict)}
 bud = sum(ST_header['Current Budget'].to_list())
 
 # %% --------------------------------------------------------------------------
-# 
+#
 # -----------------------------------------------------------------------------
 
 inputs_per_result = {}
 
+
 def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budget, exh_budget, ftol, ssize, table_id):
     global results
 
-    result = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown, seas_index=seas_index, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', ftol=ftol, ssize=ssize)
+    result = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown,
+                                               seas_index=seas_index, return_type=blend, objective_type=obj_func,
+                                               max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', ftol=ftol,
+                                               ssize=ssize)
 
     # result = Optimiser.profit_max(channel_input=ST_header_dict, laydown=laydown, seas_index=seas_index, max_budget=max_budget, exh_budget=exh_budget, num_weeks=1000)
     try:
@@ -538,11 +556,12 @@ def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budge
             print(f"Task completed: {result}")
             results[table_id] = result
             print(f"total results: {results}")
-            socketio.emit('opt_complete', {'data':table_id})
+            socketio.emit('opt_complete', {'data': table_id})
     except Exception as e:
         with app.app_context():
             print(f"Error in task callback: {str(e)}")
-            socketio.emit('opt_complete', {'data':table_id})
+            socketio.emit('opt_complete', {'data': table_id})
+
 
 @socketio.on('optimise')
 def run_optimise(dataDict):
@@ -565,10 +584,11 @@ def run_optimise(dataDict):
     blend = data['blendValue']
     disabled_rows = list(data['disabledRows'])
     print(f"disabled row ids: {disabled_rows}")
-    
+
     current_table_df = pd.DataFrame.from_records(deepcopy(table_data[table_id]))
     removed_rows_df = current_table_df[current_table_df.row_id.isin(disabled_rows)].copy()
-    removed_rows_df['Opt Channel'] = removed_rows_df.apply(lambda row: '_'.join([str(row['Channel']), str(row['Region']), str(row['Brand'])]), axis=1)
+    removed_rows_df['Opt Channel'] = removed_rows_df.apply(
+        lambda row: '_'.join([str(row['Channel']), str(row['Region']), str(row['Brand'])]), axis=1)
 
     disabled_opt_channels = list(removed_rows_df['Opt Channel'])
 
@@ -585,23 +605,24 @@ def run_optimise(dataDict):
     ST_input = ST_header_copy.to_dict('records')
     LT_input = LT_header_copy.to_dict('records')
 
-    # if 'dates' in data:
-    #     app.logger.info('dates found in data')
-    #     start_date = data['dates'][0]
-    #     end_date = data['dates'][1]
-    #     laydown = laydown[(laydown["Time-Period"] >= start_date) & (laydown["Time-Period"] <= end_date)]
-    #     app.logger.info(start_date)
-    #     app.logger.info(end_date)
+    if 'dates' in data:
+        app.logger.info('dates found in data')
+        start_date = data['dates'][0]
+        end_date = data['dates'][1]
+        laydown_copy = laydown_copy[(laydown_copy["Date"] >= start_date) & (laydown_copy["Date"] <= end_date)]
+        app.logger.info(start_date)
+        app.logger.info(end_date)
 
-    print(f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
-    
+    print(
+        f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
+
     # NEED TO ADD HANDLING SO THAT EDITS MADE TO TABLE DATA ARE ADDED TO THE ST_HEADER
 
     print(f"laydown = {laydown_copy}")
     print(f"CPU = {[entry['CPU'] for entry in ST_input]}")
 
-    inputs_dict = {'ST_input':ST_input,'LT_input':LT_input,'laydown':laydown_copy,'seas_index':seas_index_copy}
-    
+    inputs_dict = {'ST_input': ST_input, 'LT_input': LT_input, 'laydown': laydown_copy, 'seas_index': seas_index_copy}
+
     print(f"inputs per result: {inputs_per_result}")
     inputs_per_result[table_id] = deepcopy(inputs_dict)
 
@@ -609,18 +630,21 @@ def run_optimise(dataDict):
     min_spend_cap_dict = dict(zip(streams, min_spend_cap_list))
 
     print(min_spend_cap_dict)
-    socketio.start_background_task(target=optimise, ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, ftol=ftol_input, ssize=ssize_input, table_id = table_id)
+    socketio.start_background_task(target=optimise, ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy,
+                                   seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget,
+                                   exh_budget=exh_budget, ftol=ftol_input, ssize=ssize_input, table_id=table_id)
 
     return jsonify({'status': 'Task started in the background'})
 
 
-@app.route('/results_output', methods = ['POST'])
+@app.route('/results_output', methods=['POST'])
 def results_output():
     global inputs_per_result
     tab_names = dict(request.json)
     print(tab_names)
-    #print(inputs_per_result)
-    output = create_output(results_dict=results, inputs_per_result=inputs_per_result, tab_names=tab_names, include_current=True)
+    # print(inputs_per_result)
+    output = create_output(results_dict=results, inputs_per_result=inputs_per_result, tab_names=tab_names,
+                           include_current=True)
     output.to_csv('output.csv')
 
     try:
@@ -629,15 +653,17 @@ def results_output():
     except:
         app.logger.info("csv db upload failed")
 
-    return jsonify({"message":"csv exported successfully"})
+    return jsonify({"message": "csv exported successfully"})
+
 
 def create_output(results_dict, inputs_per_result, tab_names, include_current=True):
-
-    def output_rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dict, beta_dict, recorded_impressions, seas_dict, num_weeks):
+    def output_rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dict, beta_dict,
+                              recorded_impressions, seas_dict, num_weeks):
         cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
         allocation = budget / cost_per_stream
 
-        pct_laydown = np.array(recorded_impressions[stream]) / sum(recorded_impressions[stream]) if sum(recorded_impressions[stream]) != 0 else 0
+        pct_laydown = np.array(recorded_impressions[stream]) / sum(recorded_impressions[stream]) if sum(
+            recorded_impressions[stream]) != 0 else 0
         # print(sum(pct_laydown))
 
         pam = pct_laydown * allocation
@@ -710,9 +736,11 @@ def create_output(results_dict, inputs_per_result, tab_names, include_current=Tr
     LT_alpha_list = [float(entry['LT Alpha']) if 'LT Alpha' in entry else 0.0 for entry in LT_header_dict]
     LT_alpha_dict = dict(zip(streams, LT_alpha_list))
 
-    ST_beta_list = [float(entry['ST Beta']) if 'ST Beta' in entry and not pd.isna(entry['ST Beta']) and entry['ST Beta'] != np.inf else 0.0 for entry in ST_header_dict]
+    ST_beta_list = [float(entry['ST Beta']) if 'ST Beta' in entry and not pd.isna(entry['ST Beta']) and entry[
+        'ST Beta'] != np.inf else 0.0 for entry in ST_header_dict]
     ST_beta_dict = dict(zip(streams, ST_beta_list))
-    LT_beta_list = [float(entry['LT Beta']) if 'LT Beta' in entry and not pd.isna(entry['LT Beta']) and entry['LT Beta'] != np.inf else 0.0 for entry in LT_header_dict]
+    LT_beta_list = [float(entry['LT Beta']) if 'LT Beta' in entry and not pd.isna(entry['LT Beta']) and entry[
+        'LT Beta'] != np.inf else 0.0 for entry in LT_header_dict]
     LT_beta_dict = dict(zip(streams, LT_beta_list))
 
     seas_dict = seas_index
@@ -724,14 +752,16 @@ def create_output(results_dict, inputs_per_result, tab_names, include_current=Tr
     if include_current:
         current_rev_dict_ST = {'Date': list(laydown.index)}
         current_rev_dict_LT = {'Date': list(laydown.index)}
-        
+
         for stream in list(streams):
             # current_rev_dict[stream] = total_rev_per_stream(stream, current_budget_dict[stream])
 
             current_rev_dict_ST[stream] = output_rev_per_stream(stream, current_budget_dict[stream], ST_cost_per_dict,
-                                                         ST_carryover_dict, ST_alpha_dict, ST_beta_dict, recorded_impressions, seas_dict, num_weeks=1000)
+                                                                ST_carryover_dict, ST_alpha_dict, ST_beta_dict,
+                                                                recorded_impressions, seas_dict, num_weeks=1000)
             current_rev_dict_LT[stream] = output_rev_per_stream(stream, current_budget_dict[stream], LT_cost_per_dict,
-                                                         LT_carryover_dict, LT_alpha_dict, LT_beta_dict, recorded_impressions, seas_dict, num_weeks=1000)
+                                                                LT_carryover_dict, LT_alpha_dict, LT_beta_dict,
+                                                                recorded_impressions, seas_dict, num_weeks=1000)
 
         stacked_df3 = pd.DataFrame(current_rev_dict_ST)
         stacked_df3.set_index('Date', inplace=True)
@@ -783,9 +813,11 @@ def create_output(results_dict, inputs_per_result, tab_names, include_current=Tr
         curr_LT_cost_per_list = [float(entry['CPU']) if 'CPU' in entry else 0.0 for entry in curr_LT_input]
         curr_LT_cost_per_dict = dict(zip(included_streams, curr_LT_cost_per_list))
 
-        curr_ST_carryover_list = [float(entry['ST Carryover']) if 'ST Carryover' in entry else 0.0 for entry in curr_ST_input]
+        curr_ST_carryover_list = [float(entry['ST Carryover']) if 'ST Carryover' in entry else 0.0 for entry in
+                                  curr_ST_input]
         curr_ST_carryover_dict = dict(zip(included_streams, curr_ST_carryover_list))
-        curr_LT_carryover_list = [float(entry['LT Carryover']) if 'LT Carryover' in entry else 0.0 for entry in curr_LT_input]
+        curr_LT_carryover_list = [float(entry['LT Carryover']) if 'LT Carryover' in entry else 0.0 for entry in
+                                  curr_LT_input]
         curr_LT_carryover_dict = dict(zip(included_streams, curr_LT_carryover_list))
 
         curr_ST_alpha_list = [float(entry['ST Alpha']) if 'ST Alpha' in entry else 0.0 for entry in curr_ST_input]
@@ -793,11 +825,13 @@ def create_output(results_dict, inputs_per_result, tab_names, include_current=Tr
         curr_LT_alpha_list = [float(entry['LT Alpha']) if 'LT Alpha' in entry else 0.0 for entry in curr_LT_input]
         curr_LT_alpha_dict = dict(zip(included_streams, curr_LT_alpha_list))
 
-        curr_ST_beta_list = [float(entry['ST Beta']) if 'ST Beta' in entry and not pd.isna(entry['ST Beta']) and entry['ST Beta'] != np.inf else 0.0 for entry in curr_ST_input]
+        curr_ST_beta_list = [float(entry['ST Beta']) if 'ST Beta' in entry and not pd.isna(entry['ST Beta']) and entry[
+            'ST Beta'] != np.inf else 0.0 for entry in curr_ST_input]
         curr_ST_beta_dict = dict(zip(included_streams, curr_ST_beta_list))
-        curr_LT_beta_list = [float(entry['LT Beta']) if 'LT Beta' in entry and not pd.isna(entry['LT Beta']) and entry['LT Beta'] != np.inf else 0.0 for entry in curr_LT_input]
+        curr_LT_beta_list = [float(entry['LT Beta']) if 'LT Beta' in entry and not pd.isna(entry['LT Beta']) and entry[
+            'LT Beta'] != np.inf else 0.0 for entry in curr_LT_input]
         curr_LT_beta_dict = dict(zip(included_streams, curr_LT_beta_list))
-        
+
         # print(f"results from optimiser:{results}")
 
         # for stream in streams:
@@ -827,7 +861,8 @@ def create_output(results_dict, inputs_per_result, tab_names, include_current=Tr
 
         opt_budget_laydown_dict = {'Date': list(curr_laydown.index)}
         for stream in included_streams:
-            opt_budget_laydown_dict[stream] = [i * opt_budget_dict[stream] for i in daily_budget_from_pct_laydown(stream)]
+            opt_budget_laydown_dict[stream] = [i * opt_budget_dict[stream] for i in
+                                               daily_budget_from_pct_laydown(stream)]
 
         stacked_df4 = pd.DataFrame(opt_budget_laydown_dict)
         stacked_df4.set_index('Date', inplace=True)
@@ -837,7 +872,8 @@ def create_output(results_dict, inputs_per_result, tab_names, include_current=Tr
 
         stacked_df4.rename(columns={'level_1': 'Opt Channel'}, inplace=True)
 
-        stacked_df4 = pd.merge(fill_df[["Date", "Opt Channel"]].drop_duplicates(), stacked_df4, on = ["Date", "Opt Channel"], how="left").fillna(0)
+        stacked_df4 = pd.merge(fill_df[["Date", "Opt Channel"]].drop_duplicates(), stacked_df4,
+                               on=["Date", "Opt Channel"], how="left").fillna(0)
         stacked_df4['Scenario'] = tab_names[key]
         stacked_df4['Budget/Revenue'] = "Budget"
         value_col = stacked_df4.pop(0)
@@ -847,19 +883,27 @@ def create_output(results_dict, inputs_per_result, tab_names, include_current=Tr
         opt_rev_dict_ST = {'Date': list(curr_laydown.index)}
         opt_rev_dict_LT = {'Date': list(curr_laydown.index)}
         for inc_stream in included_streams:
+            opt_rev_dict_ST[inc_stream] = output_rev_per_stream(inc_stream, opt_budget_dict[inc_stream],
+                                                                curr_ST_cost_per_dict, curr_ST_carryover_dict,
+                                                                curr_ST_alpha_dict, curr_ST_beta_dict,
+                                                                curr_recorded_impressions, curr_seas_dict,
+                                                                num_weeks=1000)
+            opt_rev_dict_LT[inc_stream] = output_rev_per_stream(inc_stream, current_budget_dict[inc_stream],
+                                                                curr_LT_cost_per_dict, curr_LT_carryover_dict,
+                                                                curr_LT_alpha_dict, curr_LT_beta_dict,
+                                                                curr_recorded_impressions, curr_seas_dict,
+                                                                num_weeks=1000)
 
-            opt_rev_dict_ST[inc_stream] = output_rev_per_stream(inc_stream, opt_budget_dict[inc_stream], curr_ST_cost_per_dict, curr_ST_carryover_dict, curr_ST_alpha_dict, curr_ST_beta_dict, curr_recorded_impressions, curr_seas_dict, num_weeks=1000)
-            opt_rev_dict_LT[inc_stream] = output_rev_per_stream(inc_stream, current_budget_dict[inc_stream], curr_LT_cost_per_dict, curr_LT_carryover_dict, curr_LT_alpha_dict, curr_LT_beta_dict, curr_recorded_impressions, curr_seas_dict, num_weeks=1000)
-       
         stacked_df5 = pd.DataFrame(opt_rev_dict_ST)
         stacked_df5.set_index('Date', inplace=True)
         stacked_df5 = stacked_df5.stack()
         stacked_df5 = pd.DataFrame(stacked_df5)
-        
+
         stacked_df5.reset_index(inplace=True)
 
         stacked_df5.rename(columns={'level_1': 'Opt Channel'}, inplace=True)
-        stacked_df5 = pd.merge(fill_df[["Date", "Opt Channel"]].drop_duplicates(), stacked_df5, on = ["Date", "Opt Channel"], how="left").fillna(0)
+        stacked_df5 = pd.merge(fill_df[["Date", "Opt Channel"]].drop_duplicates(), stacked_df5,
+                               on=["Date", "Opt Channel"], how="left").fillna(0)
         stacked_df5['Scenario'] = tab_names[key]
         stacked_df5['Budget/Revenue'] = "ST Revenue"
         value_col = stacked_df5.pop(0)
@@ -873,26 +917,29 @@ def create_output(results_dict, inputs_per_result, tab_names, include_current=Tr
         stacked_df5.reset_index(inplace=True)
 
         stacked_df5.rename(columns={'level_1': 'Opt Channel'}, inplace=True)
-        stacked_df5 = pd.merge(fill_df[["Date", "Opt Channel"]].drop_duplicates(), stacked_df5, on = ["Date", "Opt Channel"], how="left").fillna(0)
+        stacked_df5 = pd.merge(fill_df[["Date", "Opt Channel"]].drop_duplicates(), stacked_df5,
+                               on=["Date", "Opt Channel"], how="left").fillna(0)
         stacked_df5['Scenario'] = tab_names[key]
         stacked_df5['Budget/Revenue'] = "LT Revenue"
         value_col = stacked_df5.pop(0)
         stacked_df5.insert(2, "Value", value_col)
         concat_df = pd.concat([concat_df, stacked_df5])
 
-    concat_df = pd.merge(concat_df, ST_header[['Opt Channel', 'Region', 'Brand', 'Channel Group', 'Channel']].drop_duplicates(), on="Opt Channel")
+    concat_df = pd.merge(concat_df,
+                         ST_header[['Opt Channel', 'Region', 'Brand', 'Channel Group', 'Channel']].drop_duplicates(),
+                         on="Opt Channel")
     concat_df['Date'] = concat_df['Date'].astype(str)
     return concat_df
 
+
 @socketio.on("collect_data")
 def chart_data():
-
     try:
         conn = engine.connect()
         query = text('SELECT * FROM "Optimised CSV";')
 
         db_result = conn.execute(query)
-        #app.logger.info(tp_result.fetchall())
+        # app.logger.info(tp_result.fetchall())
         chart_data = []
         col_names = db_result.keys()
         print("worked")
@@ -903,66 +950,18 @@ def chart_data():
                 month_year = datetime.strptime(date_column, '%Y-%m-%d').strftime("%b %Y")
                 a["Month_Year"] = month_year
             chart_data.append(a)
-        socketio.emit('chart_data', {'chartData':chart_data})
+        socketio.emit('chart_data', {'chartData': chart_data})
         print("chart_data sent")
-    
-    except SQLAlchemyError as e:
-        print('Error executing query:', str(e))
-       
-    finally:
-        if 'conn' in locals():
-            conn.close()
-@app.route('/filter_chart_data', methods=['GET'])
-def filter_chart_data():
-    try:
-        conn = engine.connect()
-        query = text('SELECT * FROM "Optimised CSV";')
-
-        db_result = conn.execute(query)
-
-        if db_result is None:
-            return jsonify({'error': 'Internal Server Error'}), 500
-
-        col_names = db_result.keys()
-        min_date = None
-        max_date = None
-        data = {}
-
-        for x in db_result.fetchall():
-            for col_name, value in zip(col_names, x):
-                if col_name == 'Date':
-                    date_value = pd.to_datetime(value)
-                    if min_date is None or date_value < min_date:
-                        min_date = date_value
-                    if max_date is None or date_value > max_date:
-                        max_date = date_value
-                elif col_name in ['Channel', 'Channel Group', 'Region', 'Country', 'Brand', 'Scenario', 'Optimisation Type', 'Budget/Revenue']:
-                    if col_name not in data:
-                        data[col_name] = []
-                    if value not in data[col_name]:
-                        data[col_name].append(value)
-
-        if not min_date or not max_date:
-            return jsonify({'error': 'Internal Server Error'}), 500
-
-        # Remove 'Budget' from revenue types
-        revenue_types = [rev_type for rev_type in data['Budget/Revenue'] if rev_type != 'Budget']
-        data['revenue_types'] = revenue_types
-
-        data['min_date'] = min_date.strftime('%Y-%m-%d')
-        data['max_date'] = max_date.strftime('%Y-%m-%d')
-
-        return jsonify(data)
 
     except SQLAlchemyError as e:
         print('Error executing query:', str(e))
-        return jsonify({'error': 'Internal Server Error'}), 500
 
     finally:
         if 'conn' in locals():
             conn.close()
 
-@app.route('/chart_response', methods = ['GET'])
+
+@app.route('/chart_response', methods=['GET'])
 def chart_response():
     try:
         fpath = 'C:/Users/matthew.browne/Documents/Blueprint/optimiser output data'
@@ -974,7 +973,8 @@ def chart_response():
         print('Error reading CSV file:', str(e))
         return jsonify({'error': 'Internal Server Error'}), 500
 
-@app.route('/chart_budget', methods = ['GET'])
+
+@app.route('/chart_budget', methods=['GET'])
 def chart_budget():
     try:
         fpath = 'C:/Users/matthew.browne/Documents/Blueprint/optimiser output data'
@@ -986,45 +986,53 @@ def chart_budget():
         print('Error reading CSV file:', str(e))
         return jsonify({'error': 'Internal Server Error'}), 500
 
+
 @app.route('/blueprint_results')
 @login_required
 def blueprint_results():
     return render_template('blueprint_results.html')
 
-@app.route('/date_range', methods = ['GET','POST'])
+@app.route('/blueprintcurveresults')
+@login_required
+def blueprint_curveresults():
+    return render_template('blueprint_curveresults.html')
+
+
+@app.route('/date_range', methods=['GET', 'POST'])
 def date_range():
     start_date = list(laydown_dates)[1]
     app.logger.info(start_date)
     end_date = list(laydown_dates)[-1]
     app.logger.info(end_date)
-    return jsonify({"startDate":start_date, "endDate":end_date})
+    return jsonify({"startDate": start_date, "endDate": end_date})
+
 
 @app.route('/blueprint')
 @login_required
 def blueprint():
     app.logger.info(laydown_dates)
-    return render_template('blueprint.html', current_user = current_user)
+    return render_template('blueprint.html', current_user=current_user)
 
-@app.route('/get_table_ids', methods = ['GET'])
+
+@app.route('/get_table_ids', methods=['GET'])
 def get_table_ids():
     table_ids = list(table_data.keys())
-    return jsonify({"success": True, "tableIds":table_ids})
+    return jsonify({"success": True, "tableIds": table_ids})
 
-@app.route('/table_ids_sync', methods = ['POST'])
+
+@app.route('/table_ids_sync', methods=['POST'])
 def table_ids_sync():
-    
     try:
-       
+
         received_data = request.get_json()
         received_table_ids = received_data.get('tableIDs', [])
-        #parsed_data = parse_qs(received_data)
+        # parsed_data = parse_qs(received_data)
         received_table_ids = list(map(str, received_data['tableIDs']))
 
         app.logger.info(f"received table ids: {received_table_ids}")
 
         for table_id in list(table_data.keys()):
             if table_id not in received_table_ids:
-                
                 del table_data[table_id]
                 app.logger.info(f"deleted tab: {table_id}")
 
@@ -1034,15 +1042,17 @@ def table_ids_sync():
         app.logger.info("tableIDs not found in ajax post request.")
         return jsonify({'status': 'error', 'message': 'Invalid request data'}), 400
     except Exception as e:
-    
+
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-@app.route('/sync_tab_counter', methods = ['GET'])
+
+@app.route('/sync_tab_counter', methods=['GET'])
 def sync_tab_counter():
     last_number = list(table_data.keys())[-1]
     return jsonify({'lastNumber': last_number})
 
-@app.route('/create_copy', methods = ['POST'])
+
+@app.route('/create_copy', methods=['POST'])
 def create_copy():
     global table_data
 
@@ -1055,19 +1065,22 @@ def create_copy():
 
     return jsonify({"success": True, "table_id": tableID})
 
-@app.route('/channel_delete', methods = ['POST'])
+
+@app.route('/channel_delete', methods=['POST'])
 def channel_delete():
     deleted_tab = str(request.json.get("tabID"))
     app.logger.info(f"deleted tab: {deleted_tab}")
     table_data.pop(deleted_tab)
-    return jsonify({"success":"tab removed succesfully"})
+    return jsonify({"success": "tab removed succesfully"})
 
-@app.route('/channel_main', methods = ['GET'])
+
+@app.route('/channel_main', methods=['GET'])
 def channel_main():
-    app.logger.info(table_data.keys())    
+    app.logger.info(table_data.keys())
     return jsonify(table_data)
 
-@app.route('/table_data_editor', methods = ['POST'])
+
+@app.route('/table_data_editor', methods=['POST'])
 def table_data_editor():
     global table_data
     try:
@@ -1091,18 +1104,19 @@ def table_data_editor():
             'status': 'error'
         }
     return jsonify(response)
-    
+
 
 @app.route('/')
 def welcome_page():
     app.logger.info(current_user)
     return render_template('Welcome.html', current_user=current_user)
 
+
 # Get request required pending login db sorted
 @app.route('/home', methods=['GET', 'POST'])
-
 def home():
     return render_template('Home.html', current_user=current_user)
+
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -1124,6 +1138,7 @@ def login():
             flash('Invalid username or password', 'error')
             return redirect(url_for('login'))
 
+
 def load_configurations():
     try:
         with open('data\config.json', 'r') as config_file:
@@ -1131,17 +1146,21 @@ def load_configurations():
     except (FileNotFoundError, json.JSONDecodeError):
         # Handle the case when the file doesn't exist or is empty
         configurations = {}
-        
+
+
 def save_configurations(configurations):
     with open('config.json', 'w') as config_file:
         json.dump(configurations, config_file, indent=2)
 
     return configurations
+
+
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('/home'))
+
 
 @app.route('/export_data')
 @login_required
@@ -1149,11 +1168,11 @@ def export_data():
     excel_buffer = BytesIO()
     with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
         all_input = pd.read_sql_table('All_Channel_Inputs', engine)
-        laydown= pd.read_sql_table('All_Laydown', engine)
-        all_index= pd.read_sql_table('All_Index', engine)
-        #ST_incr_rev= pd.read_sql_table('All_Incremental_Revenue_ST', engine)
-        #LT_incr_rev = pd.read_sql_table('All_Incremental_Revenue_LT', engine)
-        
+        laydown = pd.read_sql_table('All_Laydown', engine)
+        all_index = pd.read_sql_table('All_Index', engine)
+        # ST_incr_rev= pd.read_sql_table('All_Incremental_Revenue_ST', engine)
+        # LT_incr_rev = pd.read_sql_table('All_Incremental_Revenue_LT', engine)
+
         all_input.to_excel(writer, sheet_name='All Inputs', index=False)
         laydown.to_excel(writer, sheet_name='Laydown', index=False)
         all_index.to_excel(writer, sheet_name='Seasonal Index', index=False)
@@ -1164,7 +1183,7 @@ def export_data():
 
 
 if __name__ == '__main__':
-     with app.app_context():
+    with app.app_context():
         db.create_all()
         # for user in user_data:
         #     add_user(user)
