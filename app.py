@@ -939,10 +939,12 @@ def chart_data():
         query = text('SELECT * FROM "Optimised CSV";')
 
         db_result = conn.execute(query)
-        # app.logger.info(tp_result.fetchall())
         chart_data = []
+        dropdown_options = {}
+
+        # Define col_names after fetching the result set
         col_names = db_result.keys()
-        print("worked")
+
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
             date_column = a.get("Date")
@@ -950,8 +952,33 @@ def chart_data():
                 month_year = datetime.strptime(date_column, '%Y-%m-%d').strftime("%b %Y")
                 a["Month_Year"] = month_year
             chart_data.append(a)
+
+            # Collecting dropdown options for each column
+            for col_name, value in a.items():
+                if col_name == 'Date':
+                    date_value = datetime.strptime(value, '%Y-%m-%d')
+                    dropdown_options.setdefault(col_name, []).append(date_value)
+                elif col_name in ['Channel', 'Channel Group', 'Region', 'Brand', 'Scenario', 'Budget/Revenue']:
+                    dropdown_options.setdefault(col_name, []).append(value)
+
+        # Constructing unique dropdown options
+        dropdown_options = {key: list(set(values)) for key, values in dropdown_options.items()}
+
+        # Removing 'Budget' from revenue types
+        if 'Budget/Revenue' in dropdown_options:
+            dropdown_options['Budget/Revenue'] = [rev_type for rev_type in dropdown_options['Budget/Revenue'] if
+                                                  rev_type != 'Budget']
+
+        # Format dates to string
+        dropdown_options['min_date'] = min(dropdown_options.get('Date', [])).strftime('%Y-%m-%d')
+        dropdown_options['max_date'] = max(dropdown_options.get('Date', [])).strftime('%Y-%m-%d')
+        dropdown_options.pop('Date', None)
+
         socketio.emit('chart_data', {'chartData': chart_data})
         print("chart_data sent")
+
+        socketio.emit('dropdown_options', {'options': dropdown_options})
+        print("Dropdown options sent")
 
     except SQLAlchemyError as e:
         print('Error executing query:', str(e))
@@ -960,43 +987,86 @@ def chart_data():
         if 'conn' in locals():
             conn.close()
 
-
-@app.route('/chart_response', methods=['GET'])
+@socketio.on("response_data")
 def chart_response():
     try:
-        fpath = 'C:/Users/matthew.browne/Documents/Blueprint/optimiser output data'
-        csv_data = pd.read_csv(fpath + '/response_curve_data.csv')
-        chart_response = csv_data.to_dict(orient='records')
-        return jsonify(chart_response)
+        conn = engine.connect()
+        tables = ["Curves_Channel_Response_Blended", "Curves_Channel_Response_LT", "Curves_Channel_Response_ST"]
+        chart_response = []
 
-    except Exception as e:
-        print('Error reading CSV file:', str(e))
-        return jsonify({'error': 'Internal Server Error'}), 500
+        for table in tables:
+            query = text(f'SELECT * FROM "{table}";')
+            db_result = conn.execute(query)
 
+            col_names = db_result.keys()
+            for x in db_result.fetchall():
+                a = dict(zip(col_names, x))
+                a["Optimisation Type"] = table.split("_")[3].upper()
+                chart_response.append(a)
 
-@app.route('/chart_budget', methods=['GET'])
+        socketio.emit('chart_response', {'chartResponse': chart_response})
+        print("chart_response sent")
+
+    except SQLAlchemyError as e:
+        print('Error executing query:', str(e))
+
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@socketio.on("budget_data")
 def chart_budget():
     try:
-        fpath = 'C:/Users/matthew.browne/Documents/Blueprint/optimiser output data'
-        csv_data = pd.read_csv(fpath + '/budget_curve_data.csv')
-        chart_budget = csv_data.to_dict(orient='records')
-        return jsonify(chart_budget)
+        conn = engine.connect()
+        query = text('SELECT * FROM "Curves_Horizon";')
 
-    except Exception as e:
-        print('Error reading CSV file:', str(e))
-        return jsonify({'error': 'Internal Server Error'}), 500
+        db_result = conn.execute(query)
+        chart_budget = []
+        col_names = db_result.keys()
+        for x in db_result.fetchall():
+            a = dict(zip(col_names, x))
+            chart_budget.append(a)
+        socketio.emit('chart_budget', {'chartBudget': chart_budget})
+        print("chart_budget sent")
 
+    except SQLAlchemyError as e:
+        print('Error executing query:', str(e))
+
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@socketio.on("roi_data")
+def chart_roi():
+    try:
+        conn = engine.connect()
+        query = text('SELECT * FROM "Curves_Optimal_ROI";')
+
+        db_result = conn.execute(query)
+        chart_roi = []
+        col_names = db_result.keys()
+        for x in db_result.fetchall():
+            a = dict(zip(col_names, x))
+            chart_roi.append(a)
+        socketio.emit('chart_roi', {'chartROI': chart_roi})
+        print("chart_roi sent")
+
+    except SQLAlchemyError as e:
+        print('Error executing query:', str(e))
+
+    finally:
+        if 'conn' in locals():
+            conn.close()
 
 @app.route('/blueprint_results')
 @login_required
 def blueprint_results():
     return render_template('blueprint_results.html')
 
-@app.route('/blueprintcurveresults')
+@app.route('/blueprint_curve')
 @login_required
-def blueprint_curveresults():
+def blueprint_curve():
     return render_template('blueprint_curveresults.html')
-
 
 @app.route('/date_range', methods=['GET', 'POST'])
 def date_range():

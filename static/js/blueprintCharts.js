@@ -12,15 +12,15 @@ chartsSocket.emit("collect_data");
 chartsSocket.on('chart_data', function(data) {
   var chartData = data.chartData;
   console.log("fetched chart data from back end");
-  //console.log(chartData);
+//  console.log(chartData);
   generateChartsA(chartData);
   generateChartsB(chartData);
   generateChartsC(chartData);
 });
 
 function generateChartsA(data) {
-    console.log("reaching generateCharts method");
-    //console.log("Raw Data:", data); // Log the raw data
+    console.log("reaching generateChartsA method");
+
    // Process data for scenario charts
     const processedData = data.reduce((acc, entry) => {
       const key = entry.Scenario;
@@ -464,6 +464,7 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
     });
 }
 function generateChartsB(data) {
+        console.log("reaching generateChartsB method");
 // Process data for channel charts
      const processedDataPerChannel = data.reduce((acc, entry) => {
       const scenarioKey = entry.Scenario;
@@ -896,6 +897,7 @@ function handleDropdownChange() {
     });
 }
 function generateChartsC(data) {
+        console.log("reaching generateChartsC method");
 // Process data for laydown scenario charts
 const processedDataLaydown = data.reduce((acc, entry) => {
     const key = entry.Scenario;
@@ -1157,226 +1159,3 @@ const laydown_channel_chartData = {
       options: laydown_channel_chartOptions,
     });
   }
-
-// //Response curve chart
-// $.ajax({
-//   url: "/chart_response",
-//   method: "GET",
-//   dataType: "json",
-//   success: function (data) {
-//     //console.log("Raw Data:", data); // Log the raw data
-
-// const selectedBrand = "Bakers"; // Initial scenario selection
-
-//  // Filter data for the selected brand
-//     const filteredData = data.filter(entry => entry.Brand === selectedBrand);
-
-//  // Prepare data for the chart
-//  const response_curve_chartData = {};
-//     filteredData.forEach(entry => {
-//       const channel = entry.Channel;
-//       if (!response_curve_chartData[channel]) {
-//         response_curve_chartData[channel] = [];
-//       }
-//       // Limiting to the first 20 points
-//       if (response_curve_chartData[channel].length < 20) {
-//         response_curve_chartData[channel].push({ x: entry.Budget, y: entry.Response });
-//       }
-//     });
-//     // Create a line chart
-//     const response_curve_chart = new Chart(document.getElementById("response_curve_chart"),
-//      {
-//       type: 'line',
-//       data: {
-//         datasets: Object.keys(response_curve_chartData).map(channel => {
-//           return {
-//             label: channel,
-//             data: response_curve_chartData[channel],
-//             borderColor: '#' + (Math.random().toString(16) + '000000').substring(2,8), // Random color for each line
-//             fill: false
-//           };
-//         })
-//       },
-//       options: {
-//         scales: {
-//           x: {
-//             type: 'linear',
-//             position: 'bottom',
-//             scaleLabel: {
-//               display: true,
-//               labelString: 'Budget'
-//             }
-//           },
-//           y: {
-//             scaleLabel: {
-//               display: true,
-//               labelString: 'Response Curve'
-//             }
-//           }
-//         }
-//       }
-//     });
-//   }
-// });
-// //Budget curve chart
-// $.ajax({
-//   url: "/chart_budget",
-//   method: "GET",
-//   dataType: "json",
-//   success: function (data) {
-//     //console.log("Raw Data:", data); // Log the raw data
-
-//     const selectedBrand = "Bakers"; // Initial scenario selection
-
-//     // Filter data for the selected brand
-//     const filteredData = data.filter(entry => entry.Brand === selectedBrand);
-
-//     // Prepare data for the profit chart
-//     const profitData = {
-//       labels: [], // Budget values will be used as labels on the x-axis
-//       datasets: [
-//         {
-//           label: 'Profit',
-//           data: [], // Profit values will be used as data points on the y-axis
-//           backgroundColor: 'rgba(54, 162, 235, 0.2)', // Background color of the line
-//           borderColor: 'rgba(54, 162, 235, 1)', // Border color of the line
-//           borderWidth: 1, // Border width of the line
-//           pointRadius: [], // Radius of the data points
-//           pointBackgroundColor: [], // Background color of the data points
-//           pointBorderColor: 'rgba(54, 162, 235, 1)', // Border color of the data points
-//           pointBorderWidth: 2 // Border width of the data points
-//         },
-//         {
-//           label: 'Historical Budget (not optimized)',
-//           data: [], // Historical budget values (not optimized)
-//           backgroundColor: 'rgba(255, 99, 132, 0.7)', // Background color of the scatter plot
-//           borderColor: 'rgba(255, 99, 132, 1)', // Border color of the scatter plot
-//           pointStyle: 'circle', // Style of the data points (circle)
-//           borderWidth: 1 // Border width of the scatter plot
-//         },
-//         {
-//           label: 'Historical Budget (optimized)',
-//           data: [], // Historical budget values (optimized)
-//           backgroundColor: 'rgba(75, 192, 192, 0.7)', // Background color of the scatter plot
-//           borderColor: 'rgba(75, 192, 192, 1)', // Border color of the scatter plot
-//           pointStyle: 'circle', // Style of the data points (circle)
-//           borderWidth: 1 // Border width of the scatter plot
-//         }
-//       ]
-//     };
-
-//     let maxProfitDataPoint = null;
-//     let maxProfit = -Infinity;
-
-//     // Populate profitData with profit, historical budget (not optimized), and historical budget (optimized) values
-//     filteredData.forEach(entry => {
-//       const profit = entry.Revenue - entry.Budget;
-//       profitData.labels.push(entry.Budget);
-//       profitData.datasets[0].data.push(profit);
-
-//       // Track maximum profit data point
-//       if (profit > maxProfit) {
-//         maxProfit = profit;
-//         maxProfitDataPoint = entry;
-//       }
-
-//       // Set point radius and background color for profit chart
-//       const pointRadius = (profit === maxProfit) ? 5 : 0; // Show dot only for maximum profit
-//       const pointBackgroundColor = (profit === maxProfit) ? 'red' : 'rgba(0, 0, 0, 0)'; // Color the dot red for maximum profit
-//       profitData.datasets[0].pointRadius.push(pointRadius);
-//       profitData.datasets[0].pointBackgroundColor.push(pointBackgroundColor);
-
-//       // Add historical budget (not optimized) data
-//       profitData.datasets[1].data.push({ x: entry.Budget, y: entry.HistoricalBudgetNotOptimised });
-
-//       // Add historical budget (optimized) data
-//       profitData.datasets[2].data.push({ x: entry.Budget, y: entry.HistoricalBudgetOptimised });
-//     });
-
-//     // Render the profit chart
-//     const budget_curve_chart = new Chart(document.getElementById("budget_curve_chart"), {
-//       type: 'line',
-//       data: profitData,
-//       options: {
-//         scales: {
-//           x: {
-//             title: {
-//               display: true,
-//               text: 'Budget'
-//             }
-//           },
-//           y: {
-//             title: {
-//               display: true,
-//               text: 'Profit'
-//             }
-//           }
-//         }
-//       }
-//     });
-
-//     // Prepare data for the ROI chart
-//     const roiData = {
-//       labels: [], // Budget values will be used as labels on the x-axis
-//       datasets: [
-//         {
-//           label: 'ROI',
-//           data: [], // ROI values will be used as data points on the y-axis
-//           backgroundColor: 'rgba(255, 205, 86, 0.2)', // Background color of the line
-//           borderColor: 'rgba(255, 205, 86, 1)', // Border color of the line
-//           borderWidth: 1, // Border width of the line
-//           pointRadius: [], // Radius of the data points
-//           pointBackgroundColor: [], // Background color of the data points
-//           pointBorderColor: 'rgba(255, 205, 86, 1)', // Border color of the data points
-//           pointBorderWidth: 2 // Border width of the data points
-//         }
-//       ]
-//     };
-
-//     let maxROIDataPoint = null;
-//     let maxROI = -Infinity;
-
-//     // Populate roiData with ROI values
-//     filteredData.forEach(entry => {
-//       const profit = entry.Revenue - entry.Budget;
-//       const roi = profit / entry.Budget * 100; // Calculate ROI
-//       roiData.labels.push(entry.Budget);
-//       roiData.datasets[0].data.push(roi);
-
-//       // Track maximum ROI data point
-//       if (roi > maxROI) {
-//         maxROI = roi;
-//         maxROIDataPoint = entry;
-//       }
-
-//       // Set point radius and background color for ROI chart
-//       const pointRadius = (roi === maxROI) ? 5 : 0; // Show dot only for maximum ROI
-//       const pointBackgroundColor = (roi === maxROI) ? 'green' : 'rgba(0, 0, 0, 0)'; // Color the dot green for maximum ROI
-//       roiData.datasets[0].pointRadius.push(pointRadius);
-//       roiData.datasets[0].pointBackgroundColor.push(pointBackgroundColor);
-//     });
-
-//     // Render the ROI chart
-//     const roi_curve_chart = new Chart(document.getElementById("roi_curve_chart"), {
-//       type: 'line',
-//       data: roiData,
-//       options: {
-//         scales: {
-//           x: {
-//             title: {
-//               display: true,
-//               text: 'Budget'
-//             }
-//           },
-//           y: {
-//             title: {
-//               display: true,
-//               text: 'ROI'
-//             }
-//           }
-//         }
-//       }
-//     });
-//   }
-// });
-
