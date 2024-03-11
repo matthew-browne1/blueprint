@@ -17,7 +17,7 @@ from urllib.parse import parse_qs
 # from pyomo_opt import Optimiser
 from sqlalchemy import create_engine, text, Column, DateTime, Integer, func
 from sqlalchemy.orm import Session, declarative_base
-import datetime
+from datetime import datetime
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 import urllib.parse
 from sklearn.linear_model import LinearRegression
@@ -898,6 +898,10 @@ def chart_data():
         print("worked")
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
+            date_column = a.get("Date")
+            if date_column:
+                month_year = datetime.strptime(date_column, '%Y-%m-%d').strftime("%b %Y")
+                a["Month_Year"] = month_year
             chart_data.append(a)
         socketio.emit('chart_data', {'chartData':chart_data})
         print("chart_data sent")
@@ -909,7 +913,6 @@ def chart_data():
         if 'conn' in locals():
             conn.close()
 @app.route('/filter_chart_data', methods=['GET'])
-@login_required
 def filter_chart_data():
     try:
         conn = engine.connect()

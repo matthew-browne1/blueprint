@@ -895,9 +895,9 @@ const processedDataLaydown = data.reduce((acc, entry) => {
     const key = entry.Scenario;
     //const timePeriodParts = entry.Date.split('/');
     //const timePeriod = new Date(`${timePeriodParts[1]}/${timePeriodParts[0]}/${timePeriodParts[2]}`);
-    const entryDate = new Date(entry.Date);
-    const monthYear = entryDate.toLocaleString('default', { month: 'short', year: 'numeric' });
-
+//    const entryDate = new Date(entry.Date);
+//    const monthYear = entryDate.toLocaleString('default', { month: 'short', year: 'numeric' });
+    const monthYear = entry.Month_Year;
     if (!acc[key]) {
         acc[key] = {};
     }
