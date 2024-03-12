@@ -931,6 +931,33 @@ def create_output(results_dict, inputs_per_result, tab_names, include_current=Tr
     concat_df['Date'] = concat_df['Date'].astype(str)
     return concat_df
 
+# @app.route('/filter_chart_data', methods=['GET'])
+# def filter_chart_data():
+#     try:
+#         conn = engine.connect()
+#         query = text('SELECT * FROM "Optimised CSV";')
+#
+#         db_result = conn.execute(query)
+#         db_data = db_result.fetchall()
+#         df = pd.DataFrame(db_data)
+#
+#         min_date = min(pd.to_datetime(df['Date']))
+#         max_date = max(pd.to_datetime(df['Date']))
+#
+#         filters = ['Channel', 'Channel Group', 'Region', 'Brand', 'Scenario', 'Budget/Revenue']
+#         data = {filter_name: df[filter_name].unique().tolist() for filter_name in filters}
+#
+#         revenue_types = [rev_type for rev_type in data['Budget/Revenue'] if rev_type != 'Budget']
+#         data['revenue_types'] = revenue_types
+#
+#         data['min_date'] = min_date.strftime('%Y-%m-%d')
+#         data['max_date'] = max_date.strftime('%Y-%m-%d')
+#
+#         return jsonify(data)
+#
+#     except Exception as e:
+#         print(f"Error fetching filter data: {str(e)}")
+#         return jsonify({'error': 'Internal Server Error'}), 500
 
 @socketio.on("collect_data")
 def chart_data():
@@ -939,12 +966,10 @@ def chart_data():
         query = text('SELECT * FROM "Optimised CSV";')
 
         db_result = conn.execute(query)
+        # app.logger.info(tp_result.fetchall())
         chart_data = []
-        dropdown_options = {}
-
-        # Define col_names after fetching the result set
         col_names = db_result.keys()
-
+        print("worked")
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
             date_column = a.get("Date")
@@ -952,33 +977,8 @@ def chart_data():
                 month_year = datetime.strptime(date_column, '%Y-%m-%d').strftime("%b %Y")
                 a["Month_Year"] = month_year
             chart_data.append(a)
-
-            # Collecting dropdown options for each column
-            for col_name, value in a.items():
-                if col_name == 'Date':
-                    date_value = datetime.strptime(value, '%Y-%m-%d')
-                    dropdown_options.setdefault(col_name, []).append(date_value)
-                elif col_name in ['Channel', 'Channel Group', 'Region', 'Brand', 'Scenario', 'Budget/Revenue']:
-                    dropdown_options.setdefault(col_name, []).append(value)
-
-        # Constructing unique dropdown options
-        dropdown_options = {key: list(set(values)) for key, values in dropdown_options.items()}
-
-        # Removing 'Budget' from revenue types
-        if 'Budget/Revenue' in dropdown_options:
-            dropdown_options['Budget/Revenue'] = [rev_type for rev_type in dropdown_options['Budget/Revenue'] if
-                                                  rev_type != 'Budget']
-
-        # Format dates to string
-        dropdown_options['min_date'] = min(dropdown_options.get('Date', [])).strftime('%Y-%m-%d')
-        dropdown_options['max_date'] = max(dropdown_options.get('Date', [])).strftime('%Y-%m-%d')
-        dropdown_options.pop('Date', None)
-
         socketio.emit('chart_data', {'chartData': chart_data})
         print("chart_data sent")
-
-        socketio.emit('dropdown_options', {'options': dropdown_options})
-        print("Dropdown options sent")
 
     except SQLAlchemyError as e:
         print('Error executing query:', str(e))

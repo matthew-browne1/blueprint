@@ -63,7 +63,8 @@ function generateChartsA(data) {
             label: channelGroup,
             data: response_chartData[channelGroup],
             borderColor: '#' + (Math.random().toString(16) + '000000').substring(2, 8), // Random color for each line
-            fill: false
+            fill: false,
+            radius: 0,
         };
     })
 };
@@ -122,7 +123,8 @@ function generateChartsA(data) {
             label: channel,
             data:  response_channel_Data[channel],
             borderColor: '#' + (Math.random().toString(16) + '000000').substring(2, 8), // Random color for each line
-            fill: false
+            fill: false,
+            radius: 0,
         };
     })
 };

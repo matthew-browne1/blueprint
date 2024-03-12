@@ -1,22 +1,20 @@
-//// Fetch data from the Flask API using jQuery
 
-var chartsSocket = io.connect(window.location.origin,
-     { timeout: 500000
-}
-);
+    var chartsSocket = io.connect(window.location.origin,
+        { timeout: 500000}
+    );
 
-chartsSocket.on("connect", function () {
-  console.log("connected to server");
-});
-chartsSocket.emit("collect_data");
-chartsSocket.on('chart_data', function(data) {
-  var chartData = data.chartData;
-  console.log("fetched chart data from back end");
-//  console.log(chartData);
-  generateChartsA(chartData);
-  generateChartsB(chartData);
-  generateChartsC(chartData);
-});
+    chartsSocket.on("connect", function () {
+        console.log("connected to server");
+    });
+    chartsSocket.emit("collect_data");
+    chartsSocket.on('chart_data', function(data) {
+        var chartData = data.chartData;
+        console.log("fetched chart data from back end");
+
+        generateChartsA(chartData);
+        generateChartsB(chartData);
+        generateChartsC(chartData);
+    });
 
 function generateChartsA(data) {
     console.log("reaching generateChartsA method");
@@ -795,9 +793,9 @@ const maxBarValue2 = Math.max(...totalRevenues);
 function handleDropdownChange() {
   const selectedValue = document.getElementById('revenueFilter').value;
   let dataKey = '';
-  if (selectedValue === 'ST') {
+  if (selectedValue === 'ST Revenue') {
     dataKey = 'ST_ROI';
-  } else if (selectedValue === 'LT') {
+  } else if (selectedValue === 'LT Revenue') {
     dataKey = 'LT_ROI';
   } else if (selectedValue === 'ALL') {
     dataKey = 'Total_ROI';
@@ -817,6 +815,12 @@ function handleDropdownChange() {
   roi_channel_chart.data.datasets = channel_ROI_data_filtered;
   roi_channel_chart.update();
 }
+
+document.addEventListener("DOMContentLoaded", function() {
+  document.getElementById("revenueFilter").value = "ST Revenue";
+  handleDropdownChange();
+});
+
 // 6a. data block
     const roi_channel_chartData = {
       labels: channels.map(splitLabel(1)),
@@ -1058,6 +1062,30 @@ const processedDataChannel = data.reduce((acc, entry) => {
 // Extract labels and datasets for laydown charts
 const laydown_channel_labels = Object.keys(processedDataChannel);
 const laydown_channel_data = Object.keys(processedDataChannel[laydown_channel_labels[0]]);
+
+//// Extract unique values from the scenario column
+//const uniqueScenarios = new Set();
+//laydown_channel_labels.forEach(label => {
+//    const parts = label.split(',');
+//    if (parts.length > 1) {
+//        const scenario = parts[1].trim();
+//        uniqueScenarios.add(scenario);
+//    }
+//});
+//
+//console.log("Unique Scenarios:", [...uniqueScenarios]);
+//
+//// Populate the dropdown with unique values
+//const channelDropdown = document.getElementById('channel_dropdown');
+//uniqueScenarios.forEach(scenario => {
+//    const option = document.createElement('option');
+//    option.value = scenario;
+//    option.textContent = scenario;
+//    channelDropdown.appendChild(option);
+//});
+//
+//// Set the default value of the dropdown to the first option
+//channelDropdown.value = channelDropdown.options[0].value;
 
 // 8a. data block
 const laydown_channel_chartData = {
