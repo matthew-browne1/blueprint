@@ -1,24 +1,125 @@
+let budget_scenario_chart = null;
+let revenue_scenario_chart = null;
+let roi_scenario_chart = null;
+let budget_channel_chart = null;
+let revenue_channel_chart = null;
+let roi_channel_chart = null;
+let laydown_scenario_chart = null;
+let laydown_channel_chart = null;
 
-    var chartsSocket = io.connect(window.location.origin,
-        { timeout: 500000}
-    );
+$(document).ready(function(){
+    var filteredData = [];
+    var chartData = [];
 
-    chartsSocket.on("connect", function () {
-        console.log("connected to server");
+    // Function to populate dropdown options
+    function populateDropdown(selector, options) {
+        var dropdown = $(selector);
+        dropdown.empty();
+        var selectAllOption = $('<option></option>').attr('value', 'all').text('Select All');
+        dropdown.append(selectAllOption);
+        $.each(options, function(key, value) {
+            var option = $('<option></option>').attr('value', value).text(value);
+            dropdown.append(option);
+        });
+    }
+
+    // Automatically select all options when 'Select All' is clicked
+    $(document).on('change', 'select[multiple]', function() {
+        var $this = $(this);
+        if ($this.val() !== null && $this.val().includes('all')) {
+            var allOptions = $this.find('option').not(':disabled');
+            var selectedOptions = allOptions.map(function() {
+                return this.value;
+            }).get();
+            $this.val(selectedOptions);
+        }
     });
+
+    // Function to collect and send filter selections to backend
+    function applyFilters() {
+        var filters = {
+            MonthYear: $('#dateFilter').val(),
+            Region: $('#regionFilter').val(),
+            Brand: $('#brandFilter').val(),
+            "Channel Group": $('#channelgroupFilter').val(),
+            Channel: $('#channelFilter').val(),
+            Scenario: $('#scenarioFilter').val(),
+            "Budget/Revenue": $('#revenueFilter').val()
+        };
+        console.log("Applying filters:", filters);
+        chartsSocket.emit("apply_filter", filters);
+        generateCharts();
+    }
+
+    // Function to clear all filter selections
+    function clearFilters() {
+        $('select[multiple]').val([]);
+        applyFilters();
+        generateCharts();
+    }
+
+    // Establish SocketIO connection
+    var chartsSocket = io.connect(window.location.origin, { timeout: 500000 });
+
+    chartsSocket.on('connect', function() {
+        console.log('Connected');
+    });
+
     chartsSocket.emit("collect_data");
-    chartsSocket.on('chart_data', function(data) {
-        var chartData = data.chartData;
-        console.log("fetched chart data from back end");
+    chartsSocket.emit("apply_filter");
 
-        generateChartsA(chartData);
-        generateChartsB(chartData);
-        generateChartsC(chartData);
+chartsSocket.on('chart_data', function(data) {
+    chartData = data.chartData; // Update chartData when received from backend
+    console.log("fetched chart data from back end");
+    generateCharts();
+});
+
+chartsSocket.on('filtered_data', function(data) {
+    filteredData = data.filtered_data; // Update filteredData when received from backend
+    generateCharts();
+});
+
+
+    // Apply Filters button click event
+    $('#applyFilters').on('click', function() {
+        applyFilters();
     });
+
+    // Clear Filters button click event
+    $('#clearFilters').on('click', function() {
+        clearFilters();
+    });
+
+    function generateCharts() {
+        if (filteredData.length > 0) {
+            generateChartsA(filteredData);
+            generateChartsB(filteredData);
+            generateChartsC(filteredData);
+        } else {
+            generateChartsA(chartData);
+            generateChartsB(chartData);
+            generateChartsC(chartData);
+            generateChartsD(chartData);
+        }
+        console.log(filteredData)
+    }
+
+    // Listen for 'dropdown_options' event and populate dropdowns
+    chartsSocket.on('dropdown_options', function(data) {
+        populateDropdown('#dateFilter', data.options.MonthYear);
+        populateDropdown('#channelFilter', data.options.Channel);
+        populateDropdown('#channelgroupFilter', data.options['Channel Group']);
+        populateDropdown('#regionFilter', data.options.Region);
+        populateDropdown('#brandFilter', data.options.Brand);
+        populateDropdown('#scenarioFilter', data.options.Scenario);
+        populateDropdown('#revenueFilter', data.options['Budget/Revenue']);
+    }).on('error', function(xhr, status, error) {
+        console.error('Error fetching filter data:', error);
+    });
+});
 
 function generateChartsA(data) {
     console.log("reaching generateChartsA method");
-
    // Process data for scenario charts
     const processedData = data.reduce((acc, entry) => {
       const key = entry.Scenario;
@@ -183,14 +284,20 @@ function splitLabel(maxWords) {
   },
   animation: false,
 };
-// 1c. render block
-    const budget_scenario_chart = new Chart(document.getElementById("budget_scenario_chart"),
-     {
-      type: "bar",
-      data: budget_scenario_chartData,
-      plugins: [ChartDataLabels],
-      options: budget_scenario_chartOptions,
-    });
+ // 1c. render block
+   if (budget_scenario_chart === null) {
+        budget_scenario_chart = new Chart(document.getElementById("budget_scenario_chart"),
+            {
+                type: "bar",
+                data: budget_scenario_chartData,
+                plugins: [ChartDataLabels],
+                options: budget_scenario_chartOptions,
+            });
+    } else {
+        budget_scenario_chart.data.labels = scenario_labels.map(splitLabel(3));
+        budget_scenario_chart.data.datasets[0].data = budgetData;
+        budget_scenario_chart.update();
+    }
 
 // 2. Revenue by Scenario Chart
 const maxBarValue = Math.max(...st_revData.concat(lt_revData));
@@ -323,13 +430,19 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
   animation: false,
 };
 // 2c. render block
-    const revenue_scenario_chart = new Chart(document.getElementById("revenue_scenario_chart"),
-     {
-      type: "bar",
-      data: revenue_scenario_chartData,
-       plugins: [ChartDataLabels],
-      options: revenue_scenario_chartOptions,
-    });
+    if (revenue_scenario_chart === null) {
+        revenue_scenario_chart = new Chart(document.getElementById("revenue_scenario_chart"), {
+            type: "bar",
+            data: revenue_scenario_chartData,
+            plugins: [ChartDataLabels],
+            options: revenue_scenario_chartOptions,
+        });
+    } else {
+        revenue_scenario_chart.data.labels = revenue_scenario_chartData.labels;
+        revenue_scenario_chart.data.datasets[0].data = revenue_scenario_chartData.datasets[0].data;
+        revenue_scenario_chart.data.datasets[1].data = revenue_scenario_chartData.datasets[1].data;
+        revenue_scenario_chart.update();
+    }
 
 // 3. ROI by Scenario Chart
 // 3a. data block
@@ -453,13 +566,19 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
   animation: false,
 };
 // 3c. render block
-    const roi_scenario_chart = new Chart(document.getElementById("roi_scenario_chart"),
-     {
-      type: "bar",
-      data: roi_scenario_chartData,
-      plugins: [ChartDataLabels],
-      options: roi_scenario_chartOptions,
+if (roi_scenario_chart === null) {
+    roi_scenario_chart = new Chart(document.getElementById("roi_scenario_chart"), {
+        type: "bar",
+        data: roi_scenario_chartData,
+        plugins: [ChartDataLabels],
+        options: roi_scenario_chartOptions,
     });
+} else {
+    roi_scenario_chart.data.labels = roi_scenario_chartData.labels;
+    roi_scenario_chart.data.datasets[0].data = roi_scenario_chartData.datasets[0].data;
+    roi_scenario_chart.data.datasets[1].data = roi_scenario_chartData.datasets[1].data;
+    roi_scenario_chart.update();
+}
 }
 function generateChartsB(data) {
         console.log("reaching generateChartsB method");
@@ -656,12 +775,17 @@ function splitLabel(maxWords) {
   animation: false,
 };
 // 4c. render block
-    const budget_channel_chart = new Chart(document.getElementById("budget_channel_chart"),
-     {
-      type: "bar",
-      data: budget_channel_chartData,
-      options: budget_channel_chartOptions,
+if (budget_channel_chart === null) {
+    budget_channel_chart = new Chart(document.getElementById("budget_channel_chart"), {
+        type: "bar",
+        data: budget_channel_chartData,
+        options: budget_channel_chartOptions,
     });
+} else {
+    budget_channel_chart.data.labels = budget_channel_chartData.labels;
+    budget_channel_chart.data.datasets = budget_channel_chartData.datasets;
+    budget_channel_chart.update();
+}
 // 5. Revenue by Channel Chart
 // Function to handle dropdown selection
 function handleDropdownChange() {
@@ -783,12 +907,17 @@ const maxBarValue2 = Math.max(...totalRevenues);
   animation: false,
 };
 // 5c. render block
-    const revenue_channel_chart = new Chart(document.getElementById("revenue_channel_chart"),
-     {
-      type: "bar",
-      data: revenue_channel_chartData,
-      options: revenue_channel_chartOptions,
+if (revenue_channel_chart === null) {
+    revenue_channel_chart = new Chart(document.getElementById("revenue_channel_chart"), {
+        type: "bar",
+        data: revenue_channel_chartData,
+        options: revenue_channel_chartOptions,
     });
+} else {
+    revenue_channel_chart.data.labels = revenue_channel_chartData.labels;
+    revenue_channel_chart.data.datasets = revenue_channel_chartData.datasets;
+    revenue_channel_chart.update();
+}
 // 6. ROI by Channel Chart
 function handleDropdownChange() {
   const selectedValue = document.getElementById('revenueFilter').value;
@@ -893,23 +1022,24 @@ document.addEventListener("DOMContentLoaded", function() {
   animation: false,
 };
 // 6c. render block
-    const roi_channel_chart = new Chart(document.getElementById("roi_channel_chart"),
-     {
-      type: "bar",
-      data: roi_channel_chartData,
-      options: roi_channel_chartOptions,
+if (roi_channel_chart === null) {
+    roi_channel_chart = new Chart(document.getElementById("roi_channel_chart"), {
+        type: "bar",
+        data: roi_channel_chartData,
+        options: roi_channel_chartOptions,
     });
+} else {
+    roi_channel_chart.data.labels = roi_channel_chartData.labels;
+    roi_channel_chart.data.datasets = roi_channel_chartData.datasets;
+    roi_channel_chart.update();
+}
 }
 function generateChartsC(data) {
         console.log("reaching generateChartsC method");
 // Process data for laydown scenario charts
 const processedDataLaydown = data.reduce((acc, entry) => {
     const key = entry.Scenario;
-    //const timePeriodParts = entry.Date.split('/');
-    //const timePeriod = new Date(`${timePeriodParts[1]}/${timePeriodParts[0]}/${timePeriodParts[2]}`);
-//    const entryDate = new Date(entry.Date);
-//    const monthYear = entryDate.toLocaleString('default', { month: 'short', year: 'numeric' });
-    const monthYear = entry.Month_Year;
+    const monthYear = entry.MonthYear;
     if (!acc[key]) {
         acc[key] = {};
     }
@@ -1027,163 +1157,183 @@ laydown_scenario_labels.forEach(scenario => {
   animation: false,
 };
 // 7c. render block
-    const laydown_scenario_chart = new Chart(document.getElementById("laydown_scenario_chart"),
-     {
-      type: "bar",
-      data: laydown_scenario_chartData,
-      options: laydown_scenario_chartOptions,
+if (laydown_scenario_chart === null) {
+    laydown_scenario_chart = new Chart(document.getElementById("laydown_scenario_chart"), {
+        type: "bar",
+        data: laydown_scenario_chartData,
+        options: laydown_scenario_chartOptions,
     });
-
+} else {
+    laydown_scenario_chart.data.labels = laydown_scenario_chartData.labels;
+    laydown_scenario_chart.data.datasets = laydown_scenario_chartData.datasets;
+    laydown_scenario_chart.update();
+}
+}
+function generateChartsD(data) {
 // 8. Laydown by Channel Chart
 // Process data for laydown channel charts
-const selectedScenario = "Current"; // Initial scenario selection
+const uniqueScenarios = [...new Set(data.map(entry => entry.Scenario))];
 
-const processedDataChannel = data.reduce((acc, entry) => {
-  const key = entry.Scenario;
+// Populate dropdown list with unique scenarios
+const channelDropdown = document.getElementById("channel_dropdown");
+uniqueScenarios.forEach(scenario => {
+  const option = document.createElement("option");
+  option.value = scenario;
+  option.text = scenario;
+  channelDropdown.appendChild(option);
+});
 
-  const entryDate = new Date(entry.Date);
-  const monthYear = entryDate.toLocaleString('default', { month: 'short', year: 'numeric' });
+// Set default selected option as the first one
+channelDropdown.selectedIndex = 0;
+let selectedScenario = uniqueScenarios[0];
 
-  if (key === selectedScenario) {
-    const channel = entry['Channel Group'];
-    if (!acc[monthYear]) {
-      acc[monthYear] = {};
-    }
-    if (!acc[monthYear][channel]) {
-      acc[monthYear][channel] = 0;
-    }
-    if (entry["Budget/Revenue"] === "Budget") {
-      acc[monthYear][channel] += entry.Value;
-    }
-  }
-  return acc;
-}, {});
+// Declare laydown_channel_chart before the updateChart function
+let laydown_channel_chart;
 
-// Extract labels and datasets for laydown charts
-const laydown_channel_labels = Object.keys(processedDataChannel);
-const laydown_channel_data = Object.keys(processedDataChannel[laydown_channel_labels[0]]);
+// Add event listener to dropdown for scenario selection
+channelDropdown.addEventListener('change', function() {
+  selectedScenario = this.value;
+  updateChart(selectedScenario);
+});
 
-//// Extract unique values from the scenario column
-//const uniqueScenarios = new Set();
-//laydown_channel_labels.forEach(label => {
-//    const parts = label.split(',');
-//    if (parts.length > 1) {
-//        const scenario = parts[1].trim();
-//        uniqueScenarios.add(scenario);
-//    }
-//});
-//
-//console.log("Unique Scenarios:", [...uniqueScenarios]);
-//
-//// Populate the dropdown with unique values
-//const channelDropdown = document.getElementById('channel_dropdown');
-//uniqueScenarios.forEach(scenario => {
-//    const option = document.createElement('option');
-//    option.value = scenario;
-//    option.textContent = scenario;
-//    channelDropdown.appendChild(option);
-//});
-//
-//// Set the default value of the dropdown to the first option
-//channelDropdown.value = channelDropdown.options[0].value;
+// Initial chart rendering
+updateChart(selectedScenario);
 
-// 8a. data block
-const laydown_channel_chartData = {
-  labels: laydown_channel_labels,
-  datasets: laydown_channel_data.map(channel => ({
-    label: channel,
-    data: laydown_channel_labels.map(monthYear => processedDataChannel[monthYear][channel] || 0),
-    backgroundColor: '#' + Math.random().toString(16).substr(-6), // Random background color for each channel
-    borderWidth: 1,
-  })),
-};
+function updateChart(selectedScenario) {
+  const processedDataChannel = data.reduce((acc, entry) => {
+    const key = entry.Scenario;
+    const monthYear = entry.MonthYear;
 
-// 8b. config block
- const laydown_channel_chartOptions = {
-  scales: {
-   x: {
-      stacked: true,
-      title: {
-        display: true,
-        text: 'Month/Year',
-        font: {
-          family: 'arial',
-          weight: 'bold',
-          size: '16',
-        },
-      },
-      ticks: {
-        font: {
-          family: 'Arial',
-          size: '12',
-          weight: 'bold',
-        },
-      },
-      grid: {
-        display: false,
-      },
-      autoSkip: false,
-    },
-    y: {
-    stacked: true,
-          title: {
-        display: true,
-        text: 'Budget',
-        font: {
-          family: 'arial',
-          weight: 'bold',
-          size: '16',
-        },
-      },
-    ticks: {
-        font: {
-          family: 'Arial',
-          size: '12',
-          weight: 'bold',
-        },
-     callback: function(value, index, values) {
-          if (value < 1000000) {
-            return '£' + (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
-          } else {
-            return '£' + (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
-          }
-        }
-      },
-     },
-  },
-  responsive: false,
-  maintainAspectRatio: false,
-  layout: {
-        padding: {
-            top: 25,
-        }
-    },
-  plugins: {
-    legend: {
-      position: 'top',
-      display: true,
-      labels: {
-        font: {
-          family: 'Arial',
-          size: 12,
-          weight: 'bold'
-        }
+    if (key === selectedScenario) {
+      const channel = entry['Channel Group'];
+      if (!acc[monthYear]) {
+        acc[monthYear] = {};
       }
-    },
-  tooltip: {
-    callbacks:{
-        title: (context) => {
-        return context[0].label.replaceAll(',', ' ')}
+      if (!acc[monthYear][channel]) {
+        acc[monthYear][channel] = 0;
+      }
+      if (entry["Budget/Revenue"] === "Budget") {
+        acc[monthYear][channel] += entry.Value;
+      }
     }
-  },
-  },
-  animation: false,
-};
-// 8c. render block
-    const laydown_channel_chart = new Chart(document.getElementById("laydown_channel_chart"),
-     {
+    return acc;
+  }, {});
+
+  // Check if laydown_channel_chart is initialized
+  if (!laydown_channel_chart) {
+    const laydown_channel_labels = Object.keys(processedDataChannel);
+    const laydown_channel_data = Object.keys(processedDataChannel[laydown_channel_labels[0]]);
+
+    // 8a. data block
+    const laydown_channel_chartData = {
+      labels: laydown_channel_labels,
+      datasets: laydown_channel_data.map(channel => ({
+        label: channel,
+        data: laydown_channel_labels.map(monthYear => processedDataChannel[monthYear][channel] || 0),
+        backgroundColor: '#' + Math.random().toString(16).substr(-6), // Random background color for each channel
+        borderWidth: 1,
+      })),
+    };
+
+    // 8b. config block
+    const laydown_channel_chartOptions = {
+      scales: {
+        x: {
+          stacked: true,
+          title: {
+            display: true,
+            text: 'Month/Year',
+            font: {
+              family: 'arial',
+              weight: 'bold',
+              size: '16',
+            },
+          },
+          ticks: {
+            font: {
+              family: 'Arial',
+              size: '12',
+              weight: 'bold',
+            },
+          },
+          grid: {
+            display: false,
+          },
+          autoSkip: false,
+        },
+        y: {
+          stacked: true,
+          title: {
+            display: true,
+            text: 'Budget',
+            font: {
+              family: 'arial',
+              weight: 'bold',
+              size: '16',
+            },
+          },
+          ticks: {
+            font: {
+              family: 'Arial',
+              size: '12',
+              weight: 'bold',
+            },
+            callback: function(value, index, values) {
+              if (value < 1000000) {
+                return '£' + (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
+              } else {
+                return '£' + (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
+              }
+            }
+          },
+        },
+      },
+      responsive: false,
+      maintainAspectRatio: false,
+      layout: {
+        padding: {
+          top: 25,
+        }
+      },
+      plugins: {
+        legend: {
+          position: 'top',
+          display: true,
+          labels: {
+            font: {
+              family: 'Arial',
+              size: 12,
+              weight: 'bold'
+            }
+          }
+        },
+        tooltip: {
+          callbacks:{
+            title: (context) => {
+              return context[0].label.replaceAll(',', ' ')
+            }
+          }
+        },
+      },
+      animation: false,
+    };
+
+    // 8c. render block
+    laydown_channel_chart = new Chart(document.getElementById("laydown_channel_chart"), {
       type: "bar",
       data: laydown_channel_chartData,
       options: laydown_channel_chartOptions,
     });
+  } else {
+    // Update chart data
+    laydown_channel_chart.data.labels = Object.keys(processedDataChannel);
+    laydown_channel_chart.data.datasets = Object.keys(processedDataChannel[laydown_channel_chart.data.labels[0]]).map(channel => ({
+      label: channel,
+      data: laydown_channel_chart.data.labels.map(monthYear => processedDataChannel[monthYear][channel] || 0),
+      backgroundColor: '#' + Math.random().toString(16).substr(-6), // Random background color for each channel
+      borderWidth: 1,
+    }));
+    laydown_channel_chart.update();
   }
+}
+}

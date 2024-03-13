@@ -1,13 +1,12 @@
-//// Fetch data from the Flask API using jQuery
-
 var chartsSocket = io.connect(window.location.origin,
      { timeout: 500000
 }
 );
 
-chartsSocket.on("connect", function () {
-  console.log("connected to server");
-});
+chartsSocket.on('connect', function() {
+    console.log('Connected');
+     });
+
 chartsSocket.emit("response_data");
 chartsSocket.on('chart_response', function(data) {
   var chartResponse = data.chartResponse;
@@ -33,11 +32,19 @@ chartsSocket.on('chart_roi', function(data) {
   generateChartsC(chartROI);
 });
 
+chartsSocket.emit("budget_response_data");
+chartsSocket.on('chart_budget_response', function(data) {
+  var chartBudget_response = data.chartBudget_response;
+
+  console.log("fetched budget response data from back end");
+  generateChartsD(chartBudget_response);
+});
+
 function generateChartsA(data) {
     console.log("reaching generateChartsA method");
 
  // 1. Response Curve by Channel Group Chart
- const selectedBrand = "Nesquik"; // Initial scenario selection
+ const selectedBrand = "Shreddies"; // Initial scenario selection
 
   // Filter data for the selected brand
      const filteredData = data.filter(entry => entry.Brand === selectedBrand);
@@ -159,53 +166,57 @@ function generateChartsA(data) {
 function generateChartsB(data) {
     console.log("reaching generateChartsB method");
 // 3. Budget Curve Chart
-     const selectedBrand = "Nesquik"; // Initial scenario selection
+     const selectedBrand = "Shreddies"; // Initial scenario selection
   // Filter data for the selected brand
      const filteredData = data.filter(entry => entry.Brand === selectedBrand);
  // 3a. data block
      const budget_chartData = {
-       labels: [], // Budget values will be used as labels on the x-axis
+       labels: [],
        datasets: [
          {
            label: 'Revenue',
-           data: [], // Profit values will be used as data points on the y-axis
-           backgroundColor: 'rgba(54, 162, 235, 0.2)', // Background color of the line
-           borderColor: 'rgba(54, 162, 235, 1)', // Border color of the line
-           borderWidth: 1, // Border width of the line
-           pointRadius: [], // Radius of the data points
-           pointBackgroundColor: [], // Background color of the data points
-           pointBorderColor: 'rgba(54, 162, 235, 1)', // Border color of the data points
-           pointBorderWidth: 2 // Border width of the data points
+           data: [],
+           backgroundColor: 'rgba(54, 162, 235, 0.2)',
+           borderColor: 'rgba(54, 162, 235, 1)',
+           borderWidth: 1,
+           pointRadius: [],
+           pointBackgroundColor: [],
+           pointBorderColor: 'rgba(54, 162, 235, 1)',
+           pointBorderWidth: 2
          },
          {
            label: 'Historical Budget (not optimized)',
-           data: [], // Historical budget values (not optimized)
-           backgroundColor: 'rgba(255, 99, 132, 0.7)', // Background color of the scatter plot
-           borderColor: 'rgba(255, 99, 132, 1)', // Border color of the scatter plot
-           pointStyle: 'circle', // Style of the data points (circle)
-           borderWidth: 1 // Border width of the scatter plot
+           data: [],
+           backgroundColor: 'rgba(255, 99, 132, 0.7)',
+           borderColor: 'rgba(255, 99, 132, 1)',
+           pointStyle: 'circle',
+           borderWidth: 1
          },
          {
            label: 'Historical Budget (optimized)',
-           data: [], // Historical budget values (optimized)
-           backgroundColor: 'rgba(75, 192, 192, 0.7)', // Background color of the scatter plot
-           borderColor: 'rgba(75, 192, 192, 1)', // Border color of the scatter plot
-           pointStyle: 'circle', // Style of the data points (circle)
-           borderWidth: 1 // Border width of the scatter plot
+           data: [],
+           backgroundColor: 'rgba(75, 192, 192, 0.7)',
+           borderColor: 'rgba(75, 192, 192, 1)',
+           pointStyle: 'circle',
+           borderWidth: 1
          },
          {
             label: 'Profit',
-            data: [], // Profit values will be used as data points on the y-axis
-            backgroundColor: 'rgba(255, 206, 86, 0.2)', // Background color of the line
-            borderColor: 'rgba(255, 206, 86, 1)', // Border color of the line
-            borderWidth: 1, // Border width of the line
+            data: [],
+            backgroundColor: 'rgba(255, 206, 86, 0.2)',
+            borderColor: 'rgba(255, 206, 86, 1)',
+            borderWidth: 1,
+            pointRadius: [],
+            pointBackgroundColor: [],
+            pointBorderColor: 'rgba(255, 206, 86, 1)',
+            pointBorderWidth: 2
         },
         {
             label: 'Profit Max',
-            data: [], // Profit values will be used as data points on the y-axis
-            backgroundColor: 'rgba(255, 206, 86, 0.2)', // Background color of the line
-            borderColor: 'rgba(255, 206, 86, 1)', // Border color of the line
-            borderWidth: 1, // Border width of the line
+            data: [],
+            backgroundColor: 'rgba(0, 39, 129, 0.2)',
+            borderColor: 'rgba(0, 39, 129, 1)',
+            borderWidth: 1,
         }
        ]
      };
@@ -247,10 +258,10 @@ function generateChartsB(data) {
 function generateChartsC(data) {
     console.log("reaching generateChartsC method");
     // 4. ROI Curve Chart
-     const selectedBrand = "Nesquik"; // Initial scenario selection
+     const selectedBrand = "Shreddies"; // Initial scenario selection
   // Filter data for the selected brand
      const filteredData = data.filter(entry => entry.Brand === selectedBrand);
- // 3a. data block
+ // 4a. data block
      const roi_chartData = {
        labels: [], // Budget values will be used as labels on the x-axis
        datasets: [
@@ -297,7 +308,7 @@ function generateChartsC(data) {
         roi_chartData.datasets[2].data.push(entry["Break Even: £4"]);
         roi_chartData.datasets[3].data.push(entry["Break Even: £8"]);
 });
-// 3b. config block
+// 4b. config block
         const roi_chartOptions = {
                  scales: {
            x: {
@@ -316,7 +327,7 @@ function generateChartsC(data) {
            }
          }
     }
-// 3c. render block
+// 4c. render block
      const roi_curve_chart = new Chart(document.getElementById("roi_curve_chart"),
       {
        type: 'line',
@@ -325,4 +336,75 @@ function generateChartsC(data) {
     });
 
    }
+function generateChartsD(data) {
+    console.log("reaching generateChartsD method");
+    // 5. Budget Response Curve Chart
+     const selectedBrand = "Shreddies"; // Initial scenario selection
+  // Filter data for the selected brand
+     const filteredData = data
+        .filter(entry => entry.Brand === selectedBrand)
+        .sort((a, b) => a.Budget - b.Budget);
+ // 5a. data block
+     const budget_response_chartData = {
+       labels: [], // Budget values will be used as labels on the x-axis
+       datasets: [
+         {
+           label: 'Optimised Revenue',
+           data: [],
+           backgroundColor: 'rgba(54, 162, 235, 0.2)',
+           borderColor: 'rgba(54, 162, 235, 1)',
+           borderWidth: 1,
+           pointRadius: [],
+           pointBackgroundColor: [],
+           pointBorderColor: 'rgba(54, 162, 235, 1)',
+           pointBorderWidth: 2
+         },
+                 {
+           label: 'Predicted Revenue',
+           data: [],
+           backgroundColor: 'rgba(255, 99, 71, 0.2)',
+           borderColor: 'rgba(255, 99, 71, 1)',
+           borderWidth: 1,
+           pointRadius: [],
+           pointBackgroundColor: [],
+           pointBorderColor: 'rgba(54, 162, 235, 1)',
+           pointBorderWidth: 2
+         },
+       ]
+     };
+    filteredData.forEach(entry => {
+        budget_response_chartData.labels.push(entry.Budget);
+        budget_response_chartData.datasets[0].data.push(entry["Total Revenue"]);
+        budget_response_chartData.datasets[1].data.push(entry["Predicted Revenue"]);
+});
 
+console.log(budget_response_chartData.datasets);
+
+// 5b. config block
+        const budget_response_chartOptions = {
+                 scales: {
+           x: {
+             type: 'linear',
+             position: 'bottom',
+             scaleLabel: {
+               display: true,
+               labelString: 'Budget'
+             }
+           },
+           y: {
+             scaleLabel: {
+               display: true,
+               labelString: 'Revenue'
+             }
+           }
+         }
+    }
+// 5c. render block
+     const budget_response_chart = new Chart(document.getElementById("response_budget_chart"),
+      {
+       type: 'line',
+       data: budget_response_chartData,
+        options: budget_response_chartOptions,
+    });
+
+   }

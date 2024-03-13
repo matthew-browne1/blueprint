@@ -375,7 +375,6 @@ def prep_rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dic
     total_rev = total_rev + infsum
     return rev_list
 
-
 def prep_total_rev_per_stream(stream, budget):
     ST_rev = prep_rev_per_stream(stream, budget, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict)
     LT_rev = prep_rev_per_stream(stream, budget, LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict)
@@ -931,52 +930,42 @@ def create_output(results_dict, inputs_per_result, tab_names, include_current=Tr
     concat_df['Date'] = concat_df['Date'].astype(str)
     return concat_df
 
-# @app.route('/filter_chart_data', methods=['GET'])
-# def filter_chart_data():
-#     try:
-#         conn = engine.connect()
-#         query = text('SELECT * FROM "Optimised CSV";')
-#
-#         db_result = conn.execute(query)
-#         db_data = db_result.fetchall()
-#         df = pd.DataFrame(db_data)
-#
-#         min_date = min(pd.to_datetime(df['Date']))
-#         max_date = max(pd.to_datetime(df['Date']))
-#
-#         filters = ['Channel', 'Channel Group', 'Region', 'Brand', 'Scenario', 'Budget/Revenue']
-#         data = {filter_name: df[filter_name].unique().tolist() for filter_name in filters}
-#
-#         revenue_types = [rev_type for rev_type in data['Budget/Revenue'] if rev_type != 'Budget']
-#         data['revenue_types'] = revenue_types
-#
-#         data['min_date'] = min_date.strftime('%Y-%m-%d')
-#         data['max_date'] = max_date.strftime('%Y-%m-%d')
-#
-#         return jsonify(data)
-#
-#     except Exception as e:
-#         print(f"Error fetching filter data: {str(e)}")
-#         return jsonify({'error': 'Internal Server Error'}), 500
 
 @socketio.on("collect_data")
 def chart_data():
+    global chart_data
     try:
         conn = engine.connect()
         query = text('SELECT * FROM "Optimised CSV";')
 
         db_result = conn.execute(query)
-        # app.logger.info(tp_result.fetchall())
+        rows = db_result.fetchall()
+        columns = db_result.keys()
+        result_df = pd.DataFrame(rows, columns=columns)
+        db_result.close()
+        result_df['Date'] = pd.to_datetime(result_df['Date'])
+        result_df['MonthYear'] = result_df['Date'].dt.strftime('%Y-%b')
+        result_df = result_df.groupby(
+            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Region', 'Brand', 'Channel Group', 'Channel',
+             'MonthYear']).sum(numeric_only=True)
+        result_df.reset_index(inplace=True)
         chart_data = []
-        col_names = db_result.keys()
         print("worked")
-        for x in db_result.fetchall():
-            a = dict(zip(col_names, x))
-            date_column = a.get("Date")
-            if date_column:
-                month_year = datetime.strptime(date_column, '%Y-%m-%d').strftime("%b %Y")
-                a["Month_Year"] = month_year
+        for index, row in result_df.iterrows():
+            a = dict(row)
             chart_data.append(a)
+
+        dropdown_options = {}
+        for column in result_df.columns:
+            if column not in ['Opt Channel', 'Value']:
+                if column == 'Budget/Revenue':
+                    dropdown_options[column] = [value for value in result_df[column].unique() if "Budget" not in value]
+                else:
+                    dropdown_options[column] = result_df[column].unique().tolist()
+
+        socketio.emit('dropdown_options', {'options': dropdown_options})
+        print("Dropdown options sent")
+
         socketio.emit('chart_data', {'chartData': chart_data})
         print("chart_data sent")
 
@@ -986,6 +975,53 @@ def chart_data():
     finally:
         if 'conn' in locals():
             conn.close()
+
+# Initialize an empty filters variable
+filters = []
+
+@socketio.on("apply_filter")
+def handle_apply_filter(filter_data):
+    try:
+        filters = filter_data
+
+        if "Budget/Revenue" in filters and filters["Budget/Revenue"]:
+            if "Budget" not in filters["Budget/Revenue"]:
+                filters["Budget/Revenue"].append("Budget")
+        else:
+            filters["Budget/Revenue"] = []
+
+        print('Received filter data:', filters)
+        apply_filters(filters)
+    except KeyError:
+        print("KeyError: 'Budget/Revenue' not found in filter_data")
+def apply_filters(filters):
+    try:
+        filtered_data = []
+        print(filters)
+
+        for data_point in chart_data:
+            include_data_point = True
+
+            for key, values in filters.items():
+                if values and data_point[key] not in values:
+                    include_data_point = False
+                    break
+
+            if include_data_point:
+                filtered_data.append(data_point)
+
+        sum_st_revenue = 0
+        for data_point in filtered_data:
+            if data_point["Budget/Revenue"] == "ST Revenue":
+                sum_st_revenue += data_point["Value"]
+        print("Sum of 'ST Revenue':", sum_st_revenue)
+
+        socketio.emit('filtered_data', {'filtered_data': filtered_data})
+        print("Filtered chart data sent")
+        print("Filtered data length:", len(filtered_data))
+
+    except Exception as e:
+        print('Error applying filter:', str(e))
 
 @socketio.on("response_data")
 def chart_response():
@@ -1050,6 +1086,28 @@ def chart_roi():
             chart_roi.append(a)
         socketio.emit('chart_roi', {'chartROI': chart_roi})
         print("chart_roi sent")
+
+    except SQLAlchemyError as e:
+        print('Error executing query:', str(e))
+
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@socketio.on("budget_response_data")
+def chart_budget_response():
+    try:
+        conn = engine.connect()
+        query = text('SELECT * FROM "Curves_Budget_Response";')
+
+        db_result = conn.execute(query)
+        chart_budget_response = []
+        col_names = db_result.keys()
+        for x in db_result.fetchall():
+            a = dict(zip(col_names, x))
+            chart_budget_response.append(a)
+        socketio.emit('chart_budget_response', {'chartBudget_response': chart_budget_response})
+        print("chart_budget_response sent")
 
     except SQLAlchemyError as e:
         print('Error executing query:', str(e))
