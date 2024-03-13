@@ -1010,12 +1010,6 @@ def apply_filters(filters):
             if include_data_point:
                 filtered_data.append(data_point)
 
-        sum_st_revenue = 0
-        for data_point in filtered_data:
-            if data_point["Budget/Revenue"] == "ST Revenue":
-                sum_st_revenue += data_point["Value"]
-        print("Sum of 'ST Revenue':", sum_st_revenue)
-
         socketio.emit('filtered_data', {'filtered_data': filtered_data})
         print("Filtered chart data sent")
         print("Filtered data length:", len(filtered_data))
@@ -1025,6 +1019,7 @@ def apply_filters(filters):
 
 @socketio.on("response_data")
 def chart_response():
+    global dropdown_options1
     try:
         conn = engine.connect()
         tables = ["Curves_Channel_Response_Blended", "Curves_Channel_Response_LT", "Curves_Channel_Response_ST"]
@@ -1039,6 +1034,13 @@ def chart_response():
                 a = dict(zip(col_names, x))
                 a["Optimisation Type"] = table.split("_")[3].upper()
                 chart_response.append(a)
+
+        dropdown_options1 = {}
+        for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type" ]:
+            dropdown_options1[column] = list(set(row[column] for row in chart_response))
+
+        socketio.emit('dropdown_options1', {'options': dropdown_options1})
+        print("Curve Dropdown options sent")
 
         socketio.emit('chart_response', {'chartResponse': chart_response})
         print("chart_response sent")
@@ -1062,6 +1064,7 @@ def chart_budget():
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
             chart_budget.append(a)
+
         socketio.emit('chart_budget', {'chartBudget': chart_budget})
         print("chart_budget sent")
 

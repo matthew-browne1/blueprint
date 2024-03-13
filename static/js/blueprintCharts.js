@@ -95,13 +95,13 @@ chartsSocket.on('filtered_data', function(data) {
             generateChartsA(filteredData);
             generateChartsB(filteredData);
             generateChartsC(filteredData);
+            generateChartsD(filteredData);
         } else {
             generateChartsA(chartData);
             generateChartsB(chartData);
             generateChartsC(chartData);
             generateChartsD(chartData);
         }
-        console.log(filteredData)
     }
 
     // Listen for 'dropdown_options' event and populate dropdowns
@@ -160,7 +160,6 @@ function generateChartsA(data) {
     const lt_roiData = Object.values(processedData).map((entry) => entry.LT_ROI);
     const st_roiData = Object.values(processedData).map((entry) => entry.ST_ROI);
     const roiData = Object.values(processedData).map((entry) => entry.Total_ROI);
-   //console.log(st_roiData);
  // Function to break scenario into 2 lines
 function splitLabel(maxWords) {
   return function(label) {
@@ -618,7 +617,6 @@ function generateChartsB(data) {
       return acc;
     },
    {});
-   //console.log(processedDataPerChannel);
 // Extract labels and datasets for scenario charts
 const scenarios = Object.keys(processedDataPerChannel);
 const channels = Object.keys(processedDataPerChannel[scenarios[0]].Channels);
@@ -635,7 +633,6 @@ const channel_budget_data = scenarios.map((scenario, index) => {
     borderWidth: 1
   };
 });
-//console.log(channel_budget_data);
 const channel_revenue_data = scenarios.map((scenario, index) => {
   const data = channels.map(channel => {
     const stRevenue = processedDataPerChannel[scenario]?.Channels[channel]?.ST_Revenue || 0;
@@ -663,7 +660,6 @@ const channel_ROI_data = scenarios.map((scenario, index) => {
     borderWidth: 1,
   };
 });
-//console.log(channel_revenue_data);
  // Function to generate random colors for each channel
 function getRandomColor() {
   const letters = "0123456789ABCDEF";
@@ -787,39 +783,8 @@ if (budget_channel_chart === null) {
     budget_channel_chart.update();
 }
 // 5. Revenue by Channel Chart
-// Function to handle dropdown selection
-function handleDropdownChange() {
-  const selectedValue = document.getElementById('revenueFilter').value;
-  const channel_revenue_data_filtered = scenarios.map((scenario, index) => {
-    const data = channels.map(channel => {
-      let revenue = 0;
-      if (selectedValue === 'ST') {
-        revenue = processedDataPerChannel[scenario]?.Channels[channel]?.ST_Revenue || 0;
-      } else if (selectedValue === 'LT') {
-        revenue = processedDataPerChannel[scenario]?.Channels[channel]?.LT_Revenue || 0;
-      } else if (selectedValue === 'ALL') {
-        const stRevenue = processedDataPerChannel[scenario]?.Channels[channel]?.ST_Revenue || 0;
-        const ltRevenue = processedDataPerChannel[scenario]?.Channels[channel]?.LT_Revenue || 0;
-        revenue = stRevenue + ltRevenue;
-      }
-      return revenue;
-    });
-    return {
-      label: scenario,
-      data: data,
-      backgroundColor: `hsla(${(index * (360 / scenarios.length))}, 70%, 50%, 0.7)`, // Assigning different colors for each scenario
-      borderColor: `hsla(${(index * (360 / scenarios.length))}, 70%, 50%, 1)`,
-      borderWidth: 1,
-    };
-  });
-  revenue_channel_chart.data.datasets = channel_revenue_data_filtered;
-  revenue_channel_chart.update();
-}
-// Event listener
-document.getElementById("revenueFilter").addEventListener("change", handleDropdownChange);
 const totalRevenues = channel_revenue_data.flatMap(dataset => dataset.data);
 const maxBarValue2 = Math.max(...totalRevenues);
-//console.log(maxBarValue2);
 // 5a. data block
     const revenue_channel_chartData = {
       labels: channels.map(splitLabel(1)),
@@ -919,46 +884,17 @@ if (revenue_channel_chart === null) {
     revenue_channel_chart.update();
 }
 // 6. ROI by Channel Chart
-function handleDropdownChange() {
-  const selectedValue = document.getElementById('revenueFilter').value;
-  let dataKey = '';
-  if (selectedValue === 'ST Revenue') {
-    dataKey = 'ST_ROI';
-  } else if (selectedValue === 'LT Revenue') {
-    dataKey = 'LT_ROI';
-  } else if (selectedValue === 'ALL') {
-    dataKey = 'Total_ROI';
-  }
-  const channel_ROI_data_filtered = scenarios.map((scenario, index) => {
-    const data = channels.map(channel => {
-      return processedDataPerChannel[scenario]?.Channels[channel]?.[dataKey] || 0;
-    });
-    return {
-      label: scenario,
-      data: data,
-      backgroundColor: `hsla(${(index * (360 / scenarios.length))}, 70%, 50%, 0.7)`,
-      borderColor: `hsla(${(index * (360 / scenarios.length))}, 70%, 50%, 1)`,
-      borderWidth: 1,
-    };
-  });
-  roi_channel_chart.data.datasets = channel_ROI_data_filtered;
-  roi_channel_chart.update();
-}
-
-document.addEventListener("DOMContentLoaded", function() {
-  document.getElementById("revenueFilter").value = "ST Revenue";
-  handleDropdownChange();
-});
-
+// 6. ROI by Channel Chart
 // 6a. data block
-    const roi_channel_chartData = {
-      labels: channels.map(splitLabel(1)),
-      datasets: channel_revenue_data,
-    };
+const roi_channel_chartData = {
+  labels: channels.map(splitLabel(1)),
+  datasets: channel_ROI_data,
+};
+
 // 6b. config block
-    const roi_channel_chartOptions = {
-   scales: {
-   x: {
+const roi_channel_chartOptions = {
+  scales: {
+    x: {
       stacked: false,
       title: {
         display: true,
@@ -982,8 +918,8 @@ document.addEventListener("DOMContentLoaded", function() {
       autoSkip: false,
     },
     y: {
-    stacked: false,
-          title: {
+      stacked: false,
+      title: {
         display: true,
         text: 'ROI',
         font: {
@@ -992,47 +928,50 @@ document.addEventListener("DOMContentLoaded", function() {
           size: '16',
         },
       },
-    ticks: {
+      ticks: {
         font: {
           family: 'Arial',
           size: '12',
           weight: 'bold',
         },
-     callback: function(value, index, values) {
-            return '£' + (Math.round(value)).toLocaleString('en-US');
-          }
+        callback: function(value, index, values) {
+          return '£' + (Math.round(value)).toLocaleString('en-US');
+        }
       },
-     },
+    },
   },
   responsive: false,
   maintainAspectRatio: false,
   layout: {
-        padding: {
-            top: 25,
-        }
-    },
-  plugins: {
-  tooltip: {
-    callbacks:{
-        title: (context) => {
-        return context[0].label.replaceAll(',', ' ')}
+    padding: {
+      top: 25,
     }
   },
+  plugins: {
+    tooltip: {
+      callbacks:{
+        title: (context) => {
+          return context[0].label.replaceAll(',', ' ')
+        }
+      }
+    },
   },
   animation: false,
 };
+
 // 6c. render block
 if (roi_channel_chart === null) {
-    roi_channel_chart = new Chart(document.getElementById("roi_channel_chart"), {
-        type: "bar",
-        data: roi_channel_chartData,
-        options: roi_channel_chartOptions,
-    });
+  roi_channel_chart = new Chart(document.getElementById("roi_channel_chart"), {
+    type: "bar",
+    data: roi_channel_chartData,
+    options: roi_channel_chartOptions,
+  });
 } else {
-    roi_channel_chart.data.labels = roi_channel_chartData.labels;
-    roi_channel_chart.data.datasets = roi_channel_chartData.datasets;
-    roi_channel_chart.update();
+  roi_channel_chart.data.labels = roi_channel_chartData.labels;
+  roi_channel_chart.data.datasets = roi_channel_chartData.datasets;
+  roi_channel_chart.update();
 }
+
 }
 function generateChartsC(data) {
         console.log("reaching generateChartsC method");
@@ -1172,40 +1111,11 @@ if (laydown_scenario_chart === null) {
 function generateChartsD(data) {
 // 8. Laydown by Channel Chart
 // Process data for laydown channel charts
-const uniqueScenarios = [...new Set(data.map(entry => entry.Scenario))];
-
-// Populate dropdown list with unique scenarios
-const channelDropdown = document.getElementById("channel_dropdown");
-uniqueScenarios.forEach(scenario => {
-  const option = document.createElement("option");
-  option.value = scenario;
-  option.text = scenario;
-  channelDropdown.appendChild(option);
-});
-
-// Set default selected option as the first one
-channelDropdown.selectedIndex = 0;
-let selectedScenario = uniqueScenarios[0];
-
-// Declare laydown_channel_chart before the updateChart function
-let laydown_channel_chart;
-
-// Add event listener to dropdown for scenario selection
-channelDropdown.addEventListener('change', function() {
-  selectedScenario = this.value;
-  updateChart(selectedScenario);
-});
-
-// Initial chart rendering
-updateChart(selectedScenario);
-
-function updateChart(selectedScenario) {
   const processedDataChannel = data.reduce((acc, entry) => {
     const key = entry.Scenario;
     const monthYear = entry.MonthYear;
+    const channel = entry['Channel Group'];
 
-    if (key === selectedScenario) {
-      const channel = entry['Channel Group'];
       if (!acc[monthYear]) {
         acc[monthYear] = {};
       }
@@ -1215,12 +1125,9 @@ function updateChart(selectedScenario) {
       if (entry["Budget/Revenue"] === "Budget") {
         acc[monthYear][channel] += entry.Value;
       }
-    }
     return acc;
   }, {});
 
-  // Check if laydown_channel_chart is initialized
-  if (!laydown_channel_chart) {
     const laydown_channel_labels = Object.keys(processedDataChannel);
     const laydown_channel_data = Object.keys(processedDataChannel[laydown_channel_labels[0]]);
 
@@ -1318,22 +1225,22 @@ function updateChart(selectedScenario) {
       animation: false,
     };
 
-    // 8c. render block
-    laydown_channel_chart = new Chart(document.getElementById("laydown_channel_chart"), {
-      type: "bar",
-      data: laydown_channel_chartData,
-      options: laydown_channel_chartOptions,
-    });
-  } else {
-    // Update chart data
-    laydown_channel_chart.data.labels = Object.keys(processedDataChannel);
-    laydown_channel_chart.data.datasets = Object.keys(processedDataChannel[laydown_channel_chart.data.labels[0]]).map(channel => ({
-      label: channel,
-      data: laydown_channel_chart.data.labels.map(monthYear => processedDataChannel[monthYear][channel] || 0),
-      backgroundColor: '#' + Math.random().toString(16).substr(-6), // Random background color for each channel
-      borderWidth: 1,
-    }));
-    laydown_channel_chart.update();
-  }
-}
+// 8c. render block
+    if (laydown_channel_chart === null) {
+        laydown_channel_chart = new Chart(document.getElementById("laydown_channel_chart"), {
+            type: "bar",
+            data: laydown_channel_chartData,
+            options: laydown_channel_chartOptions,
+        });
+    } else {
+        // Update chart data
+        laydown_channel_chart.data.labels = Object.keys(processedDataChannel);
+        laydown_channel_chart.data.datasets = Object.keys(processedDataChannel[laydown_channel_chart.data.labels[0]]).map(channel => ({
+            label: channel,
+            data: laydown_channel_chart.data.labels.map(monthYear => processedDataChannel[monthYear][channel] || 0),
+            backgroundColor: '#' + Math.random().toString(16).substr(-6), // Random background color for each channel
+            borderWidth: 1,
+        }));
+        laydown_channel_chart.update(); // Update the chart
+    }
 }

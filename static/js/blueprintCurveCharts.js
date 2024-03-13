@@ -6,6 +6,46 @@ var chartsSocket = io.connect(window.location.origin,
 chartsSocket.on('connect', function() {
     console.log('Connected');
      });
+$(document).ready(function(){
+    var filteredData = [];
+    var chartData = [];
+
+    // Function to populate dropdown options
+    function populateDropdown(selector, options) {
+        var dropdown = $(selector);
+        dropdown.empty();
+        var selectAllOption = $('<option></option>').attr('value', 'all').text('Select All');
+        dropdown.append(selectAllOption);
+        $.each(options, function(key, value) {
+            var option = $('<option></option>').attr('value', value).text(value);
+            dropdown.append(option);
+        });
+    }
+
+    // Automatically select all options when 'Select All' is clicked
+    $(document).on('change', 'select[multiple]', function() {
+        var $this = $(this);
+        if ($this.val() !== null && $this.val().includes('all')) {
+            var allOptions = $this.find('option').not(':disabled');
+            var selectedOptions = allOptions.map(function() {
+                return this.value;
+            }).get();
+            $this.val(selectedOptions);
+        }
+    });
+
+        // Listen for 'dropdown_options' event and populate dropdowns
+    chartsSocket.on('dropdown_options1', function(data) {
+        populateDropdown('#channelFilter', data.options.Channel);
+        populateDropdown('#channelgroupFilter', data.options['Channel Group']);
+        populateDropdown('#regionFilter', data.options.Region);
+        populateDropdown('#brandFilter', data.options.Brand);
+        populateDropdown('#optimisationFilter', data.options['Optimisation Type']);
+    }).on('error', function(xhr, status, error) {
+        console.error('Error fetching filter data:', error);
+    });
+});
+
 
 chartsSocket.emit("response_data");
 chartsSocket.on('chart_response', function(data) {
@@ -102,65 +142,65 @@ function generateChartsA(data) {
         options: response_curve_chartOptions,
     });
 
- // 2. Response Curve by Channel Chart
-
-    const filteredDataChannel = data.filter(entry => entry.Brand === selectedBrand);
-        filteredDataChannel.forEach(entry => {
-            entry.OptimizationType = "ST";
-            entry["Channel Group"] = "social";
-        });
-
-// Prepare data for the chart
-    const response_channel_Data = {};
-    filteredDataChannel.forEach(entry => {
-        const channel = entry.Channel;
-        if (!response_channel_Data[channel]) {
-             response_channel_Data[channel] = [];
-    }
-    // Limiting to the first 20 points
-    if ( response_channel_Data[channel].length < 40) {
-         response_channel_Data[channel].push({ x: entry.Budget, y: entry["Predicted Revenue"]});
-    }
-});
-
-//2a. data block
-    const response_channel_chartData = {
-        datasets: Object.keys(response_channel_Data).map(channel => {
-        return {
-            label: channel,
-            data:  response_channel_Data[channel],
-            borderColor: '#' + (Math.random().toString(16) + '000000').substring(2, 8), // Random color for each line
-            fill: false,
-            radius: 0,
-        };
-    })
-};
-// 2b. config block
-    const response_channel_chartOptions = {
-                 scales: {
-           x: {
-             type: 'linear',
-             position: 'bottom',
-             scaleLabel: {
-               display: true,
-               labelString: 'Budget'
-             }
-           },
-           y: {
-             scaleLabel: {
-               display: true,
-               labelString: 'Response Curve'
-             }
-           }
-         }
-    }
-// 2c. render block
-    const response_channel_chart = new Chart(document.getElementById("response_channel_chart"),
-      {
-       type: 'line',
-       data: response_channel_chartData,
-        options: response_channel_chartOptions,
-    });
+// // 2. Response Curve by Channel Chart
+//
+//    const filteredDataChannel = data.filter(entry => entry.Brand === selectedBrand);
+//        filteredDataChannel.forEach(entry => {
+//            entry.OptimizationType = "ST";
+//            entry["Channel Group"] = "social";
+//        });
+//
+//// Prepare data for the chart
+//    const response_channel_Data = {};
+//    filteredDataChannel.forEach(entry => {
+//        const channel = entry.Channel;
+//        if (!response_channel_Data[channel]) {
+//             response_channel_Data[channel] = [];
+//    }
+//    // Limiting to the first 20 points
+//    if ( response_channel_Data[channel].length < 40) {
+//         response_channel_Data[channel].push({ x: entry.Budget, y: entry["Predicted Revenue"]});
+//    }
+//});
+//
+////2a. data block
+//    const response_channel_chartData = {
+//        datasets: Object.keys(response_channel_Data).map(channel => {
+//        return {
+//            label: channel,
+//            data:  response_channel_Data[channel],
+//            borderColor: '#' + (Math.random().toString(16) + '000000').substring(2, 8), // Random color for each line
+//            fill: false,
+//            radius: 0,
+//        };
+//    })
+//};
+//// 2b. config block
+//    const response_channel_chartOptions = {
+//                 scales: {
+//           x: {
+//             type: 'linear',
+//             position: 'bottom',
+//             scaleLabel: {
+//               display: true,
+//               labelString: 'Budget'
+//             }
+//           },
+//           y: {
+//             scaleLabel: {
+//               display: true,
+//               labelString: 'Response Curve'
+//             }
+//           }
+//         }
+//    }
+//// 2c. render block
+//    const response_channel_chart = new Chart(document.getElementById("response_channel_chart"),
+//      {
+//       type: 'line',
+//       data: response_channel_chartData,
+//        options: response_channel_chartOptions,
+//    });
 
 }
 function generateChartsB(data) {
