@@ -266,7 +266,32 @@ function initializeDataTable(tableID) {
                     }
                   }
                 );
+                    $.ajax({
+                      url: "/date_range",
+                      type: "GET",
+                      dataType: "json",
+                      success: function (data) {
+                        console.log("fetching and applying dates");
+                        // Set the fetched dates as default values for date inputs
 
+                        var startDate = new Date(data.startDate)
+                          .toISOString()
+                          .split("T")[0];
+                        var endDate = new Date(data.endDate)
+                          .toISOString()
+                          .split("T")[0];
+
+                        $("#start-date"+tableID).val(startDate);
+                        $("#start-date"+tableID).prop("min", startDate);
+                        $("#start-date"+tableID).prop("max", endDate);
+                        $("#end-date"+tableID).val(endDate);
+                        $("#end-date"+tableID).prop("min", startDate);
+                        $("#end-date"+tableID).prop("max", endDate);
+                      },
+                      error: function (error) {
+                        console.error("Error fetching dates:", error);
+                      },
+                    });
                 function getDisabledRowIds() {
                   var disabledRowIds = [];
 
@@ -315,47 +340,32 @@ function initializeDataTable(tableID) {
                     var ftolValue = ftol.value;
                     var ssizeValue = ssize.value;
                     var disabledRowIds = getDisabledRowIds();
+                    var tabName = fetchTabName(1);
 
                     var dataToSend = {
                       objectiveValue: objValue,
                       exhaustValue: exhValue,
                       maxValue: maxValue,
                       blendValue: blendValue,
-                      tableID: 1,
+                      tableID: tableID,
                       ftolValue: ftolValue,
                       ssizeValue: ssizeValue,
                       disabledRows: disabledRowIds,
+                      tabName: tabName
                     };
-                    var dateButtonIsChecked = $("#date-filter-button"+tableID).prop(
-                      "checked"
-                    );
-                    var startDate = $("#start-date"+tableID).datepicker("getDate");
-                    var endDate = $("#end-date"+tableID).datepicker("getDate");
-                    var dateTuple = [startDate, endDate];
-                    if (!dateButtonIsChecked) {
-                      dataToSend[dates] = dateTuple;
-                    }
+                        var dateButtonIsChecked = $(
+                          "#date-filter-button"+tableID
+                        ).prop("checked");
+                        var startDate = $("#start-date"+tableID).val();
+                        var endDate = $("#end-date"+tableID).val();
+                        var dateTuple = [startDate, endDate];
+                        if (!dateButtonIsChecked) {
+                          dataToSend["dates"] = dateTuple;
+                        }
                     console.log(dataToSend);
 
                     // Use jQuery AJAX to send the data to the Flask endpoint
-                    $.ajax({
-                      type: "POST", // Use POST method
-                      url: "/optimise", // Replace with your actual Flask endpoint URL
-                      contentType: "application/json",
-                      data: JSON.stringify(dataToSend), // Convert data to JSON format
-                      success: function (response) {
-                        // Handle the response from the Flask endpoint here
-                        console.log(response);
-                        optResults = response;
-                        // alert(JSON.stringify(response))
-                        
-                      },
-                      error: function (error) {
-                        // Handle any errors that occur during the AJAX request
-                        console.error("AJAX request error:", error);
-                        hideLoadingOverlay(tableID);
-                      },
-                    });
+                    tabSocket.emit("optimise", {dataToSend: dataToSend});
                   });
               
 
@@ -366,6 +376,12 @@ function initializeDataTable(tableID) {
    });
   
 
+}
+
+function fetchTabName(setID) {
+  var buttonText = document.getElementById("button-text" + setID);
+  var tabName = buttonText.innerText;
+  return tabName;
 }
 
 // function initializeButtons(setID) {

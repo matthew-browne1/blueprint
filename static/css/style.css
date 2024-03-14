@@ -7,17 +7,9 @@
   justify-content: center;
   height: 100vh;
   background: #ffffff;
+  gap:50px;
 }
-/* style the header */
-.header {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  margin-bottom: 2rem;
 
-  }
 /* Logo Position */
   img {
       position: absolute;
@@ -183,6 +175,24 @@ body.showLoginForm .modal-content{
   background-color: #393EE3; 
 }
 
-/* .current-user-welcome-text {
-  
-} */
+.current-user-welcome-text {
+  padding-top: 50px;
+}
+
+.welcome-bp-logo {
+  /* padding-top: 200px; */
+  width: 500px;
+}
+
+.logo-cont {
+  display: grid;
+  grid-template-columns: auto auto; /* Two columns, each taking auto width */
+  justify-content: center; /* Center the grid horizontally */
+  align-items: center; /* Center the grid vertically */
+}
+
+.logo-cont img {
+  width: auto; /* Adjust width as needed */
+  height: auto; /* Adjust height as needed */
+  margin-right: 10px; /* Adjust spacing between images */
+}

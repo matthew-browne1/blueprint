@@ -7,11 +7,14 @@
     <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
+
 <div class="container">
-    <div class="header">
-        <img src="/static/images/RA Logo 1.png" alt="Retail Alchemy Logo">
-        <h1 class="app-name">Blueprint</h1>
+    <div class="logo-cont">
+        <!-- <img src="/static/images/RA Logo 1.png" alt="Retail Alchemy Logo"> -->
+        <img src="/static/images/blueprint logo.png" alt="Blueprint Logo" class="welcome-bp-logo">
     </div>
+
+    
 
     {% if current_user.is_authenticated %}
         <p class="current-user-welcome-text">Currently logged-in user: {{ current_user.user_info[0].full_name }}</p>

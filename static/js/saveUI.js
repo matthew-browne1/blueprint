@@ -154,7 +154,7 @@ function initializeInitialTable() {
     ],
     rowId: "row_id",
   });
-  attachButtonListenersToDataTable();
+  //attachButtonListenersToDataTable();
   var channelEditor = new $.fn.dataTable.Editor({
     ajax: {
       type: "POST",
@@ -251,7 +251,7 @@ function loadFunc() {
                 initializeInitialButton();
                 initializeInitialTable();
                 dropdownButtons(1);
-                initializeButtons(1);
+                //initializeButtons(1);
                 newTabButtonInit();
                 console.log("attempting to reinitialize load and save table");
                
@@ -264,7 +264,7 @@ function loadFunc() {
                   // attachButtonListenersToDataTable(id);
                   // redrawAllSparklines(id);
                   initializeCollapsibleButtons(id);
-                  initializeButtons(id);
+                  //initializeButtons(id);
                   closeButtonTab(id);
                 });
               }

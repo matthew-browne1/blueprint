@@ -2,6 +2,7 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 from numba import jit
+import time
 
 class Optimise:
     @jit
@@ -76,7 +77,7 @@ class Optimise:
 
 
     def profit_objective(budgets, *args):
-        streams, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict, recorded_impressions, seas_dict, num_weeks, return_type, objective_type = args
+        streams, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict, recorded_impressions, seas_dict, num_weeks, max_budget, exh_budget, return_type, objective_type = args
         total_rev = sum(
             Optimise.total_rev_per_stream(stream, budgets[i], ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,
                                 LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict,
@@ -125,24 +126,56 @@ class Optimise:
         else:
             return max_budget - sum(budgets)
 
+    def output_rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dict, beta_dict, recorded_impressions,
+                          seas_dict, num_weeks):
+        cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
+        allocation = budget / cost_per_stream
 
-    def blended_profit_max_scipy(ST_input, LT_input, laydown, seas_index, return_type, objective_type, max_budget, exh_budget, method, ftol=0.1, ssize=0.1, num_weeks=1000):
+        pct_laydown = np.array(recorded_impressions[stream]) / sum(recorded_impressions[stream]) if sum(
+            recorded_impressions[stream]) != 0 else 0
+        # print(sum(pct_laydown))
 
+        pam = pct_laydown * allocation
+        # print(sum(pam))
+        # carryover_list = np.zeros_like(pam)
+        # carryover_list[0] = pam[0]
+        # print(stream)
+        carryover_list = Optimise.adstock(pam, carryover_dict[stream])
+        # print(sum(carryover_list))
+        # for i in range(1, len(pam)):
+        #     carryover_val = pam[i] + carryover_list[i - 1] * carryover_dict[stream]
+        #     carryover_list[i] = carryover_val
+        # print(sum(carryover_list))
+        # print("carryover_list:", carryover_list)
+
+        rev_list = Optimise.dim_returns(alpha_dict[stream], beta_dict[stream], carryover_list)
+        # rev_list = beta_dict[stream] * ((1 - np.exp(-alpha_dict[stream] * carryover_list)))
+
+        # print(stream)
+        # print(sum(rev_list))
+        # print("beta dict:", beta_dict[stream])
+
+        indexed_vals = rev_list * seas_dict[stream]
+        # total_rev = np.sum(indexed_vals)
+        # print(total_rev)
+
+        # infsum = np.sum(carryover_list[-1] * carryover_dict[stream] ** np.arange(1, num_weeks))
+        #
+        # total_rev += infsum
+        return indexed_vals
+    def blended_profit_max_scipy(ST_input, LT_input, laydown, seas_index, return_type, objective_type, max_budget,
+                             exh_budget, method, scenario_name, step, tolerance,
+                             num_weeks=1000):
         streams = [entry['Opt Channel'] for entry in ST_input]
 
-        recorded_impressions = {}
-        for x in laydown.columns:
-            recorded_impressions[x] = laydown[x].to_list()
-
-        seas_dict = {}
-        for x in seas_index.columns:
-            seas_dict[x] = seas_index[x].to_list()
-
-        max_spend_cap_list = [float(entry['Max Spend Cap']) for entry in ST_input]
-        max_spend_cap_dict = dict(zip(streams, max_spend_cap_list))
+        current_budget_list = [entry['Current Budget'] for entry in ST_input]
+        current_budget_dict = dict(zip(streams, current_budget_list))
 
         min_spend_cap_list = [float(entry['Min Spend Cap']) for entry in ST_input]
         min_spend_cap_dict = dict(zip(streams, min_spend_cap_list))
+
+        max_spend_cap_list = [float(entry['Max Spend Cap']) for entry in ST_input]
+        max_spend_cap_dict = dict(zip(streams, max_spend_cap_list))
 
         ST_cost_per_list = [float(entry['CPU']) if 'CPU' in entry else 0.0 for entry in ST_input]
         ST_cost_per_dict = dict(zip(streams, ST_cost_per_list))
@@ -159,40 +192,128 @@ class Optimise:
         LT_alpha_list = [float(entry['LT Alpha']) if 'LT Alpha' in entry else 0.0 for entry in LT_input]
         LT_alpha_dict = dict(zip(streams, LT_alpha_list))
 
-        ST_beta_list = [float(entry['ST Beta']) if 'ST Beta' in entry and not pd.isna(entry['ST Beta']) and entry['ST Beta'] != np.inf else 0.0 for entry in ST_input]
+        ST_beta_list = [float(entry['ST Beta']) if 'ST Beta' in entry and not pd.isna(entry['ST Beta']) and entry[
+            'ST Beta'] != np.inf else 0.0 for entry in ST_input]
         ST_beta_dict = dict(zip(streams, ST_beta_list))
 
-        LT_beta_list = [float(entry['LT Beta']) if 'LT Beta' in entry and not pd.isna(entry['LT Beta']) and entry['LT Beta'] != np.inf else 0.0 for entry in LT_input]
+        LT_beta_list = [float(entry['LT Beta']) if 'LT Beta' in entry and not pd.isna(entry['LT Beta']) and entry[
+            'LT Beta'] != np.inf else 0.0 for entry in LT_input]
         LT_beta_dict = dict(zip(streams, LT_beta_list))
 
-        print(min_spend_cap_dict)
+        recorded_impressions = {}
+        for x in laydown.columns:
+            recorded_impressions[x] = laydown[x].to_list()
+
+        seas_dict = {}
+        for x in seas_index.columns:
+            seas_dict[x] = seas_index[x].to_list()
 
         args = (streams, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,
                 LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict,
-                recorded_impressions, seas_dict, num_weeks, return_type, objective_type)
+                recorded_impressions, seas_dict, num_weeks, max_budget, exh_budget, return_type, objective_type)
 
         initial_budgets = [min(max_spend_cap_dict[stream], max_budget / len(streams)) for stream in streams]
 
         bounds = [(min_spend_cap_dict[stream], max_spend_cap_dict[stream]) for stream in streams]
 
         constraints = []
-        if exh_budget == 'yes':
+        if exh_budget:
             constraints.append({'type': 'eq', 'fun': lambda budgets: max_budget - sum(budgets)})
         else:
-            constraints.append({'type': 'ineq', 'fun': lambda budgets:  sum(budgets) - max_budget})
-        # print(constraints)
+            constraints.append({'type': 'ineq', 'fun': lambda budgets: sum(budgets) - max_budget})
+        print(constraints)
 
-        # def optimization_callback(xk):
-        #     # Add any relevant information you want to print or check at each iteration
-        #     print("Current solution:", xk)
+        def optimization_callback(xk):
+            # Add any relevant information you want to print or check at each iteration
+            print("Current solution:", xk)
 
-        result = minimize(Optimise.profit_objective, initial_budgets, args=args, bounds=bounds, constraints=constraints, method=method, options={'disp': True, 'maxiter': 10000, 'ftol': ftol, 'eps':ssize})
-
+        start_time = time.time()
+        result = minimize(Optimise.profit_objective, initial_budgets, args=args, bounds=bounds, constraints=constraints,
+                        method=method,
+                        # callback=optimization_callback,
+                        options={'disp': True, 'maxiter': 10000, 'eps': step, 'ftol': tolerance})
+        end_time = time.time()
+        elapsed_time_seconds = end_time - start_time
         # result = minimize(profit_objective_with_penalty, initial_budgets, args=args, bounds=bounds, method='Powell')#, method=method)
 
         # result = differential_evolution(profit_objective_with_penalty, bounds, args=args, disp=True)
 
         opt_budgets_dict = dict(zip(streams, result.x))
+
+        opt_revenues_ST = {'Date': list(laydown.index)}
+        opt_revenues_LT = {'Date': list(laydown.index)}
+        opt_laydown = {'Date': list(laydown.index)}
+        curr_revenue_ST = {'Date': list(laydown.index)}
+        curr_revenue_LT = {'Date': list(laydown.index)}
+        curr_laydown = {'Date': list(laydown.index)}
+        for stream in streams:
+            opt_revenues_ST[stream] = Optimise.output_rev_per_stream(stream, opt_budgets_dict[stream],
+                                                                                ST_cost_per_dict,
+                                                                                ST_carryover_dict, ST_alpha_dict,
+                                                                                ST_beta_dict,
+                                                                                recorded_impressions, seas_dict,
+                                                                                num_weeks=1000)
+            opt_revenues_LT[stream] = Optimise.output_rev_per_stream(stream, opt_budgets_dict[stream],
+                                                                    LT_cost_per_dict,
+                                                                    LT_carryover_dict, LT_alpha_dict,
+                                                                    LT_beta_dict,
+                                                                    recorded_impressions, seas_dict,
+                                                                    num_weeks=1000)
+            curr_revenue_ST[stream] = Optimise.output_rev_per_stream(stream, current_budget_dict[stream],
+                                                                                ST_cost_per_dict,
+                                                                                ST_carryover_dict, ST_alpha_dict,
+                                                                                ST_beta_dict,
+                                                                                recorded_impressions, seas_dict,
+                                                                                num_weeks=1000)
+            curr_revenue_LT[stream] = Optimise.output_rev_per_stream(stream, current_budget_dict[stream],
+                                                                    LT_cost_per_dict,
+                                                                    LT_carryover_dict, LT_alpha_dict,
+                                                                    LT_beta_dict,
+                                                                    recorded_impressions, seas_dict,
+                                                                    num_weeks=1000)
+        opt_revenues_ST_df = pd.DataFrame.from_dict(opt_revenues_ST).set_index('Date').stack().reset_index()
+        opt_revenues_ST_df.columns = ['Date', 'Opt Channel', 'Value']
+        opt_revenues_ST_df['Scenario'] = scenario_name
+        opt_revenues_ST_df['Budget/Revenue'] = 'ST Revenue'
+        opt_revenues_LT_df = pd.DataFrame.from_dict(opt_revenues_LT).set_index('Date').stack().reset_index()
+        opt_revenues_LT_df.columns = ['Date', 'Opt Channel', 'Value']
+        opt_revenues_LT_df['Scenario'] = scenario_name
+        opt_revenues_LT_df['Budget/Revenue'] = 'LT Revenue'
+
+        #################################################
+        opt_laydown = laydown / laydown.sum()
+        for stream in streams:
+            opt_laydown[stream] = opt_laydown[stream] * opt_budgets_dict[stream]
+        opt_laydown = opt_laydown.stack().reset_index()
+        opt_laydown.columns = ['Date', 'Opt Channel', 'Value']
+        opt_laydown['Scenario'] = scenario_name
+        opt_laydown['Budget/Revenue'] = 'Budget'
+        #################################################
+
+        curr_revenue_ST_df = pd.DataFrame.from_dict(curr_revenue_ST).set_index('Date').stack().reset_index()
+        curr_revenue_ST_df.columns = ['Date', 'Opt Channel', 'Value']
+        curr_revenue_ST_df['Scenario'] = scenario_name + ' (Unoptimised)'
+        curr_revenue_ST_df['Budget/Revenue'] = 'ST Revenue'
+        curr_revenue_LT_df = pd.DataFrame.from_dict(curr_revenue_LT).set_index('Date').stack().reset_index()
+        curr_revenue_LT_df.columns = ['Date', 'Opt Channel', 'Value']
+        curr_revenue_LT_df['Scenario'] = scenario_name + ' (Unoptimised)'
+        curr_revenue_LT_df['Budget/Revenue'] = 'LT Revenue'
+        
+        #################################################
+        curr_laydown = laydown / laydown.sum()
+        for stream in streams:
+            curr_laydown[stream] = curr_laydown[stream] * current_budget_dict[stream]
+        curr_laydown = curr_laydown.stack().reset_index()
+        curr_laydown.columns = ['Date', 'Opt Channel', 'Value']
+        curr_laydown['Scenario'] = scenario_name + ' (Unoptimised)'
+        curr_laydown['Budget/Revenue'] = 'Budget'
+        #################################################
+
+        output_df = pd.concat(
+            [curr_laydown, curr_revenue_ST_df, curr_revenue_LT_df, opt_laydown, opt_revenues_ST_df, opt_revenues_LT_df])
+        output_df = pd.merge(output_df,
+                            pd.DataFrame.from_dict(ST_input)[['Opt Channel', 'Region', 'Brand', 'Channel Group', 'Channel']].drop_duplicates(),
+                            on='Opt Channel')
 
         if result.success:
             print("Optimal Solution Found:")
@@ -201,10 +322,9 @@ class Optimise:
             print(f"Maximized Profit: {-result.fun}")
         else:
             print("Solver did not find an optimal solution.")
-            print(f"Solution failed using budget input of: {max_budget} with max total spend cap of: {sum(max_spend_cap_list)}")
+            print(f"Solution failed using budget input of: {max_budget} with max total spend cap of: {sum(spend_cap_list)}")
 
-        return opt_budgets_dict
-
+        return opt_budgets_dict, elapsed_time_seconds, output_df
 
 # %% --------------------------------------------------------------------------
 #
