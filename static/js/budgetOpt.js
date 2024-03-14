@@ -238,7 +238,8 @@ document.addEventListener("DOMContentLoaded", function () {
     var ftolValue = ftol.value;
     var ssizeValue = ssize.value;
     var disabledRowIds = getDisabledRowIds();
-
+    var tabName = fetchTabName(1);
+    console.log("tabName:"+tabName);
     var dataToSend = {
       objectiveValue: objValue,
       exhaustValue: exhValue,
@@ -247,14 +248,16 @@ document.addEventListener("DOMContentLoaded", function () {
       tableID: 1,
       ftolValue: ftolValue,
       ssizeValue: ssizeValue,
-      disabledRows: disabledRowIds
+      disabledRows: disabledRowIds,
+      tabName: tabName
     };
+    
     var dateButtonIsChecked = $("#date-filter-button1").prop("checked");
-    var startDate = $("#start-date1").datepicker("getDate");
-    var endDate = $("#end-date1").datepicker("getDate");
+    var startDate = $("#start-date1").val();
+    var endDate = $("#end-date1").val();
     var dateTuple = [startDate, endDate];
     if (!dateButtonIsChecked) {
-      dataToSend[dates] = dateTuple;
+      dataToSend["dates"] = dateTuple;
     }
     console.log(dataToSend);
     socket.emit('optimise', { dataToSend : dataToSend });
@@ -382,13 +385,18 @@ $(document).ready(function() {
         type: 'GET',
         dataType: 'json',
         success: function(data) {
+            console.log("fetching and applying dates");
             // Set the fetched dates as default values for date inputs
-            $('#start-date1').val(data.startDate);
-            $('#start-date1').prop('min', data.startDate);
-            $("#start-date1").prop("max", data.endDate);
-            $('#end-date1').val(data.endDate);
-            $("#end-date1").prop("min", data.startDate);
-            $("#end-date1").prop("max", data.endDate);
+
+            var startDate = new Date(data.startDate).toISOString().split("T")[0];
+            var endDate = new Date(data.endDate).toISOString().split("T")[0];
+
+            $('#start-date1').val(startDate);
+            $('#start-date1').prop('min', startDate);
+            $("#start-date1").prop("max", endDate);
+            $('#end-date1').val(endDate);
+            $("#end-date1").prop("min", startDate);
+            $("#end-date1").prop("max", endDate);
         },
         error: function(error) {
             console.error('Error fetching dates:', error);
@@ -448,10 +456,8 @@ function sendToggleStatesToBackend() {
 
 function openNewTab() {
   console.log("opening new tab");
-  var tabExists = false;
   window.open("/blueprint_results", "_blank");
   }
-
   
   $("#results-div").on("click", "#results-button", function () {
     console.log(tabNames);
@@ -471,14 +477,6 @@ function openNewTab() {
     });
   });
 
-  $(function () {
-    $("#start-date1").datepicker();
-  });
-
-  $(function () {
-    $("#end-date1").datepicker();
-  });
-
 $("#date-filter-button1").on("click", function () {
   var isChecked = $(this).prop("checked");
   var dateContainers = $(".date-inputs");
@@ -491,6 +489,12 @@ $("#date-filter-button1").on("click", function () {
     dateContainers.removeClass("greyed-out");
   }
 });
+
+function fetchTabName(setID) {
+  var buttonText = document.getElementById("button-text"+setID);
+  var tabName = buttonText.innerText;
+  return tabName
+}
 
 function optAll() {
   $.ajax({
@@ -517,7 +521,10 @@ function optAll() {
             var ftolValue = ftol.value;
             var ssizeValue = ssize.value;
             var disabledRowIds = getDisabledRowIds(setID);
+            var tabName = fetchTabName(setID);
 
+            console.log("tab name is:");
+            console.log(tabName);
             var dataToSend = {
               objectiveValue: objValue,
               exhaustValue: exhValue,
@@ -527,6 +534,7 @@ function optAll() {
               ftolValue: ftolValue,
               ssizeValue: ssizeValue,
               disabledRows: disabledRowIds,
+              tabName: tabName
             };
 
             // Use jQuery AJAX to send the data to the Flask endpoint

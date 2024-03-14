@@ -1,6 +1,17 @@
 //// Fetch data from the Flask API using jQuery
+const budget_scenario_chart = null;
+const revenue_scenario_chart = null;
+const roi_scenario_char = null;
+const budget_channel_chart = null;
+const revenue_channel_chart = null;
+const roi_channel_chart = null;
+const laydown_scenario_chart = null;
+const laydown_channel_chart = null;
+
+var chartsGenerated = false;
 
 var chartsSocket = io.connect(window.location.origin);
+
 
 chartsSocket.on("connect", function () {
   console.log("connected to server");
@@ -13,6 +24,8 @@ chartsSocket.on('chart_data', function(data) {
   console.log("fetched chart data from back end");
   //console.log(chartData);
   generateCharts(chartData);
+  var button = document.getElementById("chartReload");
+  button.addEventListener("click", destroyCharts(chartData));
 });
 
 function generateCharts(data) {
@@ -879,10 +892,11 @@ function handleDropdownChange() {
 // Process data for laydown scenario charts
 const processedDataLaydown = data.reduce((acc, entry) => {
     const key = entry.Scenario;
+    const monthYear = entry.MonthYear;
     //const timePeriodParts = entry.Date.split('/');
     //const timePeriod = new Date(`${timePeriodParts[1]}/${timePeriodParts[0]}/${timePeriodParts[2]}`);
-    const entryDate = new Date(entry.Date);
-    const monthYear = entryDate.toLocaleString('default', { month: 'short', year: 'numeric' });
+    // const entryDate = new Date(entry.Date);
+    // const monthYear = entryDate.toLocaleString('default', { month: 'short', year: 'numeric' });
 
     if (!acc[key]) {
         acc[key] = {};
@@ -1007,136 +1021,137 @@ laydown_scenario_labels.forEach(scenario => {
       options: laydown_scenario_chartOptions,
     });
 
-// 8. Laydown by Channel Chart
-// Process data for laydown channel charts
-const selectedScenario = "Current"; // Initial scenario selection
+// // 8. Laydown by Channel Chart
+// // Process data for laydown channel charts
+// const selectedScenario = "Current"; 
 
-const processedDataChannel = data.reduce((acc, entry) => {
-  const key = entry.Scenario;
+// const processedDataChannel = data.reduce((acc, entry) => {
+//   const key = entry.Scenario;
 
-  const entryDate = new Date(entry.Date);
-  const monthYear = entryDate.toLocaleString('default', { month: 'short', year: 'numeric' });
+//   const monthYear = entry.MonthYear;
 
-  if (key === selectedScenario) {
-    const channel = entry['Channel Group'];
-    if (!acc[monthYear]) {
-      acc[monthYear] = {};
-    }
-    if (!acc[monthYear][channel]) {
-      acc[monthYear][channel] = 0;
-    }
-    if (entry["Budget/Revenue"] === "Budget") {
-      acc[monthYear][channel] += entry.Value;
-    }
-  }
-  return acc;
-}, {});
+//   if (key === selectedScenario) {
+//     const channel = entry['Channel Group'];
+//     if (!acc[monthYear]) {
+//       acc[monthYear] = {};
+//     }
+//     if (!acc[monthYear][channel]) {
+//       acc[monthYear][channel] = 0;
+//     }
+//     if (entry["Budget/Revenue"] === "Budget") {
+//       acc[monthYear][channel] += entry.Value;
+//     }
+//   }
+//   return acc;
+// }, {});
 
-// Extract labels and datasets for laydown charts
-const laydown_channel_labels = Object.keys(processedDataChannel);
-const laydown_channel_data = Object.keys(processedDataChannel[laydown_channel_labels[0]]);
+// // Extract labels and datasets for laydown charts
+// const laydown_channel_labels = Object.keys(processedDataChannel);
+// const laydown_channel_data = Object.keys(processedDataChannel[laydown_channel_labels[0]]);
 
-// 8a. data block
-const laydown_channel_chartData = {
-  labels: laydown_channel_labels,
-  datasets: laydown_channel_data.map(channel => ({
-    label: channel,
-    data: laydown_channel_labels.map(monthYear => processedDataChannel[monthYear][channel] || 0),
-    backgroundColor: '#' + Math.random().toString(16).substr(-6), // Random background color for each channel
-    borderWidth: 1,
-  })),
-};
+// // 8a. data block
+// const laydown_channel_chartData = {
+//   labels: laydown_channel_labels,
+//   datasets: laydown_channel_data.map(channel => ({
+//     label: channel,
+//     data: laydown_channel_labels.map(monthYear => processedDataChannel[monthYear][channel] || 0),
+//     backgroundColor: '#' + Math.random().toString(16).substr(-6), // Random background color for each channel
+//     borderWidth: 1,
+//   })),
+// };
 
-// 8b. config block
- const laydown_channel_chartOptions = {
-  scales: {
-   x: {
-      stacked: true,
-      title: {
-        display: true,
-        text: 'Month/Year',
-        font: {
-          family: 'arial',
-          weight: 'bold',
-          size: '16',
-        },
-      },
-      ticks: {
-        font: {
-          family: 'Arial',
-          size: '12',
-          weight: 'bold',
-        },
-      },
-      grid: {
-        display: false,
-      },
-      autoSkip: false,
-    },
-    y: {
-    stacked: true,
-          title: {
-        display: true,
-        text: 'Budget',
-        font: {
-          family: 'arial',
-          weight: 'bold',
-          size: '16',
-        },
-      },
-    ticks: {
-        font: {
-          family: 'Arial',
-          size: '12',
-          weight: 'bold',
-        },
-     callback: function(value, index, values) {
-          if (value < 1000000) {
-            return '£' + (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
-          } else {
-            return '£' + (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
-          }
-        }
-      },
-     },
-  },
-  responsive: false,
-  maintainAspectRatio: false,
-  layout: {
-        padding: {
-            top: 25,
-        }
-    },
-  plugins: {
-    legend: {
-      position: 'top',
-      display: true,
-      labels: {
-        font: {
-          family: 'Arial',
-          size: 12,
-          weight: 'bold'
-        }
-      }
-    },
-  tooltip: {
-    callbacks:{
-        title: (context) => {
-        return context[0].label.replaceAll(',', ' ')}
-    }
-  },
-  },
-};
-// 8c. render block
-    const laydown_channel_chart = new Chart(document.getElementById("laydown_channel_chart"),
-     {
-      type: "bar",
-      data: laydown_channel_chartData,
-      options: laydown_channel_chartOptions,
-    });
+// // 8b. config block
+//  const laydown_channel_chartOptions = {
+//   scales: {
+//    x: {
+//       stacked: true,
+//       title: {
+//         display: true,
+//         text: 'Month/Year',
+//         font: {
+//           family: 'arial',
+//           weight: 'bold',
+//           size: '16',
+//         },
+//       },
+//       ticks: {
+//         font: {
+//           family: 'Arial',
+//           size: '12',
+//           weight: 'bold',
+//         },
+//       },
+//       grid: {
+//         display: false,
+//       },
+//       autoSkip: false,
+//     },
+//     y: {
+//     stacked: true,
+//           title: {
+//         display: true,
+//         text: 'Budget',
+//         font: {
+//           family: 'arial',
+//           weight: 'bold',
+//           size: '16',
+//         },
+//       },
+//     ticks: {
+//         font: {
+//           family: 'Arial',
+//           size: '12',
+//           weight: 'bold',
+//         },
+//      callback: function(value, index, values) {
+//           if (value < 1000000) {
+//             return '£' + (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
+//           } else {
+//             return '£' + (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
+//           }
+//         }
+//       },
+//      },
+//   },
+//   responsive: false,
+//   maintainAspectRatio: false,
+//   layout: {
+//         padding: {
+//             top: 25,
+//         }
+//     },
+//   plugins: {
+//     legend: {
+//       position: 'top',
+//       display: true,
+//       labels: {
+//         font: {
+//           family: 'Arial',
+//           size: 12,
+//           weight: 'bold'
+//         }
+//       }
+//     },
+//   tooltip: {
+//     callbacks:{
+//         title: (context) => {
+//         return context[0].label.replaceAll(',', ' ')}
+//     }
+//   },
+//   },
+// };
+// // 8c. render block
+//     const laydown_channel_chart = new Chart(document.getElementById("laydown_channel_chart"),
+//      {
+//       type: "bar",
+//       data: laydown_channel_chartData,
+//       options: laydown_channel_chartOptions,
+//     });
 
-  }
+//   }
   
+chartsGenerated = true;
+
 // //Response curve chart
 // $.ajax({
 //   url: "/chart_response",
@@ -1359,3 +1374,16 @@ const laydown_channel_chartData = {
 //   }
 // });
 
+  }
+function destroyCharts(data) {
+  // budget_scenario_chart.destroy();
+  // revenue_scenario_chart.destroy();
+  // roi_scenario_char.destroy();
+  // budget_channel_chart.destroy();
+  // revenue_channel_chart.destroy();
+  // roi_channel_chart.destroy();
+  // laydown_scenario_chart.destroy()
+  // laydown_channel_chart.destroy()
+  // chartsGenerated=false;
+  generateCharts(data);
+}
