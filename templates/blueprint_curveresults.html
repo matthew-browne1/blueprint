@@ -1,0 +1,112 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blueprint Results</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <link rel="stylesheet" href="/static/css/blueprint_results.css">
+</head>
+<body>
+<div class="title-container">
+    <h1>Blueprint Results</h1>
+    <img src="/static/images/blueprint logo.png" alt="Logo" class="logo">
+</div>
+<div class="wrapper">
+    <div class="sidepanel">
+        <span>Filters</span>
+        <h6>Filters will be applied to all charts</h6>
+        <div class="line"></div>
+
+        <div class="filter-container">
+            <h2 class="filter-title">Region</h2>
+            <select id="regionFilter">
+                <option>Select Region</option>
+                <!-- Add options as needed -->
+            </select>
+        </div>
+        <div class="filter-container">
+            <h2 class="filter-title">Brand</h2>
+            <select id="brandFilter">
+                <option>Select Scenario</option>
+                <!-- Add options as needed -->
+            </select>
+        </div>
+        <div class="filter-container">
+            <h2 class="filter-title">Channel Group</h2>
+            <h6>Filters will only be applied to Response Curves</h6>
+            <select id="channelgroupFilter" multiple>
+                <option>Select Channel Group</option>
+                <!-- Add options as needed -->
+            </select>
+        </div>
+<!--        <div class="filter-container">-->
+<!--            <h2 class="filter-title">Channel</h2>-->
+<!--            <h6>Filters will only be applied to Response Curves</h6>-->
+<!--            <select id="channelFilter">-->
+<!--                <option>Select Channel</option>-->
+<!--                &lt;!&ndash; Add options as needed &ndash;&gt;-->
+<!--            </select>-->
+<!--        </div>-->
+        <div class="filter-container">
+            <h2 class="filter-title">Optimisation Type</h2>
+            <h6>Filters will only be applied to Response Curves</h6>
+            <select id="optimisationFilter">
+                <option>Select Optimisation Type</option>
+                <!-- Add options as needed -->
+            </select>
+        </div>
+        <div class="filter-container" style="border: none;">
+            <button class="button2">Apply Filters</button>
+            <button class="button2">Clear Filters</button>
+        </div>
+        <div class="circle">
+            <i class="fa fa-chevron-left" aria-hidden="true"></i>
+            <i class="fa fa-chevron-right hide" aria-hidden="true"></i>
+        </div>
+    </div>
+    <div class="nav-container">
+        <a href="/blueprint_results#scenario" class="active">Scenario Charts</a>
+        <a href="/blueprint_results#channel">Channel Charts</a>
+        <a href="/blueprint_results#laydown">Laydown Charts</a>
+        <a href="/blueprint_results">Curve Charts</a>
+    </div>
+    <div class="chart-container">
+        <section id="response">
+            Curve Charts
+            <div class="chart-content" id="response_channel_group">
+                Response Curve by Channel Group
+                <canvas id="response_curve_chart" width="1600" height="400"></canvas>
+            </div>
+<!--            <div class="chart-content" id="response_channel">-->
+<!--                Response Curve by Channel-->
+<!--                <canvas id="response_channel_chart" width="1600" height="400"></canvas>-->
+<!--            </div>-->
+            <div class="chart-content" id="response_budget">
+                Budget Response Curve
+                <canvas id="response_budget_chart" width="1600" height="400"></canvas>
+            </div>
+            <div>
+                <div class="chart-content" id="budget_curve">
+                    Budget Curve
+                    <canvas id="budget_curve_chart" width="1600" height="400"></canvas>
+                </div>
+                <div class="chart-content" id="roi_curve">
+                    ROI Curve
+                    <canvas id="roi_curve_chart" width="1600" height="400"></canvas>
+                </div>
+            </div>
+        </section>
+    </div>
+
+</div>
+</body>
+
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"
+        integrity="sha384-Gr6Lu2Ajx28mzwyVR8CFkULdCU7kMlZ9UthllibdOSo6qAiN+yXNHqtgdTvFXMT4"
+        crossorigin="anonymous"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
+<script type="module" src="../static/js/blueprintBase.js"></script>
+<script type="module" src="../static/js/blueprintCurveCharts.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>

@@ -1,4 +1,3 @@
-
 # %% --------------------------------------------------------------------------
 #
 # -----------------------------------------------------------------------------
@@ -42,16 +41,16 @@ from multiprocessing import Manager, freeze_support
 app = Flask(__name__)
 socketio = SocketIO(app)
 
-#executor = ProcessPoolExecutor()
+# executor = ProcessPoolExecutor()
 
 ### TODO: WRITE A CLASS WHICH FETCHES CORRECT DB DETAILS
 
 azure_host = "blueprintalpha.postgres.database.azure.com"
 azure_user = "bptestadmin"
 azure_password = "Password!"
-azure_database = "postgres" 
+azure_database = "postgres"
 
-ra_server_uri = 'postgresql://postgres:'+urllib.parse.quote_plus("Gde3400@@")+'@192.168.1.2:5432/CPW Blueprint'
+ra_server_uri = 'postgresql://postgres:' + urllib.parse.quote_plus("Gde3400@@") + '@192.168.1.2:5432/CPW Blueprint'
 
 # Create the new PostgreSQL URI for Azure
 
@@ -70,11 +69,13 @@ bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
     user_info = db.relationship('UserInfo', backref='user', lazy=True)
+
 
 class UserInfo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -82,13 +83,15 @@ class UserInfo(db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
+
 class Snapshot(db.Model):
     name = db.Column(db.String, nullable=False)
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String, nullable=False)
-    table_ids = db.Column(db.String, nullable = False)
+    table_ids = db.Column(db.String, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     table_data = db.Column(db.Text, nullable=False)
+
 
 # class DatabaseHandler(logging.Handler):
 #     def emit(self, record):
@@ -109,22 +112,28 @@ class PyomoLogHandler(logging.Handler):
         db.session.add(Log(message=log_message))
         db.session.commit()
 
+
 pyomo_logger = logging.getLogger('pyomo')
 pyomo_logger.addHandler(PyomoLogHandler())
+
 
 class Log(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
     message = db.Column(db.String, nullable=False)
 
+
 @login_manager.user_loader
 def load_user(user_id):
     return User.query.options(joinedload(User.user_info)).get(int(user_id))
 
+
 user_data = [
-    {'username': 'mattbrowne1', 'password': 'password123', 'full_name': 'Matthew Browne', 'email': 'matthew.browne@retailalchemy.co.uk'},
+    {'username': 'mattbrowne1', 'password': 'password123', 'full_name': 'Matthew Browne',
+     'email': 'matthew.browne@retailalchemy.co.uk'},
     {'username': 'testuser', 'password': 'testpassword', 'full_name': 'John Doe', 'email': 'user2@example.com'},
 ]
+
 
 def add_user(user_data):
     existing_user = User.query.filter_by(username=user_data['username']).first()
@@ -144,10 +153,10 @@ def add_user(user_data):
         app.logger.info(f"User '{user_data['username']}' already exists.")
 
 
-@app.route('/get_user_id', methods = ['GET'])
+@app.route('/get_user_id', methods=['GET'])
 def get_user_id():
     user_id = current_user.id
-    return jsonify({'user_id':user_id})
+    return jsonify({'user_id': user_id})
 
 
 @app.route('/save_snapshot', methods=['POST'])
@@ -171,7 +180,8 @@ def save_snapshot():
         existing_snapshot.table_data = table_data_json
     else:
         # Create a new snapshot
-        new_snapshot = Snapshot(name=snapshot_name, content=content, table_ids=table_ids_str, user_id=user_id, table_data=table_data_json)
+        new_snapshot = Snapshot(name=snapshot_name, content=content, table_ids=table_ids_str, user_id=user_id,
+                                table_data=table_data_json)
         db.session.add(new_snapshot)
 
     try:
@@ -181,7 +191,8 @@ def save_snapshot():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
 
-@app.route('/overwrite_save', methods = ['POST'])
+
+@app.route('/overwrite_save', methods=['POST'])
 @login_required
 def overwrite_save():
     snapshot_id = request.json.get('selectedSaveId')
@@ -207,6 +218,7 @@ def overwrite_save():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
 
+
 @app.route('/load_snapshot')
 @login_required
 def load_snapshot():
@@ -216,10 +228,11 @@ def load_snapshot():
     table_data = json.loads(snapshot.table_data)
     content_list = snapshot.content
     table_ids_list = snapshot.table_ids
-    app.logger.info(table_data.keys())    
+    app.logger.info(table_data.keys())
     return jsonify({'content': content_list, 'table_ids': table_ids_list})
 
-@app.route('/get_saves', methods = ['GET'])
+
+@app.route('/get_saves', methods=['GET'])
 @login_required
 def get_saves():
     if not current_user.is_authenticated:
@@ -230,7 +243,7 @@ def get_saves():
 
     for save in user_saves:
         save_info = {
-            'DT_RowId': save.id,  
+            'DT_RowId': save.id,
             'name': save.name,
             'table_ids': save.table_ids
         }
@@ -238,35 +251,37 @@ def get_saves():
 
     return jsonify({'data': saves_data})
 
-@app.route('/toggle_states', methods = ['POST'])
+
+@app.route('/toggle_states', methods=['POST'])
 def toggle_states():
     try:
         data = request.json
-       
+
         return jsonify({"message": "Toggle states saved successfully"})
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
 
-@app.route('/load_selected_row', methods = ['GET', 'POST'])
+@app.route('/load_selected_row', methods=['GET', 'POST'])
 @login_required
 def notify_selected_row():
     if request.method == 'POST':
         save_id = request.json.get('selectedSaveId')
         session['save_id'] = save_id
         return jsonify({'status': 'POST request procecssed successfully'})
-    
+
     elif request.method == 'GET':
         save_id = session.get('save_id')
         session.pop('save_id', None)
-        save = Snapshot.query.filter_by(id=save_id, user_id = current_user.id).first()
+        save = Snapshot.query.filter_by(id=save_id, user_id=current_user.id).first()
         if not save:
-            return jsonify({'error':'Unathorized access'}), 403
+            return jsonify({'error': 'Unathorized access'}), 403
         else:
             content_list = save.content
             table_ids_list = save.table_ids
-            app.logger.info(table_data.keys())    
+            app.logger.info(table_data.keys())
             return jsonify({'content': content_list, 'table_ids': table_ids_list})
+
 
 results = {}
 
@@ -321,39 +336,38 @@ laydown_table_name = "laydown"
 # seas_index = seas_index_fetched
 
 
-
-
 num_weeks = 1000
+
 
 def prep_rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dict, beta_dict):
     cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
-    #print("cpu:")
-    #print(cost_per_stream)
+    # print("cpu:")
+    # print(cost_per_stream)
     allocation = budget / cost_per_stream
-    #print('allocation:')
-    #print(allocation)
+    # print('allocation:')
+    # print(allocation)
     pct_laydown = []
     for x in range(len(recorded_impressions[stream])):
         try:
             pct_laydown.append(recorded_impressions[stream][x] / sum(recorded_impressions[stream]))
         except:
             pct_laydown.append(0)
-    #print("pct_laydown:")
-    #print(pct_laydown)
+    # print("pct_laydown:")
+    # print(pct_laydown)
     pam = [pct_laydown[i] * allocation for i in range(len(pct_laydown))]
     carryover_list = []
     carryover_list.append(pam[0])
     for x in range(1, len(pam)):
         carryover_val = pam[x] + carryover_list[x - 1] * carryover_dict[stream]
         carryover_list.append(carryover_val)
-    #print("carryover list:")
-    #print(carryover_list)
+    # print("carryover list:")
+    # print(carryover_list)
     rev_list = []
     for x in carryover_list:
         rev_val = beta_dict[stream] * (1 - np.exp(-alpha_dict[stream] * x))
         rev_list.append(rev_val)
-    #print("rev list")
-    #print(rev_list)
+    # print("rev list")
+    # print(rev_list)
     indexed_vals = [a * b for a, b in zip(rev_list, seas_dict[stream])]
     total_rev = sum(indexed_vals)
     infsum = 0
@@ -368,6 +382,7 @@ def prep_total_rev_per_stream(stream, budget):
     total_rev = ST_rev + LT_rev
     return total_rev
 
+
 results = {}
 
 ST_header = pd.read_sql_table('All_Channel_Inputs', engine)
@@ -381,7 +396,7 @@ seas_index = pd.read_sql_table('All_Index', engine)
 
 for x in laydown.columns.tolist():
     if x not in ST_header['Opt Channel'].tolist() and x != 'Date':
-        #print(x)
+        # print(x)
         laydown.drop(columns=[x], inplace=True)
 
 streams = []
@@ -389,7 +404,6 @@ for stream in ST_header['Opt Channel']:
     streams.append(str(stream))
 
 laydown_dates = laydown['Date']
-
 
 for stream in streams:
     ST_header.loc[ST_header['Opt Channel'] == stream, 'Current Budget'] = sum(laydown[stream])
@@ -421,7 +435,7 @@ for x in laydown.columns:
 beta_calc_rev_dict_ST = {'Date': list(laydown.Date)}
 for stream in list(streams):
     beta_calc_rev_dict_ST[stream] = prep_rev_per_stream(stream, current_budget_dict[stream], ST_cost_per_dict,
-                                                   ST_carryover_dict, ST_alpha_dict, ST_beta_dict)
+                                                        ST_carryover_dict, ST_alpha_dict, ST_beta_dict)
     sum(beta_calc_rev_dict_ST[stream])
 beta_calc_df = pd.DataFrame(beta_calc_rev_dict_ST)[list(streams)].sum().reset_index()
 beta_calc_df.columns = ['Opt Channel', 'Calc_Rev']
@@ -449,7 +463,7 @@ seas_index = pd.read_sql_table('All_Index', engine)
 
 for x in laydown.columns.tolist():
     if x not in LT_header['Opt Channel'].tolist() and x != 'Date':
-        #print(x)
+        # print(x)
         laydown.drop(columns=[x], inplace=True)
 
 streams = []
@@ -457,7 +471,6 @@ for stream in LT_header['Opt Channel']:
     streams.append(str(stream))
 
 laydown_dates = laydown['Date']
-
 
 for stream in streams:
     LT_header.loc[LT_header['Opt Channel'] == stream, 'Current Budget'] = sum(laydown[stream])
@@ -487,10 +500,10 @@ for x in laydown.columns:
     recorded_impressions[x] = laydown.fillna(0)[x].to_list()
 
 beta_calc_rev_dict_LT = {'Date': list(laydown.Date)}
-#stream = 'ATLTVSuper FoodsBSBakersDog'
+# stream = 'ATLTVSuper FoodsBSBakersDog'
 for stream in list(streams):
     beta_calc_rev_dict_ST[stream] = prep_rev_per_stream(stream, current_budget_dict[stream], LT_cost_per_dict,
-                                                   LT_carryover_dict, LT_alpha_dict, LT_beta_dict)
+                                                        LT_carryover_dict, LT_alpha_dict, LT_beta_dict)
     sum(beta_calc_rev_dict_ST[stream])
 beta_calc_df = pd.DataFrame(beta_calc_rev_dict_ST)[list(streams)].sum().reset_index()
 beta_calc_df.columns = ['Opt Channel', 'Calc_Rev']
@@ -507,23 +520,23 @@ LT_header_dict = LT_header.to_dict("records")
 table_df = ST_header.copy()
 
 dataTable_cols = ['Region', 'Brand', 'Channel', 'Current Budget', 'Min Spend Cap', 'Max Spend Cap',
-                  #'ST Carryover', 'ST Alpha', 'ST Beta', 'LT Carryover', 'LT Alpha', 'LT Beta',
+                  # 'ST Carryover', 'ST Alpha', 'ST Beta', 'LT Carryover', 'LT Alpha', 'LT Beta',
                   'Laydown']
 
 for col in table_df.columns:
     if col not in dataTable_cols:
         table_df.drop(columns=col, inplace=True)
 
-table_df.insert(0, 'row_id', range(1, len(table_df)+1))
+table_df.insert(0, 'row_id', range(1, len(table_df) + 1))
 table_dict = table_df.to_dict("records")
 for var in table_dict:
-    var['Laydown'] = laydown[var['Channel']+"_"+var['Region']+"_"+var['Brand']].tolist()
+    var['Laydown'] = laydown[var['Channel'] + "_" + var['Region'] + "_" + var['Brand']].tolist()
 
 table_data = {"1": deepcopy(table_dict)}
 bud = sum(ST_header['Current Budget'].to_list())
 
 # %% --------------------------------------------------------------------------
-# 
+#
 # -----------------------------------------------------------------------------
 
 inputs_per_result = {}
@@ -542,11 +555,12 @@ def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budge
             results[table_id] = result
             output_df_per_result[table_id] = output_df
             print(f"total results: {results}")
-            socketio.emit('opt_complete', {'data':table_id})
+            socketio.emit('opt_complete', {'data': table_id})
     except Exception as e:
         with app.app_context():
             print(f"Error in task callback: {str(e)}")
-            socketio.emit('opt_complete', {'data':table_id})
+            socketio.emit('opt_complete', {'data': table_id})
+
 
 @socketio.on('optimise')
 def run_optimise(dataDict):
@@ -570,10 +584,11 @@ def run_optimise(dataDict):
     blend = data['blendValue']
     disabled_rows = list(data['disabledRows'])
     print(f"disabled row ids: {disabled_rows}")
-    
+
     current_table_df = pd.DataFrame.from_records(deepcopy(table_data[table_id]))
     removed_rows_df = current_table_df[current_table_df.row_id.isin(disabled_rows)].copy()
-    removed_rows_df['Opt Channel'] = removed_rows_df.apply(lambda row: '_'.join([str(row['Channel']), str(row['Region']), str(row['Brand'])]), axis=1)
+    removed_rows_df['Opt Channel'] = removed_rows_df.apply(
+        lambda row: '_'.join([str(row['Channel']), str(row['Region']), str(row['Brand'])]), axis=1)
 
     disabled_opt_channels = list(removed_rows_df['Opt Channel'])
 
@@ -605,15 +620,17 @@ def run_optimise(dataDict):
         app.logger.info(start_date)
         app.logger.info(end_date)
 
-    print(f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
-    
+    print(
+        f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
+
     # NEED TO ADD HANDLING SO THAT EDITS MADE TO TABLE DATA ARE ADDED TO THE ST_HEADER
 
     print(f"laydown = {laydown_copy}")
     print(f"CPU = {[entry['CPU'] for entry in ST_input]}")
 
-    inputs_dict = {'ST_input':ST_input,'LT_input':LT_input,'laydown':laydown_copy,'seas_index':seas_index_copy}
-    
+    inputs_dict = {'ST_input': ST_input, 'LT_input': LT_input, 'laydown': laydown_copy, 'seas_index': seas_index_copy}
+
+    print(f"inputs per result: {inputs_per_result}")
     inputs_per_result[table_id] = deepcopy(inputs_dict)
     #print(f"inputs per result: {inputs_per_result}")
     min_spend_cap_list = [float(entry['Min Spend Cap']) for entry in ST_input]
@@ -625,7 +642,7 @@ def run_optimise(dataDict):
     return jsonify({'status': 'Task started in the background'})
 
 
-@app.route('/results_output', methods = ['POST'])
+@app.route('/results_output', methods=['POST'])
 def results_output():
     global inputs_per_result
     tab_names = dict(request.json)
@@ -640,7 +657,7 @@ def results_output():
     except:
         app.logger.info("csv db upload failed")
 
-    return jsonify({"message":"csv exported successfully"})
+    return jsonify({"message": "csv exported successfully"})
 
 def create_output(output_df_per_result):
     concat_df = pd.DataFrame()
@@ -649,9 +666,10 @@ def create_output(output_df_per_result):
     
     return concat_df
 
+
 @socketio.on("collect_data")
 def chart_data():
-
+    global chart_data
     try:
         conn = engine.connect()
         query = text('SELECT * FROM "Optimised CSV";')
@@ -663,86 +681,225 @@ def chart_data():
         db_result.close()
         result_df['Date'] = pd.to_datetime(result_df['Date'])
         result_df['MonthYear'] = result_df['Date'].dt.strftime('%Y-%b')
-        result_df = result_df.groupby(['Opt Channel','Scenario','Budget/Revenue','Region','Brand','Channel Group','Channel','MonthYear']).sum(numeric_only=True)
+        result_df = result_df.groupby(
+            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Region', 'Brand', 'Channel Group', 'Channel',
+             'MonthYear']).sum(numeric_only=True)
         result_df.reset_index(inplace=True)
         chart_data = []
         print("worked")
         for index, row in result_df.iterrows():
             a = dict(row)
             chart_data.append(a)
-        socketio.emit('chart_data', {'chartData':chart_data})
+
+        dropdown_options = {}
+        for column in result_df.columns:
+            if column not in ['Opt Channel', 'Value']:
+                if column == 'Budget/Revenue':
+                    dropdown_options[column] = [value for value in result_df[column].unique() if "Budget" not in value]
+                else:
+                    dropdown_options[column] = result_df[column].unique().tolist()
+
+        socketio.emit('dropdown_options', {'options': dropdown_options})
+        print("Dropdown options sent")
+
+        socketio.emit('chart_data', {'chartData': chart_data})
         print("chart_data sent")
-    
+
     except SQLAlchemyError as e:
         print('Error executing query:', str(e))
-       
+
     finally:
         if 'conn' in locals():
             conn.close()
 
-@app.route('/chart_response', methods = ['GET'])
-def chart_response():
+# Initialize an empty filters variable
+filters = []
+
+@socketio.on("apply_filter")
+def handle_apply_filter(filter_data):
     try:
-        fpath = 'C:/Users/matthew.browne/Documents/Blueprint/optimiser output data'
-        csv_data = pd.read_csv(fpath + '/response_curve_data.csv')
-        chart_response = csv_data.to_dict(orient='records')
-        return jsonify(chart_response)
+        filters = filter_data
+
+        if "Budget/Revenue" in filters and filters["Budget/Revenue"]:
+            if "Budget" not in filters["Budget/Revenue"]:
+                filters["Budget/Revenue"].append("Budget")
+        else:
+            filters["Budget/Revenue"] = []
+
+        print('Received filter data:', filters)
+        apply_filters(filters)
+    except KeyError:
+        print("KeyError: 'Budget/Revenue' not found in filter_data")
+def apply_filters(filters):
+    try:
+        filtered_data = []
+        print(filters)
+
+        for data_point in chart_data:
+            include_data_point = True
+
+            for key, values in filters.items():
+                if values and data_point[key] not in values:
+                    include_data_point = False
+                    break
+
+            if include_data_point:
+                filtered_data.append(data_point)
+
+        socketio.emit('filtered_data', {'filtered_data': filtered_data})
+        print("Filtered chart data sent")
+        print("Filtered data length:", len(filtered_data))
 
     except Exception as e:
-        print('Error reading CSV file:', str(e))
-        return jsonify({'error': 'Internal Server Error'}), 500
+        print('Error applying filter:', str(e))
 
-@app.route('/chart_budget', methods = ['GET'])
+@socketio.on("response_data")
+def chart_response():
+    global dropdown_options1
+    try:
+        conn = engine.connect()
+        tables = ["Curves_Channel_Response_Blended", "Curves_Channel_Response_LT", "Curves_Channel_Response_ST"]
+        chart_response = []
+
+        for table in tables:
+            query = text(f'SELECT * FROM "{table}";')
+            db_result = conn.execute(query)
+
+            col_names = db_result.keys()
+            for x in db_result.fetchall():
+                a = dict(zip(col_names, x))
+                a["Optimisation Type"] = table.split("_")[3].upper()
+                chart_response.append(a)
+
+        dropdown_options1 = {}
+        for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type" ]:
+            dropdown_options1[column] = list(set(row[column] for row in chart_response))
+
+        socketio.emit('dropdown_options1', {'options': dropdown_options1})
+        print("Curve Dropdown options sent")
+
+        socketio.emit('chart_response', {'chartResponse': chart_response})
+        print("chart_response sent")
+
+    except SQLAlchemyError as e:
+        print('Error executing query:', str(e))
+
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@socketio.on("budget_data")
 def chart_budget():
     try:
-        fpath = 'C:/Users/matthew.browne/Documents/Blueprint/optimiser output data'
-        csv_data = pd.read_csv(fpath + '/budget_curve_data.csv')
-        chart_budget = csv_data.to_dict(orient='records')
-        return jsonify(chart_budget)
+        conn = engine.connect()
+        query = text('SELECT * FROM "Curves_Horizon";')
 
-    except Exception as e:
-        print('Error reading CSV file:', str(e))
-        return jsonify({'error': 'Internal Server Error'}), 500
+        db_result = conn.execute(query)
+        chart_budget = []
+        col_names = db_result.keys()
+        for x in db_result.fetchall():
+            a = dict(zip(col_names, x))
+            chart_budget.append(a)
+
+        socketio.emit('chart_budget', {'chartBudget': chart_budget})
+        print("chart_budget sent")
+
+    except SQLAlchemyError as e:
+        print('Error executing query:', str(e))
+
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@socketio.on("roi_data")
+def chart_roi():
+    try:
+        conn = engine.connect()
+        query = text('SELECT * FROM "Curves_Optimal_ROI";')
+
+        db_result = conn.execute(query)
+        chart_roi = []
+        col_names = db_result.keys()
+        for x in db_result.fetchall():
+            a = dict(zip(col_names, x))
+            chart_roi.append(a)
+        socketio.emit('chart_roi', {'chartROI': chart_roi})
+        print("chart_roi sent")
+
+    except SQLAlchemyError as e:
+        print('Error executing query:', str(e))
+
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
+@socketio.on("budget_response_data")
+def chart_budget_response():
+    try:
+        conn = engine.connect()
+        query = text('SELECT * FROM "Curves_Budget_Response";')
+
+        db_result = conn.execute(query)
+        chart_budget_response = []
+        col_names = db_result.keys()
+        for x in db_result.fetchall():
+            a = dict(zip(col_names, x))
+            chart_budget_response.append(a)
+        socketio.emit('chart_budget_response', {'chartBudget_response': chart_budget_response})
+        print("chart_budget_response sent")
+
+    except SQLAlchemyError as e:
+        print('Error executing query:', str(e))
+
+    finally:
+        if 'conn' in locals():
+            conn.close()
 
 @app.route('/blueprint_results')
 @login_required
 def blueprint_results():
     return render_template('blueprint_results.html')
 
-@app.route('/date_range', methods = ['GET','POST'])
+@app.route('/blueprint_curve')
+@login_required
+def blueprint_curve():
+    return render_template('blueprint_curveresults.html')
+
+@app.route('/date_range', methods=['GET', 'POST'])
 def date_range():
     start_date = list(laydown_dates)[1]
     app.logger.info(start_date)
     end_date = list(laydown_dates)[-1]
     app.logger.info(end_date)
-    return jsonify({"startDate":start_date, "endDate":end_date})
+    return jsonify({"startDate": start_date, "endDate": end_date})
+
 
 @app.route('/blueprint')
 @login_required
 def blueprint():
     app.logger.info(laydown_dates)
-    return render_template('blueprint.html', current_user = current_user)
+    return render_template('blueprint.html', current_user=current_user)
 
-@app.route('/get_table_ids', methods = ['GET'])
+
+@app.route('/get_table_ids', methods=['GET'])
 def get_table_ids():
     table_ids = list(table_data.keys())
-    return jsonify({"success": True, "tableIds":table_ids})
+    return jsonify({"success": True, "tableIds": table_ids})
 
-@app.route('/table_ids_sync', methods = ['POST'])
+
+@app.route('/table_ids_sync', methods=['POST'])
 def table_ids_sync():
-    
     try:
-       
+
         received_data = request.get_json()
         received_table_ids = received_data.get('tableIDs', [])
-        #parsed_data = parse_qs(received_data)
+        # parsed_data = parse_qs(received_data)
         received_table_ids = list(map(str, received_data['tableIDs']))
 
         app.logger.info(f"received table ids: {received_table_ids}")
 
         for table_id in list(table_data.keys()):
             if table_id not in received_table_ids:
-                
                 del table_data[table_id]
                 app.logger.info(f"deleted tab: {table_id}")
 
@@ -752,15 +909,17 @@ def table_ids_sync():
         app.logger.info("tableIDs not found in ajax post request.")
         return jsonify({'status': 'error', 'message': 'Invalid request data'}), 400
     except Exception as e:
-    
+
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
-@app.route('/sync_tab_counter', methods = ['GET'])
+
+@app.route('/sync_tab_counter', methods=['GET'])
 def sync_tab_counter():
     last_number = list(table_data.keys())[-1]
     return jsonify({'lastNumber': last_number})
 
-@app.route('/create_copy', methods = ['POST'])
+
+@app.route('/create_copy', methods=['POST'])
 def create_copy():
     global table_data
 
@@ -773,19 +932,22 @@ def create_copy():
 
     return jsonify({"success": True, "table_id": tableID})
 
-@app.route('/channel_delete', methods = ['POST'])
+
+@app.route('/channel_delete', methods=['POST'])
 def channel_delete():
     deleted_tab = str(request.json.get("tabID"))
     app.logger.info(f"deleted tab: {deleted_tab}")
     table_data.pop(deleted_tab)
-    return jsonify({"success":"tab removed succesfully"})
+    return jsonify({"success": "tab removed succesfully"})
 
-@app.route('/channel_main', methods = ['GET'])
+
+@app.route('/channel_main', methods=['GET'])
 def channel_main():
-    app.logger.info(table_data.keys())    
+    app.logger.info(table_data.keys())
     return jsonify(table_data)
 
-@app.route('/table_data_editor', methods = ['POST'])
+
+@app.route('/table_data_editor', methods=['POST'])
 def table_data_editor():
     global table_data
     try:
@@ -809,18 +971,19 @@ def table_data_editor():
             'status': 'error'
         }
     return jsonify(response)
-    
+
 
 @app.route('/')
 def welcome_page():
     app.logger.info(current_user)
     return render_template('Welcome.html', current_user=current_user)
 
+
 # Get request required pending login db sorted
 @app.route('/home', methods=['GET', 'POST'])
-
 def home():
     return render_template('Home.html', current_user=current_user)
+
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -842,6 +1005,7 @@ def login():
             flash('Invalid username or password', 'error')
             return redirect(url_for('login'))
 
+
 def load_configurations():
     try:
         with open('data\config.json', 'r') as config_file:
@@ -849,17 +1013,21 @@ def load_configurations():
     except (FileNotFoundError, json.JSONDecodeError):
         # Handle the case when the file doesn't exist or is empty
         configurations = {}
-        
+
+
 def save_configurations(configurations):
     with open('config.json', 'w') as config_file:
         json.dump(configurations, config_file, indent=2)
 
     return configurations
+
+
 @app.route('/logout')
 @login_required
 def logout():
     logout_user()
     return redirect(url_for('/home'))
+
 
 @app.route('/export_data')
 @login_required
@@ -867,11 +1035,11 @@ def export_data():
     excel_buffer = BytesIO()
     with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
         all_input = pd.read_sql_table('All_Channel_Inputs', engine)
-        laydown= pd.read_sql_table('All_Laydown', engine)
-        all_index= pd.read_sql_table('All_Index', engine)
-        #ST_incr_rev= pd.read_sql_table('All_Incremental_Revenue_ST', engine)
-        #LT_incr_rev = pd.read_sql_table('All_Incremental_Revenue_LT', engine)
-        
+        laydown = pd.read_sql_table('All_Laydown', engine)
+        all_index = pd.read_sql_table('All_Index', engine)
+        # ST_incr_rev= pd.read_sql_table('All_Incremental_Revenue_ST', engine)
+        # LT_incr_rev = pd.read_sql_table('All_Incremental_Revenue_LT', engine)
+
         all_input.to_excel(writer, sheet_name='All Inputs', index=False)
         laydown.to_excel(writer, sheet_name='Laydown', index=False)
         all_index.to_excel(writer, sheet_name='Seasonal Index', index=False)
@@ -882,7 +1050,7 @@ def export_data():
 
 
 if __name__ == '__main__':
-     with app.app_context():
+    with app.app_context():
         db.create_all()
         # for user in user_data:
         #     add_user(user)
