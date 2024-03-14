@@ -1375,15 +1375,4 @@ chartsGenerated = true;
 // });
 
   }
-function destroyCharts(data) {
-  // budget_scenario_chart.destroy();
-  // revenue_scenario_chart.destroy();
-  // roi_scenario_char.destroy();
-  // budget_channel_chart.destroy();
-  // revenue_channel_chart.destroy();
-  // roi_channel_chart.destroy();
-  // laydown_scenario_chart.destroy()
-  // laydown_channel_chart.destroy()
-  // chartsGenerated=false;
-  generateCharts(data);
-}
+
