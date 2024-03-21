@@ -375,6 +375,7 @@ def prep_rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dic
     total_rev = total_rev + infsum
     return rev_list
 
+
 def prep_total_rev_per_stream(stream, budget):
     ST_rev = prep_rev_per_stream(stream, budget, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict)
     LT_rev = prep_rev_per_stream(stream, budget, LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict)
@@ -976,8 +977,10 @@ def chart_data():
         if 'conn' in locals():
             conn.close()
 
+
 # Initialize an empty filters variable
 filters = []
+
 
 @socketio.on("apply_filter")
 def handle_apply_filter(filter_data):
@@ -994,6 +997,8 @@ def handle_apply_filter(filter_data):
         apply_filters(filters)
     except KeyError:
         print("KeyError: 'Budget/Revenue' not found in filter_data")
+
+
 def apply_filters(filters):
     try:
         filtered_data = []
@@ -1019,6 +1024,7 @@ def apply_filters(filters):
 
 @socketio.on("response_data")
 def chart_response():
+    global chart_response
     global dropdown_options1
     try:
         conn = engine.connect()
@@ -1033,16 +1039,25 @@ def chart_response():
             for x in db_result.fetchall():
                 a = dict(zip(col_names, x))
                 a["Optimisation Type"] = table.split("_")[3].upper()
+                a["region_brand"] = f"{a['Region']}_{a['Brand']}"
+                a["region_brand_opt"] = f"{a['region_brand']}_{a['Optimisation Type']}"
                 chart_response.append(a)
 
         dropdown_options1 = {}
-        for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type" ]:
+        for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type", "region_brand",
+                       "region_brand_opt"]:
             dropdown_options1[column] = list(set(row[column] for row in chart_response))
+
+        default_option = dropdown_options1["region_brand"][0]
+        default_option = default_option + "_" + chart_response[0]["Optimisation Type"]
+        chart_response_default = [row for row in chart_response if row["region_brand_opt"] == default_option]
+
+        print(default_option)
 
         socketio.emit('dropdown_options1', {'options': dropdown_options1})
         print("Curve Dropdown options sent")
 
-        socketio.emit('chart_response', {'chartResponse': chart_response})
+        socketio.emit('chart_response', {'chartResponse': chart_response_default})
         print("chart_response sent")
 
     except SQLAlchemyError as e:
@@ -1052,8 +1067,10 @@ def chart_response():
         if 'conn' in locals():
             conn.close()
 
+
 @socketio.on("budget_data")
 def chart_budget():
+    global chart_budget
     try:
         conn = engine.connect()
         query = text('SELECT * FROM "Curves_Horizon";')
@@ -1063,9 +1080,15 @@ def chart_budget():
         col_names = db_result.keys()
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
+            a["region_brand"] = f"{a['Region']}_{a['Brand']}"
             chart_budget.append(a)
 
-        socketio.emit('chart_budget', {'chartBudget': chart_budget})
+        default_option = dropdown_options1["region_brand"][0]
+        chart_budget_default = [row for row in chart_budget if row["region_brand"] == default_option]
+
+        print(default_option)
+
+        socketio.emit('chart_budget', {'chartBudget': chart_budget_default})
         print("chart_budget sent")
 
     except SQLAlchemyError as e:
@@ -1075,8 +1098,10 @@ def chart_budget():
         if 'conn' in locals():
             conn.close()
 
+
 @socketio.on("roi_data")
 def chart_roi():
+    global chart_roi
     try:
         conn = engine.connect()
         query = text('SELECT * FROM "Curves_Optimal_ROI";')
@@ -1086,8 +1111,13 @@ def chart_roi():
         col_names = db_result.keys()
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
+            a["region_brand"] = f"{a['Region']}_{a['Brand']}"
             chart_roi.append(a)
-        socketio.emit('chart_roi', {'chartROI': chart_roi})
+
+        default_option = dropdown_options1["region_brand"][0]
+        chart_roi_default = [row for row in chart_roi if row["region_brand"] == default_option]
+
+        socketio.emit('chart_roi', {'chartROI': chart_roi_default})
         print("chart_roi sent")
 
     except SQLAlchemyError as e:
@@ -1097,8 +1127,10 @@ def chart_roi():
         if 'conn' in locals():
             conn.close()
 
+
 @socketio.on("budget_response_data")
 def chart_budget_response():
+    global chart_budget_response
     try:
         conn = engine.connect()
         query = text('SELECT * FROM "Curves_Budget_Response";')
@@ -1108,8 +1140,13 @@ def chart_budget_response():
         col_names = db_result.keys()
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
+            a["region_brand"] = f"{a['Region']}_{a['Brand']}"
             chart_budget_response.append(a)
-        socketio.emit('chart_budget_response', {'chartBudget_response': chart_budget_response})
+
+        default_option = dropdown_options1["region_brand"][0]
+        chart_budget_response_default = [row for row in chart_budget_response if row["region_brand"] == default_option]
+
+        socketio.emit('chart_budget_response', {'chartBudget_response': chart_budget_response_default})
         print("chart_budget_response sent")
 
     except SQLAlchemyError as e:
@@ -1119,15 +1156,73 @@ def chart_budget_response():
         if 'conn' in locals():
             conn.close()
 
+
+@socketio.on("apply_filter_curve")
+def handle_apply_filter(filter_data):
+    try:
+        filters = filter_data
+        if 'Region' in filters and 'Brand' in filters and 'Optimisation Type' in filters:
+            filters['region_brand_opt'] = f"{filters['Region']}_{filters['Brand']}_{filters['Optimisation Type']}"
+        if 'Region' in filters and 'Brand' in filters:
+            filters['region_brand'] = f"{filters['Region']}_{filters['Brand']}"
+
+        print('Received filter data:', filters)
+        unique_region_brand_opt = set(row["region_brand"] for row in chart_budget)
+        print("Unique values in chart_budget:", unique_region_brand_opt)
+
+        apply_filters(chart_response, filters, 'filtered_data_response')
+        apply_filters(chart_budget, filters, 'filtered_data_budget')
+        apply_filters(chart_roi, filters, 'filtered_data_roi')
+        apply_filters(chart_budget_response, filters, 'filtered_data_budget_response')
+
+    except Exception as e:
+        print('Error applying filters:', str(e))
+
+def apply_filters(data, filters, event_name):
+    try:
+        filtered_data = []
+
+        if data == chart_response:
+            filter_key = 'region_brand_opt'
+        else:
+            filter_key = 'region_brand'
+
+        for data_point in data:
+            include_data_point = True
+
+            if filter_key == 'region_brand_opt':
+                data_point_filter = f"{data_point['region_brand_opt']}"
+            else:
+                data_point_filter = f"{data_point['region_brand']}"
+
+            relevant_filters = {key: values for key, values in filters.items() if key in data_point}
+
+            for key, values in relevant_filters.items():
+                if values and data_point[key] not in values:
+                    include_data_point = False
+                    break
+
+            if include_data_point:
+                filtered_data.append(data_point)
+
+        socketio.emit(event_name, {'filtered_data': filtered_data})
+        print("Filtered chart data sent for", event_name)
+        print("Filtered data length:", len(filtered_data))
+
+    except Exception as e:
+        print('Error applying filter:', str(e))
+
 @app.route('/blueprint_results')
 @login_required
 def blueprint_results():
     return render_template('blueprint_results.html')
 
+
 @app.route('/blueprint_curve')
 @login_required
 def blueprint_curve():
     return render_template('blueprint_curveresults.html')
+
 
 @app.route('/date_range', methods=['GET', 'POST'])
 def date_range():

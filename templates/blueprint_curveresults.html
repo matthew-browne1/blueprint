@@ -28,26 +28,10 @@
         <div class="filter-container">
             <h2 class="filter-title">Brand</h2>
             <select id="brandFilter">
-                <option>Select Scenario</option>
+                <option>Select Brand</option>
                 <!-- Add options as needed -->
             </select>
         </div>
-        <div class="filter-container">
-            <h2 class="filter-title">Channel Group</h2>
-            <h6>Filters will only be applied to Response Curves</h6>
-            <select id="channelgroupFilter" multiple>
-                <option>Select Channel Group</option>
-                <!-- Add options as needed -->
-            </select>
-        </div>
-<!--        <div class="filter-container">-->
-<!--            <h2 class="filter-title">Channel</h2>-->
-<!--            <h6>Filters will only be applied to Response Curves</h6>-->
-<!--            <select id="channelFilter">-->
-<!--                <option>Select Channel</option>-->
-<!--                &lt;!&ndash; Add options as needed &ndash;&gt;-->
-<!--            </select>-->
-<!--        </div>-->
         <div class="filter-container">
             <h2 class="filter-title">Optimisation Type</h2>
             <h6>Filters will only be applied to Response Curves</h6>
@@ -56,13 +40,8 @@
                 <!-- Add options as needed -->
             </select>
         </div>
-        <div class="filter-container" style="border: none;">
-            <button class="button2">Apply Filters</button>
-            <button class="button2">Clear Filters</button>
-        </div>
-        <div class="circle">
-            <i class="fa fa-chevron-left" aria-hidden="true"></i>
-            <i class="fa fa-chevron-right hide" aria-hidden="true"></i>
+         <div class="filter-container" style="border: none;">
+            <button id="applyFilters" class="button2">Apply Filters</button>
         </div>
     </div>
     <div class="nav-container">
@@ -72,16 +51,10 @@
         <a href="/blueprint_results">Curve Charts</a>
     </div>
     <div class="chart-container">
-        <section id="response">
-            Curve Charts
             <div class="chart-content" id="response_channel_group">
                 Response Curve by Channel Group
                 <canvas id="response_curve_chart" width="1600" height="400"></canvas>
             </div>
-<!--            <div class="chart-content" id="response_channel">-->
-<!--                Response Curve by Channel-->
-<!--                <canvas id="response_channel_chart" width="1600" height="400"></canvas>-->
-<!--            </div>-->
             <div class="chart-content" id="response_budget">
                 Budget Response Curve
                 <canvas id="response_budget_chart" width="1600" height="400"></canvas>
@@ -96,7 +69,6 @@
                     <canvas id="roi_curve_chart" width="1600" height="400"></canvas>
                 </div>
             </div>
-        </section>
     </div>
 
 </div>
@@ -107,6 +79,5 @@
         crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
-<script type="module" src="../static/js/blueprintBase.js"></script>
 <script type="module" src="../static/js/blueprintCurveCharts.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>

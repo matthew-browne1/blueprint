@@ -7,44 +7,43 @@ chartsSocket.on('connect', function() {
     console.log('Connected');
      });
 $(document).ready(function(){
-    var filteredData = [];
-    var chartData = [];
 
-    // Function to populate dropdown options
-    function populateDropdown(selector, options) {
-        var dropdown = $(selector);
-        dropdown.empty();
-        var selectAllOption = $('<option></option>').attr('value', 'all').text('Select All');
-        dropdown.append(selectAllOption);
-        $.each(options, function(key, value) {
-            var option = $('<option></option>').attr('value', value).text(value);
-            dropdown.append(option);
-        });
-    }
-
-    // Automatically select all options when 'Select All' is clicked
-    $(document).on('change', 'select[multiple]', function() {
-        var $this = $(this);
-        if ($this.val() !== null && $this.val().includes('all')) {
-            var allOptions = $this.find('option').not(':disabled');
-            var selectedOptions = allOptions.map(function() {
-                return this.value;
-            }).get();
-            $this.val(selectedOptions);
-        }
+   // Function to populate dropdown options
+function populateDropdown(selector, options) {
+    var dropdown = $(selector);
+    dropdown.empty();
+    $.each(options, function(key, value) {
+        var option = $('<option></option>').attr('value', value).text(value);
+        dropdown.append(option);
     });
+}
+
+
+      // Function to collect and send filter selections to backend
+    function applyFilters() {
+        var filters = {
+            Region: $('#regionFilter').val(),
+            Brand: $('#brandFilter').val(),
+            "Optimisation Type": $('#optimisationFilter').val()
+        };
+        console.log("Applying filters:", filters);
+        chartsSocket.emit("apply_filter_curve", filters);
+        generateCharts();
+    }
 
         // Listen for 'dropdown_options' event and populate dropdowns
     chartsSocket.on('dropdown_options1', function(data) {
-        populateDropdown('#channelFilter', data.options.Channel);
-        populateDropdown('#channelgroupFilter', data.options['Channel Group']);
         populateDropdown('#regionFilter', data.options.Region);
         populateDropdown('#brandFilter', data.options.Brand);
         populateDropdown('#optimisationFilter', data.options['Optimisation Type']);
     }).on('error', function(xhr, status, error) {
         console.error('Error fetching filter data:', error);
     });
-});
+
+       // Apply Filters button click event
+    $('#applyFilters').on('click', function() {
+        applyFilters();
+    });
 
 
 chartsSocket.emit("response_data");
@@ -52,10 +51,25 @@ chartsSocket.on('chart_response', function(data) {
   var chartResponse = data.chartResponse;
 
   console.log("fetched response data from back end");
-//  console.log(chartResponse);
+  console.log(chartResponse)
   generateChartsA(chartResponse);
+  setDefaultSelections(chartResponse);
 });
+    function setDefaultSelections(chartResponse) {
+        // Check if chartResponse contains data
+        if (chartResponse.length > 0) {
+            var defaultSelections = {
+                Region: chartResponse[0].Region,
+                Brand: chartResponse[0].Brand,
+                "Optimisation Type": chartResponse[0]['Optimisation Type']
+            };
 
+            // Set default selections in dropdowns
+            $('#regionFilter').val(defaultSelections.Region);
+            $('#brandFilter').val(defaultSelections.Brand);
+            $('#optimisationFilter').val(defaultSelections['Optimisation Type']);
+        }
+    }
 chartsSocket.emit("budget_data");
 chartsSocket.on('chart_budget', function(data) {
   var chartBudget = data.chartBudget;
@@ -79,29 +93,24 @@ chartsSocket.on('chart_budget_response', function(data) {
   console.log("fetched budget response data from back end");
   generateChartsD(chartBudget_response);
 });
+});
 
 function generateChartsA(data) {
     console.log("reaching generateChartsA method");
 
  // 1. Response Curve by Channel Group Chart
- const selectedBrand = "Shreddies"; // Initial scenario selection
-
-  // Filter data for the selected brand
-     const filteredData = data.filter(entry => entry.Brand === selectedBrand);
-        filteredData.forEach(entry => {entry.OptimizationType = "ST";});
-
-// Prepare data for the chart
+    // Prepare data for the chart
     const response_chartData = {};
-    filteredData.forEach(entry => {
+    data.forEach(entry => {
         const channelGroup = entry["Channel Group"];
         if (!response_chartData[channelGroup]) {
             response_chartData[channelGroup] = [];
-    }
-    // Limiting to the first 20 points
-    if (response_chartData[channelGroup].length < 40) {
-        response_chartData[channelGroup].push({ x: entry.Budget, y: entry["Predicted Revenue"]});
-    }
-});
+        }
+        // Limiting to the first 40 points
+        if (response_chartData[channelGroup].length < 40) {
+            response_chartData[channelGroup].push({ x: entry.Budget, y: entry["Predicted Revenue"] });
+        }
+    });
 
 // 1a. data block
     const response_curve_chartData = {
@@ -141,166 +150,102 @@ function generateChartsA(data) {
        data: response_curve_chartData,
         options: response_curve_chartOptions,
     });
-
-// // 2. Response Curve by Channel Chart
-//
-//    const filteredDataChannel = data.filter(entry => entry.Brand === selectedBrand);
-//        filteredDataChannel.forEach(entry => {
-//            entry.OptimizationType = "ST";
-//            entry["Channel Group"] = "social";
-//        });
-//
-//// Prepare data for the chart
-//    const response_channel_Data = {};
-//    filteredDataChannel.forEach(entry => {
-//        const channel = entry.Channel;
-//        if (!response_channel_Data[channel]) {
-//             response_channel_Data[channel] = [];
-//    }
-//    // Limiting to the first 20 points
-//    if ( response_channel_Data[channel].length < 40) {
-//         response_channel_Data[channel].push({ x: entry.Budget, y: entry["Predicted Revenue"]});
-//    }
-//});
-//
-////2a. data block
-//    const response_channel_chartData = {
-//        datasets: Object.keys(response_channel_Data).map(channel => {
-//        return {
-//            label: channel,
-//            data:  response_channel_Data[channel],
-//            borderColor: '#' + (Math.random().toString(16) + '000000').substring(2, 8), // Random color for each line
-//            fill: false,
-//            radius: 0,
-//        };
-//    })
-//};
-//// 2b. config block
-//    const response_channel_chartOptions = {
-//                 scales: {
-//           x: {
-//             type: 'linear',
-//             position: 'bottom',
-//             scaleLabel: {
-//               display: true,
-//               labelString: 'Budget'
-//             }
-//           },
-//           y: {
-//             scaleLabel: {
-//               display: true,
-//               labelString: 'Response Curve'
-//             }
-//           }
-//         }
-//    }
-//// 2c. render block
-//    const response_channel_chart = new Chart(document.getElementById("response_channel_chart"),
-//      {
-//       type: 'line',
-//       data: response_channel_chartData,
-//        options: response_channel_chartOptions,
-//    });
-
 }
 function generateChartsB(data) {
     console.log("reaching generateChartsB method");
-// 3. Budget Curve Chart
-     const selectedBrand = "Shreddies"; // Initial scenario selection
-  // Filter data for the selected brand
-     const filteredData = data.filter(entry => entry.Brand === selectedBrand);
- // 3a. data block
-     const budget_chartData = {
-       labels: [],
-       datasets: [
-         {
-           label: 'Revenue',
-           data: [],
-           backgroundColor: 'rgba(54, 162, 235, 0.2)',
-           borderColor: 'rgba(54, 162, 235, 1)',
-           borderWidth: 1,
-           pointRadius: [],
-           pointBackgroundColor: [],
-           pointBorderColor: 'rgba(54, 162, 235, 1)',
-           pointBorderWidth: 2
-         },
-         {
-           label: 'Historical Budget (not optimized)',
-           data: [],
-           backgroundColor: 'rgba(255, 99, 132, 0.7)',
-           borderColor: 'rgba(255, 99, 132, 1)',
-           pointStyle: 'circle',
-           borderWidth: 1
-         },
-         {
-           label: 'Historical Budget (optimized)',
-           data: [],
-           backgroundColor: 'rgba(75, 192, 192, 0.7)',
-           borderColor: 'rgba(75, 192, 192, 1)',
-           pointStyle: 'circle',
-           borderWidth: 1
-         },
-         {
-            label: 'Profit',
-            data: [],
-            backgroundColor: 'rgba(255, 206, 86, 0.2)',
-            borderColor: 'rgba(255, 206, 86, 1)',
-            borderWidth: 1,
-            pointRadius: [],
-            pointBackgroundColor: [],
-            pointBorderColor: 'rgba(255, 206, 86, 1)',
-            pointBorderWidth: 2
-        },
-        {
-            label: 'Profit Max',
-            data: [],
-            backgroundColor: 'rgba(0, 39, 129, 0.2)',
-            borderColor: 'rgba(0, 39, 129, 1)',
-            borderWidth: 1,
-        }
-       ]
-     };
-    filteredData.forEach(entry => {
+    // 3. Budget Curve Chart
+     // 3a. data block
+    const budget_chartData = {
+        labels: [],
+        datasets: [
+            {
+                label: 'Revenue',
+                data: [],
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                pointRadius: [],
+                pointBackgroundColor: [],
+                pointBorderColor: 'rgba(54, 162, 235, 1)',
+                pointBorderWidth: 2
+            },
+            {
+                label: 'Historical Budget (not optimized)',
+                data: [],
+                backgroundColor: 'rgba(255, 99, 132, 0.7)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                pointStyle: 'circle',
+                borderWidth: 1
+            },
+            {
+                label: 'Historical Budget (optimized)',
+                data: [],
+                backgroundColor: 'rgba(75, 192, 192, 0.7)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                pointStyle: 'circle',
+                borderWidth: 1
+            },
+            {
+                label: 'Profit',
+                data: [],
+                backgroundColor: 'rgba(255, 206, 86, 0.2)',
+                borderColor: 'rgba(255, 206, 86, 1)',
+                borderWidth: 1,
+                pointRadius: [],
+                pointBackgroundColor: [],
+                pointBorderColor: 'rgba(255, 206, 86, 1)',
+                pointBorderWidth: 2
+            },
+            {
+                label: 'Profit Max',
+                data: [],
+                backgroundColor: 'rgba(0, 39, 129, 0.2)',
+                borderColor: 'rgba(0, 39, 129, 1)',
+                borderWidth: 1,
+            }
+        ]
+    };
+
+    data.forEach(entry => {
         budget_chartData.labels.push(entry.Budget);
         budget_chartData.datasets[0].data.push(entry.Revenue);
         budget_chartData.datasets[1].data.push(entry["Historical Profit (not optimised)"]);
         budget_chartData.datasets[2].data.push(entry["Historical Profit (optimised)"]);
         budget_chartData.datasets[3].data.push(entry.Profit);
         budget_chartData.datasets[4].data.push(entry["Profit Max"]);
-});
-// 3b. config block
-        const budget_chartOptions = {
-                 scales: {
-           x: {
-             type: 'linear',
-             position: 'bottom',
-             scaleLabel: {
-               display: true,
-               labelString: 'Budget'
-             }
-           },
-           y: {
-             scaleLabel: {
-               display: true,
-               labelString: 'Profit'
-             }
-           }
-         }
-    }
-// 3c. render block
-     const budget_curve_chart = new Chart(document.getElementById("budget_curve_chart"),
-      {
-       type: 'line',
-       data: budget_chartData,
-        options: budget_chartOptions,
     });
+
+    // 3b. config block
+    const budget_chartOptions = {
+        scales: {
+            x: {
+                type: 'linear',
+                position: 'bottom',
+                scaleLabel: {
+                    display: true,
+                    labelString: 'Budget'
+                }
+            },
+            y: {
+                scaleLabel: {
+                    display: true,
+                    labelString: 'Profit'
+                }
+            }
+        }
+    };
+
+    // 3c. render block
+    const budget_curve_chart = new Chart(document.getElementById("budget_curve_chart"),
+        {
+            type: 'line',
+            data: budget_chartData,
+            options: budget_chartOptions,
+        });
 }
 function generateChartsC(data) {
     console.log("reaching generateChartsC method");
     // 4. ROI Curve Chart
-     const selectedBrand = "Shreddies"; // Initial scenario selection
-  // Filter data for the selected brand
-     const filteredData = data.filter(entry => entry.Brand === selectedBrand);
  // 4a. data block
      const roi_chartData = {
        labels: [], // Budget values will be used as labels on the x-axis
@@ -341,7 +286,7 @@ function generateChartsC(data) {
         },
        ]
      };
-    filteredData.forEach(entry => {
+    data.forEach(entry => {
         roi_chartData.labels.push(entry.Budget);
         roi_chartData.datasets[0].data.push(entry.ROI);
         roi_chartData.datasets[1].data.push(entry["Break Even: £1"]);
@@ -378,73 +323,70 @@ function generateChartsC(data) {
    }
 function generateChartsD(data) {
     console.log("reaching generateChartsD method");
-    // 5. Budget Response Curve Chart
-     const selectedBrand = "Shreddies"; // Initial scenario selection
-  // Filter data for the selected brand
-     const filteredData = data
-        .filter(entry => entry.Brand === selectedBrand)
-        .sort((a, b) => a.Budget - b.Budget);
- // 5a. data block
-     const budget_response_chartData = {
-       labels: [], // Budget values will be used as labels on the x-axis
-       datasets: [
-         {
-           label: 'Optimised Revenue',
-           data: [],
-           backgroundColor: 'rgba(54, 162, 235, 0.2)',
-           borderColor: 'rgba(54, 162, 235, 1)',
-           borderWidth: 1,
-           pointRadius: [],
-           pointBackgroundColor: [],
-           pointBorderColor: 'rgba(54, 162, 235, 1)',
-           pointBorderWidth: 2
-         },
-                 {
-           label: 'Predicted Revenue',
-           data: [],
-           backgroundColor: 'rgba(255, 99, 71, 0.2)',
-           borderColor: 'rgba(255, 99, 71, 1)',
-           borderWidth: 1,
-           pointRadius: [],
-           pointBackgroundColor: [],
-           pointBorderColor: 'rgba(54, 162, 235, 1)',
-           pointBorderWidth: 2
-         },
-       ]
-     };
-    filteredData.forEach(entry => {
+    // 2. Budget Response Curve Chart
+    // Sort data
+    const sortedData = data.sort((a, b) => a.Budget - b.Budget);
+
+    // 2a. data block
+    const budget_response_chartData = {
+        labels: [],
+        datasets: [
+            {
+                label: 'Optimised Revenue',
+                data: [],
+                backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                borderColor: 'rgba(54, 162, 235, 1)',
+                borderWidth: 1,
+                pointRadius: [],
+                pointBackgroundColor: [],
+                pointBorderColor: 'rgba(54, 162, 235, 1)',
+                pointBorderWidth: 2
+            },
+            {
+                label: 'Predicted Revenue',
+                data: [],
+                backgroundColor: 'rgba(255, 99, 71, 0.2)',
+                borderColor: 'rgba(255, 99, 71, 1)',
+                borderWidth: 1,
+                pointRadius: [],
+                pointBackgroundColor: [],
+                pointBorderColor: 'rgba(54, 162, 235, 1)',
+                pointBorderWidth: 2
+            },
+        ]
+    };
+    sortedData.forEach(entry => {
         budget_response_chartData.labels.push(entry.Budget);
         budget_response_chartData.datasets[0].data.push(entry["Total Revenue"]);
         budget_response_chartData.datasets[1].data.push(entry["Predicted Revenue"]);
-});
-
-console.log(budget_response_chartData.datasets);
-
-// 5b. config block
-        const budget_response_chartOptions = {
-                 scales: {
-           x: {
-             type: 'linear',
-             position: 'bottom',
-             scaleLabel: {
-               display: true,
-               labelString: 'Budget'
-             }
-           },
-           y: {
-             scaleLabel: {
-               display: true,
-               labelString: 'Revenue'
-             }
-           }
-         }
-    }
-// 5c. render block
-     const budget_response_chart = new Chart(document.getElementById("response_budget_chart"),
-      {
-       type: 'line',
-       data: budget_response_chartData,
-        options: budget_response_chartOptions,
     });
 
-   }
+    // 2b. config block
+    const budget_response_chartOptions = {
+        scales: {
+            x: {
+                type: 'linear',
+                position: 'bottom',
+                scaleLabel: {
+                    display: true,
+                    labelString: 'Budget'
+                }
+            },
+            y: {
+                scaleLabel: {
+                    display: true,
+                    labelString: 'Revenue'
+                }
+            }
+        }
+    };
+
+    // 2c. render block
+    const budget_response_chart = new Chart(document.getElementById("response_budget_chart"),
+        {
+            type: 'line',
+            data: budget_response_chartData,
+            options: budget_response_chartOptions,
+        });
+
+}

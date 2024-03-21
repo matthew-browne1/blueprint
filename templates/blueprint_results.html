@@ -6,6 +6,7 @@
     <title>Blueprint Results</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <link rel="stylesheet" href="/static/css/blueprint_results.css">
+
 </head>
 <body>
 <div class="title-container">
@@ -17,12 +18,11 @@
         <span>Filters</span>
         <h6>Filters will be applied to all charts</h6>
         <div class="line"></div>
-
         <div class="filter-container">
             <h2 class="filter-title">Date</h2>
             <select id="dateFilter" multiple>
-            </select>
         </div>
+
         <div class="filter-container">
             <h2 class="filter-title">Region</h2>
             <select id="regionFilter" multiple>
@@ -56,10 +56,6 @@
         <div class="filter-container" style="border: none;">
             <button id="applyFilters" class="button2">Apply Filters</button>
             <button id="clearFilters" class="button2">Clear Filters</button>
-        </div>
-        <div class="circle">
-            <i class="fa fa-chevron-left" aria-hidden="true"></i>
-            <i class="fa fa-chevron-right hide" aria-hidden="true"></i>
         </div>
     </div>
     <div class="nav-container">
@@ -108,19 +104,20 @@
             <div class="chart-content" id="laydown_channel">
                 Laydown by Channel Group
                 <canvas id="laydown_channel_chart" width="1600" height="400"></canvas>
-<!--                <div class="dropdown">-->
-<!--                    <select id="channel_dropdown">-->
-<!--                    </select>-->
-<!--                </div>-->
+                <!--                <div class="dropdown">-->
+                <!--                    <select id="channel_dropdown">-->
+                <!--                    </select>-->
+                <!--                </div>-->
             </div>
         </section>
     </div>
 </div>
 </body>
 
-<script src="https://cdn.socket.io/4.7.4/socket.io.min.js" integrity="sha384-Gr6Lu2Ajx28mzwyVR8CFkULdCU7kMlZ9UthllibdOSo6qAiN+yXNHqtgdTvFXMT4" crossorigin="anonymous"></script>
+<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"
+        integrity="sha384-Gr6Lu2Ajx28mzwyVR8CFkULdCU7kMlZ9UthllibdOSo6qAiN+yXNHqtgdTvFXMT4"
+        crossorigin="anonymous"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script src="https://code.jquery.com/jquery-3.7.0.js"></script>
-<script type="module" src="../static/js/blueprintBase.js"></script>
 <script type="module" src="../static/js/blueprintCharts.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>

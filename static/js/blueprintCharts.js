@@ -7,7 +7,7 @@ let roi_channel_chart = null;
 let laydown_scenario_chart = null;
 let laydown_channel_chart = null;
 
-$(document).ready(function(){
+$(document).ready(function() {
     var filteredData = [];
     var chartData = [];
 
@@ -23,18 +23,6 @@ $(document).ready(function(){
         });
     }
 
-    // Automatically select all options when 'Select All' is clicked
-    $(document).on('change', 'select[multiple]', function() {
-        var $this = $(this);
-        if ($this.val() !== null && $this.val().includes('all')) {
-            var allOptions = $this.find('option').not(':disabled');
-            var selectedOptions = allOptions.map(function() {
-                return this.value;
-            }).get();
-            $this.val(selectedOptions);
-        }
-    });
-
     // Function to collect and send filter selections to backend
     function applyFilters() {
         var filters = {
@@ -48,14 +36,12 @@ $(document).ready(function(){
         };
         console.log("Applying filters:", filters);
         chartsSocket.emit("apply_filter", filters);
-        generateCharts();
     }
 
     // Function to clear all filter selections
     function clearFilters() {
-        $('select[multiple]').val([]);
+        $('select[multiple]').val([]); // Clear select field values
         applyFilters();
-        generateCharts();
     }
 
     // Establish SocketIO connection
@@ -68,17 +54,16 @@ $(document).ready(function(){
     chartsSocket.emit("collect_data");
     chartsSocket.emit("apply_filter");
 
-chartsSocket.on('chart_data', function(data) {
-    chartData = data.chartData; // Update chartData when received from backend
-    console.log("fetched chart data from back end");
-    generateCharts();
-});
+    chartsSocket.on('chart_data', function(data) {
+        chartData = data.chartData; // Update chartData when received from backend
+        console.log("fetched chart data from back end");
+        generateCharts();
+    });
 
-chartsSocket.on('filtered_data', function(data) {
-    filteredData = data.filtered_data; // Update filteredData when received from backend
-    generateCharts();
-});
-
+    chartsSocket.on('filtered_data', function(data) {
+        filteredData = data.filtered_data; // Update filteredData when received from backend
+        generateCharts();
+    });
 
     // Apply Filters button click event
     $('#applyFilters').on('click', function() {
@@ -90,6 +75,62 @@ chartsSocket.on('filtered_data', function(data) {
         clearFilters();
     });
 
+    // Listen for 'dropdown_options' event and populate dropdowns
+    chartsSocket.on('dropdown_options', function(data) {
+        populateDropdown('#dateFilterOptions', data.options.MonthYear);
+        populateDropdown('#channelFilter', data.options.Channel);
+        populateDropdown('#channelgroupFilter', data.options['Channel Group']);
+        populateDropdown('#regionFilter', data.options.Region);
+        populateDropdown('#brandFilter', data.options.Brand);
+        populateDropdown('#scenarioFilter', data.options.Scenario);
+        populateDropdown('#revenueFilter', data.options['Budget/Revenue']);
+
+        // Enable custom dropdown with search box for date filter
+        enableCustomDropdown('#dateFilter');
+    }).on('error', function(xhr, status, error) {
+        console.error('Error fetching filter data:', error);
+    });
+
+    // Function to enable custom dropdown with search box
+    function enableCustomDropdown(selector) {
+        var dropdownInput = $(selector); // Corrected selector here
+        var dropdownOptions = $(selector + 'Options');
+
+        // Show dropdown options when input is focused
+        dropdownInput.on("focus", function() {
+            dropdownOptions.show();
+        });
+
+        // Hide dropdown options when input loses focus
+        dropdownInput.on("blur", function() {
+            dropdownOptions.hide();
+        });
+
+        // Filter options based on input value
+        dropdownInput.on("input", function() {
+            var inputValue = this.value.trim().toLowerCase();
+            dropdownOptions.children(".option").each(function() {
+                var optionText = $(this).text().toLowerCase();
+                $(this).toggle(optionText.includes(inputValue));
+            });
+        });
+
+        // Select option when clicked
+        dropdownOptions.on("click", "input[type='checkbox']", function() {
+            // If 'Select All' checkbox is clicked, select/deselect all options
+            if ($(this).is('#selectAllDate')) {
+                var isChecked = $(this).prop('checked');
+                dropdownOptions.find("input[type='checkbox']").prop('checked', isChecked);
+            }
+            // Update the input value based on selected options
+            var selectedOptions = dropdownOptions.find("input[type='checkbox']:checked").map(function() {
+                return $(this).val();
+            }).get();
+            dropdownInput.val(selectedOptions.join(', '));
+        });
+    }
+
+    // Function to generate charts
     function generateCharts() {
         if (filteredData.length > 0) {
             generateChartsA(filteredData);
@@ -104,19 +145,19 @@ chartsSocket.on('filtered_data', function(data) {
         }
     }
 
-    // Listen for 'dropdown_options' event and populate dropdowns
-    chartsSocket.on('dropdown_options', function(data) {
-        populateDropdown('#dateFilter', data.options.MonthYear);
-        populateDropdown('#channelFilter', data.options.Channel);
-        populateDropdown('#channelgroupFilter', data.options['Channel Group']);
-        populateDropdown('#regionFilter', data.options.Region);
-        populateDropdown('#brandFilter', data.options.Brand);
-        populateDropdown('#scenarioFilter', data.options.Scenario);
-        populateDropdown('#revenueFilter', data.options['Budget/Revenue']);
-    }).on('error', function(xhr, status, error) {
-        console.error('Error fetching filter data:', error);
+    // Automatically select all options when 'Select All' is clicked
+    $(document).on('change', 'select[multiple]', function() {
+        var $this = $(this);
+        if ($this.val() !== null && $this.val().includes('all')) {
+            var allOptions = $this.find('option').not(':disabled');
+            var selectedOptions = allOptions.map(function() {
+                return this.value;
+            }).get();
+            $this.val(selectedOptions);
+        }
     });
 });
+
 
 function generateChartsA(data) {
     console.log("reaching generateChartsA method");
