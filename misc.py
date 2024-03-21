@@ -44,3 +44,5 @@ def generate_requirements_file(output_file='requirements.txt'):
         print(f"Requirements file '{output_file}' generated successfully.")
     else:
         print("Failed to generate the requirements file.")
+
+generate_requirements_file()

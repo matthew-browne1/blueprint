@@ -2,44 +2,29 @@
 #
 # -----------------------------------------------------------------------------
 from flask import Flask, render_template, send_file, jsonify, request, url_for, redirect, flash, session, current_app
-from flask_sse import sse
 from flask_socketio import SocketIO, emit
 import numpy as np
 import pandas as pd
-import seaborn as sns
 import json
 import os
-import sys
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import joinedload
-from urllib.parse import parse_qs
-# from pyomo_opt import Optimiser
 from sqlalchemy import create_engine, text, Column, DateTime, Integer, func
-from sqlalchemy.orm import Session, declarative_base
 from datetime import datetime, date, time
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 import urllib.parse
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import PolynomialFeatures
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 import secrets
 import logging
-from logging.handlers import RotatingFileHandler
-from pyomo.environ import *
-from pyomo.opt import SolverFactory
-import statsmodels as sm
-from scipy.optimize import minimize
 from optimiser import Optimise
-from pyomo_opt import Optimiser
 from io import BytesIO
-from concurrent.futures import ProcessPoolExecutor
 from copy import deepcopy
-from multiprocessing import Manager, freeze_support
+
 #from azure import identity
 
 app = Flask(__name__)
-socketio = SocketIO(app)
+socketio = SocketIO(app=app)
 
 # executor = ProcessPoolExecutor()
 
@@ -89,9 +74,9 @@ class Snapshot(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     content = db.Column(db.String, nullable=False)
     table_ids = db.Column(db.String, nullable=False)
+    scenario_names = db.Column(db.String, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     table_data = db.Column(db.Text, nullable=False)
-
 
 # class DatabaseHandler(logging.Handler):
 #     def emit(self, record):
@@ -165,6 +150,7 @@ def save_snapshot():
     snapshot_name = request.json.get('name')
     user_id = current_user.id
     content = request.json.get('content')
+    scenario_names = request.json.get('scenarioNames')
     current_table_ids = list(table_data.keys())
     table_data_json = json.dumps(table_data)
 
@@ -177,10 +163,11 @@ def save_snapshot():
         # Update the existing snapshot
         existing_snapshot.content = content
         existing_snapshot.table_ids = table_ids_str
+        existing_snapshot.scenario_names = scenario_names
         existing_snapshot.table_data = table_data_json
     else:
         # Create a new snapshot
-        new_snapshot = Snapshot(name=snapshot_name, content=content, table_ids=table_ids_str, user_id=user_id,
+        new_snapshot = Snapshot(name=snapshot_name, content=content, table_ids=table_ids_str, scenario_names=scenario_names, user_id=user_id,
                                 table_data=table_data_json)
         db.session.add(new_snapshot)
 
@@ -198,6 +185,7 @@ def overwrite_save():
     snapshot_id = request.json.get('selectedSaveId')
     user_id = current_user.id
     content = request.json.get('content')
+    scenario_names = request.json.get('scenarioNames')
     current_table_ids = list(table_data.keys())
     table_data_json = json.dumps(table_data)
 
@@ -210,6 +198,7 @@ def overwrite_save():
     existing_snapshot.content = content
     existing_snapshot.table_ids = table_ids_str
     existing_snapshot.table_data = table_data_json
+    existing_snapshot.scenario_names = scenario_names
 
     try:
         db.session.commit()
@@ -279,8 +268,10 @@ def notify_selected_row():
         else:
             content_list = save.content
             table_ids_list = save.table_ids
+            scenario_names = save.scenario_names
+            table_data = json.loads(save.table_data)
             app.logger.info(table_data.keys())
-            return jsonify({'content': content_list, 'table_ids': table_ids_list})
+            return jsonify({'content': content_list, 'table_ids': table_ids_list, 'scenario_names':scenario_names})
 
 
 results = {}
@@ -547,11 +538,12 @@ def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budge
     global results
     global output_df_per_result
 
-    result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown, seas_index=seas_index, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name, tolerance=ftol, step=ssize)
+    
 
     try:
         with app.app_context():
-            print(f"Task completed: {result}")
+            result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown, seas_index=seas_index, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name, tolerance=ftol, step=ssize)
+            print(f"Task completed: {result} in {time_elapsed} time")
             results[table_id] = result
             output_df_per_result[table_id] = output_df
             print(f"total results: {results}")
@@ -564,80 +556,86 @@ def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budge
 
 @socketio.on('optimise')
 def run_optimise(dataDict):
+
     data = dict(dataDict.get('dataToSend'))
     global inputs_per_result
-
+    table_id = str(data['tableID'])
     ST_header_copy = deepcopy(ST_header)
     LT_header_copy = deepcopy(LT_header)
     laydown_copy = deepcopy(laydown)
     seas_index_copy = deepcopy(seas_index)
 
     app.logger.info("REACHING OPT METHOD")
-    table_id = str(data['tableID'])
-    obj_func = data['objectiveValue']
-    exh_budget = data['exhaustValue']
-    max_budget = int(data['maxValue'])
-    ftol_input = float(data['ftolValue'])
-    ssize_input = float(data['ssizeValue'])
-    scenario_name = data['tabName']
-    num_weeks = 1000
-    blend = data['blendValue']
-    disabled_rows = list(data['disabledRows'])
-    print(f"disabled row ids: {disabled_rows}")
+    
+    try:
+        obj_func = data['objectiveValue']
+        exh_budget = data['exhaustValue']
+        max_budget = int(data['maxValue'])
+        ftol_input = float(data['ftolValue'])
+        ssize_input = float(data['ssizeValue'])
+        scenario_name = data['tabName']
+        num_weeks = 1000
+        blend = data['blendValue']
+        disabled_rows = list(data['disabledRows'])
+        print(f"disabled row ids: {disabled_rows}")
 
-    current_table_df = pd.DataFrame.from_records(deepcopy(table_data[table_id]))
-    removed_rows_df = current_table_df[current_table_df.row_id.isin(disabled_rows)].copy()
-    removed_rows_df['Opt Channel'] = removed_rows_df.apply(
-        lambda row: '_'.join([str(row['Channel']), str(row['Region']), str(row['Brand'])]), axis=1)
+        current_table_df = pd.DataFrame.from_records(deepcopy(table_data[table_id]))
+        removed_rows_df = current_table_df[current_table_df.row_id.isin(disabled_rows)].copy()
+        removed_rows_df['Opt Channel'] = removed_rows_df.apply(
+            lambda row: '_'.join([str(row['Channel']), str(row['Region']), str(row['Brand'])]), axis=1)
 
-    disabled_opt_channels = list(removed_rows_df['Opt Channel'])
+        disabled_opt_channels = list(removed_rows_df['Opt Channel'])
 
-    for col in current_table_df.columns:
-        ST_header_copy[col] = current_table_df[col]
-        LT_header_copy[col] = current_table_df[col]
+        for col in current_table_df.columns:
+            ST_header_copy[col] = current_table_df[col]
+            LT_header_copy[col] = current_table_df[col]
 
-    ST_header_copy = ST_header_copy[~(ST_header_copy['Opt Channel'].isin(disabled_opt_channels))]
-    LT_header_copy = LT_header_copy[~(LT_header_copy['Opt Channel'].isin(disabled_opt_channels))]
+        ST_header_copy = ST_header_copy[~(ST_header_copy['Opt Channel'].isin(disabled_opt_channels))]
+        LT_header_copy = LT_header_copy[~(LT_header_copy['Opt Channel'].isin(disabled_opt_channels))]
 
-    laydown_copy = laydown_copy.drop(columns=disabled_opt_channels, errors='ignore')
-    seas_index_copy = seas_index_copy.drop(columns=disabled_opt_channels, errors='ignore')
+        laydown_copy = laydown_copy.drop(columns=disabled_opt_channels, errors='ignore')
+        seas_index_copy = seas_index_copy.drop(columns=disabled_opt_channels, errors='ignore')
 
-    ST_input = ST_header_copy.to_dict('records')
-    LT_input = LT_header_copy.to_dict('records')
+        ST_input = ST_header_copy.to_dict('records')
+        LT_input = LT_header_copy.to_dict('records')
 
-    if "dates" in data:
-        app.logger.info('dates found in data')
-        print("dates in the datatosend")
-        print(data['dates'][0][:10])
-        print(data['dates'][1][:10])
-        start_date = datetime.strptime(data['dates'][0][:10], "%Y-%m-%d")
-        end_date = datetime.strptime(data['dates'][1][:10], "%Y-%m-%d")
-        print(f"start data: {start_date}, end_date: {end_date}, laydown_copy dates: {laydown_copy['Date']}")
-        laydown_copy = laydown_copy[(laydown_copy["Date"] >= start_date) & (laydown_copy["Date"] <= end_date)]
-        seas_index_copy = seas_index_copy[(laydown_copy["Date"] >= start_date) & (seas_index_copy["Date"] <= end_date)]
-        print(laydown_copy)
-        print(seas_index_copy)
-        app.logger.info(start_date)
-        app.logger.info(end_date)
+        if "dates" in data:
+            app.logger.info('dates found in data')
+            print("dates in the datatosend")
+            print(data['dates'][0][:10])
+            print(data['dates'][1][:10])
+            start_date = datetime.strptime(data['dates'][0][:10], "%Y-%m-%d")
+            end_date = datetime.strptime(data['dates'][1][:10], "%Y-%m-%d")
+            print(f"start data: {start_date}, end_date: {end_date}, laydown_copy dates: {laydown_copy['Date']}")
+            laydown_copy = laydown_copy[(laydown_copy["Date"] >= start_date) & (laydown_copy["Date"] <= end_date)]
+            seas_index_copy = seas_index_copy[(laydown_copy["Date"] >= start_date) & (seas_index_copy["Date"] <= end_date)]
+            print(laydown_copy)
+            print(seas_index_copy)
+            app.logger.info(start_date)
+            app.logger.info(end_date)
 
-    print(
-        f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
+        print(
+            f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
 
-    # NEED TO ADD HANDLING SO THAT EDITS MADE TO TABLE DATA ARE ADDED TO THE ST_HEADER
+        # NEED TO ADD HANDLING SO THAT EDITS MADE TO TABLE DATA ARE ADDED TO THE ST_HEADER
 
-    print(f"laydown = {laydown_copy}")
-    print(f"CPU = {[entry['CPU'] for entry in ST_input]}")
+        print(f"laydown = {laydown_copy}")
+        print(f"CPU = {[entry['CPU'] for entry in ST_input]}")
 
-    inputs_dict = {'ST_input': ST_input, 'LT_input': LT_input, 'laydown': laydown_copy, 'seas_index': seas_index_copy}
+        inputs_dict = {'ST_input': ST_input, 'LT_input': LT_input, 'laydown': laydown_copy, 'seas_index': seas_index_copy}
 
-    print(f"inputs per result: {inputs_per_result}")
-    inputs_per_result[table_id] = deepcopy(inputs_dict)
-    #print(f"inputs per result: {inputs_per_result}")
-    min_spend_cap_list = [float(entry['Min Spend Cap']) for entry in ST_input]
-    min_spend_cap_dict = dict(zip(streams, min_spend_cap_list))
-    laydown_copy.set_index('Date', inplace=True)
-    #print(min_spend_cap_dict)
-    socketio.start_background_task(target=optimise, ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, ftol=ftol_input, ssize=ssize_input, table_id = table_id, scenario_name = scenario_name)
+        print(f"inputs per result: {inputs_per_result}")
+        inputs_per_result[table_id] = deepcopy(inputs_dict)
+        #print(f"inputs per result: {inputs_per_result}")
+        min_spend_cap_list = [float(entry['Min Spend Cap']) for entry in ST_input]
+        min_spend_cap_dict = dict(zip(streams, min_spend_cap_list))
+        laydown_copy.set_index('Date', inplace=True)
+        #print(min_spend_cap_dict)
+        socketio.start_background_task(target=optimise, ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, ftol=ftol_input, ssize=ssize_input, table_id = table_id, scenario_name = scenario_name)
+    
+    except Exception as e:
+        print('Error in user inputs')
+        socketio.emit('opt_complete', {'data': table_id})
 
     return jsonify({'status': 'Task started in the background'})
 

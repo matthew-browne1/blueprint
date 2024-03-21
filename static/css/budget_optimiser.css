@@ -153,6 +153,10 @@
     align-items: center;
   }
 
+.collapsible:hover {
+  
+}
+
 .fa-pen-to-square {
   cursor: pointer;
 }
@@ -558,7 +562,7 @@
 }
 
 .button.d .knobs:before {
-  content: "ON";
+  content: "OFF";
   position: absolute;
   top: 4px;
   left: 4px;
@@ -570,15 +574,15 @@
   text-align: center;
   line-height: 1;
   padding: 9px 4px;
-  background-color: #03a9f4;
+  background-color: #f44336;
   border-radius: 50%;
   transition: 0.3s cubic-bezier(0.18, 0.89, 0.35, 1.15) all;
 }
 
 .button.d .checkbox:checked + .knobs:before {
-  content: "OFF";
+  content: "ON";
   left: 42px;
-  background-color: #f44336;
+  background-color: #03a9f4;
 }
 
 .button.d .checkbox:checked ~ .layer {

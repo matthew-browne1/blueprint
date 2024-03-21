@@ -7,6 +7,7 @@ import time
 class Optimise:
     @jit
     def adstock(PAM, a):
+        #print(PAM)
         newdata = PAM
         for i in range(1, len(PAM)):
             newdata[i] += a * newdata[i - 1]
@@ -25,10 +26,11 @@ class Optimise:
         cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
         allocation = budget / cost_per_stream
 
-        pct_laydown = np.array(recorded_impressions[stream]) / sum(recorded_impressions[stream]) if sum(recorded_impressions[stream]) != 0 else 0
+        pct_laydown = np.array(recorded_impressions[stream]) / sum(recorded_impressions[stream]) if sum(recorded_impressions[stream]) != 0 else np.zeros(len(recorded_impressions[stream]))
         # print(sum(pct_laydown))
 
         pam = pct_laydown * allocation
+       
         # print(sum(pam))
         # carryover_list = np.zeros_like(pam)
         # carryover_list[0] = pam[0]
@@ -132,11 +134,11 @@ class Optimise:
         allocation = budget / cost_per_stream
 
         pct_laydown = np.array(recorded_impressions[stream]) / sum(recorded_impressions[stream]) if sum(
-            recorded_impressions[stream]) != 0 else 0
+            recorded_impressions[stream]) != 0 else np.zeros(len(recorded_impressions[stream]))
         # print(sum(pct_laydown))
 
         pam = pct_laydown * allocation
-        # print(sum(pam))
+        print(pam)
         # carryover_list = np.zeros_like(pam)
         # carryover_list[0] = pam[0]
         # print(stream)
@@ -325,8 +327,3 @@ class Optimise:
             print(f"Solution failed using budget input of: {max_budget} with max total spend cap of: {sum(spend_cap_list)}")
 
         return opt_budgets_dict, elapsed_time_seconds, output_df
-
-# %% --------------------------------------------------------------------------
-#
-# -----------------------------------------------------------------------------
-

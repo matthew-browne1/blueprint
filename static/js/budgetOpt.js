@@ -9,10 +9,43 @@ var socket = io.connect(window.location.origin);
 socket.on("connect", function () {
   console.log("connected to server");
 });
+
 var optResults = {};
 
 // ANY EDITS MADE TO THIS FUNCTION, REMEMBER TO ALSO CHANGE THEM IN THE IDENTICAL FUNCTION IN SAVEUI.JS
+function sendTableIDsOnRefresh() {
+  var tableIDs = [];
 
+  // Loop through divs with ids "channel"+tableID, up to 15
+  for (var i = 1; i <= 15; i++) {
+    var divId = "channel" + i;
+    var divElement = document.getElementById(divId);
+
+    // If divElement is found, collect the tableID and add it to the array
+    if (divElement) {
+      var tableID = i;
+      tableIDs.push(tableID);
+    }
+  }
+
+  console.log("table ids collected:", tableIDs);
+
+  // Perform an AJAX post request to send back the array of tableIDs
+  $.ajax({
+    type: "POST",
+    url: "/table_ids_sync",
+    contentType: "application/json",
+    data: JSON.stringify({ tableIDs: tableIDs }),
+    success: function (response) {
+      console.log("TableIDs sent successfully:", tableIDs);
+      // Assuming you want to do something with the response
+      console.log("Server response:", response);
+    },
+    error: function (error) {
+      console.error("Error sending TableIDs:", error);
+    },
+  });
+}
 function initializeInitialTable() {
   
   var channelTable = $("#channel1").DataTable({
@@ -88,6 +121,28 @@ function initializeInitialTable() {
     ],
     rowId: "row_id",
   });
+      $.ajax({
+        url: "/date_range",
+        type: "GET",
+        dataType: "json",
+        success: function (data) {
+          console.log("fetching and applying dates");
+          // Set the fetched dates as default values for date inputs
+
+          var startDate = new Date(data.startDate).toISOString().split("T")[0];
+          var endDate = new Date(data.endDate).toISOString().split("T")[0];
+
+          $("#start-date1").val(startDate);
+          $("#start-date1").prop("min", startDate);
+          $("#start-date1").prop("max", endDate);
+          $("#end-date1").val(endDate);
+          $("#end-date1").prop("min", startDate);
+          $("#end-date1").prop("max", endDate);
+        },
+        error: function (error) {
+          console.error("Error fetching dates:", error);
+        },
+      });
   attachButtonListenersToDataTable();
   var channelEditor = new $.fn.dataTable.Editor({
     ajax: {
@@ -256,34 +311,27 @@ document.addEventListener("DOMContentLoaded", function () {
     var startDate = $("#start-date1").val();
     var endDate = $("#end-date1").val();
     var dateTuple = [startDate, endDate];
-    if (!dateButtonIsChecked) {
+    if (dateButtonIsChecked) {
       dataToSend["dates"] = dateTuple;
     }
     console.log(dataToSend);
     socket.emit('optimise', { dataToSend : dataToSend });
-    // Use jQuery AJAX to send the data to the Flask endpoint
-    // $.ajax({
-    //   type: "POST", // Use POST method
-    //   url: "/optimise", // Replace with your actual Flask endpoint URL
-    //   contentType: "application/json",
-    //   data: JSON.stringify(dataToSend), // Convert data to JSON format
-    //   success: function (response) {
-    //     // Handle the response from the Flask endpoint here
-    //     console.log(response);
-    //     optResults = response;
-    //     // alert(JSON.stringify(response))
-    //     showResultsButton();
-        
-    //   },
-    //   error: function (error) {
-    //     // Handle any errors that occur during the AJAX request
-    //     console.error("AJAX request error:", error);
-    //     hideLoadingOverlay();
-    //   },
-    // });
+
   });
 
 });
+  $("#date-filter-button1").on("click", function () {
+    var isChecked = $(this).prop("checked");
+    var dateContainers = $(".date-inputs");
+
+    if (!isChecked) {
+      console.log("date button is unchecked");
+      dateContainers.addClass("greyed-out");
+    } else {
+      console.log("date button is checked");
+      dateContainers.removeClass("greyed-out");
+    }
+  });
 }
 
 initializeInitialTable();
@@ -477,18 +525,6 @@ function openNewTab() {
     });
   });
 
-$("#date-filter-button1").on("click", function () {
-  var isChecked = $(this).prop("checked");
-  var dateContainers = $(".date-inputs");
-
-  if (isChecked) {
-    console.log("date button is unchecked");
-    dateContainers.addClass("greyed-out");
-  } else {
-    console.log("date button is checked");
-    dateContainers.removeClass("greyed-out");
-  }
-});
 
 function fetchTabName(setID) {
   var buttonText = document.getElementById("button-text"+setID);

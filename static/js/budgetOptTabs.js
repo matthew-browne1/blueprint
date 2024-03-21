@@ -306,23 +306,6 @@ function initializeDataTable(tableID) {
                   return disabledRowIds;
                 }
 
-                  $.ajax({
-                    url: "/date_range",
-                    type: "GET",
-                    dataType: "json",
-                    success: function (data) {
-                      // Set the fetched dates as default values for date inputs
-                      $("#start-date"+tableID).val(data.startDate);
-                      $("#start-date"+tableID).prop("min", data.startDate);
-                      $("#start-date"+tableID).prop("max", data.endDate);
-                      $("#end-date"+tableID).val(data.endDate);
-                      $("#end-date"+tableID).prop("min", data.startDate);
-                      $("#end-date"+tableID).prop("max", data.endDate);
-                    },
-                    error: function (error) {
-                      console.error("Error fetching dates:", error);
-                    },
-                  });
                   var obj = document.getElementById("obj-input" + tableID);
                   var exh = document.getElementById("exh-input" + tableID);
                   var max = document.getElementById("max-input" + tableID);
@@ -359,7 +342,7 @@ function initializeDataTable(tableID) {
                         var startDate = $("#start-date"+tableID).val();
                         var endDate = $("#end-date"+tableID).val();
                         var dateTuple = [startDate, endDate];
-                        if (!dateButtonIsChecked) {
+                        if (dateButtonIsChecked) {
                           dataToSend["dates"] = dateTuple;
                         }
                     console.log(dataToSend);
@@ -374,7 +357,18 @@ function initializeDataTable(tableID) {
        console.error("Error creating copy of data:", error);
      },
    });
-  
+  $("#date-filter-button"+tableID).on("click", function () {
+    var isChecked = $(this).prop("checked");
+    var dateContainers = $(".date-inputs"+tableID);
+
+    if (!isChecked) {
+      console.log("date button is unchecked");
+      dateContainers.addClass("greyed-out");
+    } else {
+      console.log("date button is checked");
+      dateContainers.removeClass("greyed-out");
+    }
+  });
 
 }
 
