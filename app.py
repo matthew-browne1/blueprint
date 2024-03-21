@@ -20,11 +20,15 @@ import logging
 from optimiser import Optimise
 from io import BytesIO
 from copy import deepcopy
+import threading
+import queue
 
 #from azure import identity
 
 app = Flask(__name__)
 socketio = SocketIO(app=app)
+
+task_queue = queue.Queue()
 
 # executor = ProcessPoolExecutor()
 
@@ -631,14 +635,34 @@ def run_optimise(dataDict):
         min_spend_cap_dict = dict(zip(streams, min_spend_cap_list))
         laydown_copy.set_index('Date', inplace=True)
         #print(min_spend_cap_dict)
-        socketio.start_background_task(target=optimise, ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, ftol=ftol_input, ssize=ssize_input, table_id = table_id, scenario_name = scenario_name)
-    
+        #socketio.start_background_task(target=optimise, ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, ftol=ftol_input, ssize=ssize_input, table_id = table_id, scenario_name = scenario_name)
+        task_queue.put((ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budget, exh_budget, ftol_input, ssize_input, table_id, scenario_name))
     except Exception as e:
         print('Error in user inputs')
         socketio.emit('opt_complete', {'data': table_id})
 
     return jsonify({'status': 'Task started in the background'})
 
+def run_optimise_task():
+    while True:
+        # Get the task from the queue (blocks until a task is available)
+        task = task_queue.get()
+        if task is None:
+            break
+        
+        # Unpack the task arguments
+        ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budget, exh_budget, ftol, ssize, table_id, scenario_name = task
+        
+        # Run the optimise task with provided arguments
+        optimise(ST_input=ST_input, LT_input=LT_input, laydown=laydown, seas_index=seas_index, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, ftol=ftol, ssize=ssize, table_id=table_id, scenario_name=scenario_name)
+        
+        # Mark the task as done
+        task_queue.task_done()
+
+# Start the thread to run optimise tasks
+optimise_thread = threading.Thread(target=run_optimise_task)
+optimise_thread.daemon = True  # Set the thread as a daemon so it exits when the main thread exits
+optimise_thread.start()
 
 @app.route('/results_output', methods=['POST'])
 def results_output():
@@ -1046,6 +1070,12 @@ def export_data():
 
     return send_file(excel_buffer, download_name=f'{current_user.id}_Input_File.xlsx', as_attachment=True)
 
+def main():
+    task_queue = queue.Queue()
+    num_workers = 4
+    threads = []
+    for _ in range(num_workers):
+        t = threading.Thread(target=run_optimise)
 
 if __name__ == '__main__':
     with app.app_context():
