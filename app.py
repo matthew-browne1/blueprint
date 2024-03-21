@@ -945,11 +945,12 @@ def chart_data():
         result_df = pd.DataFrame(rows, columns=columns)
         db_result.close()
         result_df['Date'] = pd.to_datetime(result_df['Date'])
-        result_df['MonthYear'] = result_df['Date'].dt.strftime('%Y-%b')
+        result_df['MonthYear'] = result_df['Date'].dt.strftime('%b %Y')
         result_df = result_df.groupby(
             ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Region', 'Brand', 'Channel Group', 'Channel',
              'MonthYear']).sum(numeric_only=True)
         result_df.reset_index(inplace=True)
+        result_df = result_df.sort_values(by='MonthYear')
         chart_data = []
         print("worked")
         for index, row in result_df.iterrows():
@@ -977,11 +978,6 @@ def chart_data():
         if 'conn' in locals():
             conn.close()
 
-
-# Initialize an empty filters variable
-filters = []
-
-
 @socketio.on("apply_filter")
 def handle_apply_filter(filter_data):
     try:
@@ -997,7 +993,6 @@ def handle_apply_filter(filter_data):
         apply_filters(filters)
     except KeyError:
         print("KeyError: 'Budget/Revenue' not found in filter_data")
-
 
 def apply_filters(filters):
     try:
@@ -1158,27 +1153,27 @@ def chart_budget_response():
 
 
 @socketio.on("apply_filter_curve")
-def handle_apply_filter(filter_data):
+def handle_curve_filter(curve_filter_data):
     try:
-        filters = filter_data
-        if 'Region' in filters and 'Brand' in filters and 'Optimisation Type' in filters:
-            filters['region_brand_opt'] = f"{filters['Region']}_{filters['Brand']}_{filters['Optimisation Type']}"
-        if 'Region' in filters and 'Brand' in filters:
-            filters['region_brand'] = f"{filters['Region']}_{filters['Brand']}"
+        curve_filters = curve_filter_data
+        if 'Region' in curve_filters and 'Brand' in curve_filters and 'Optimisation Type' in curve_filters:
+            curve_filters['region_brand_opt'] = f"{curve_filters['Region']}_{curve_filters['Brand']}_{curve_filters['Optimisation Type']}"
+        if 'Region' in curve_filters and 'Brand' in curve_filters:
+            curve_filters['region_brand'] = f"{curve_filters['Region']}_{curve_filters['Brand']}"
 
-        print('Received filter data:', filters)
+        print('Received filter data:', curve_filters)
         unique_region_brand_opt = set(row["region_brand"] for row in chart_budget)
         print("Unique values in chart_budget:", unique_region_brand_opt)
 
-        apply_filters(chart_response, filters, 'filtered_data_response')
-        apply_filters(chart_budget, filters, 'filtered_data_budget')
-        apply_filters(chart_roi, filters, 'filtered_data_roi')
-        apply_filters(chart_budget_response, filters, 'filtered_data_budget_response')
+        apply_curve_filters(chart_response, curve_filters, 'filtered_data_response')
+        apply_curve_filters(chart_budget, curve_filters, 'filtered_data_budget')
+        apply_curve_filters(chart_roi, curve_filters, 'filtered_data_roi')
+        apply_curve_filters(chart_budget_response, curve_filters, 'filtered_data_budget_response')
 
     except Exception as e:
         print('Error applying filters:', str(e))
 
-def apply_filters(data, filters, event_name):
+def apply_curve_filters(data, curve_filters, event_name):
     try:
         filtered_data = []
 
@@ -1195,7 +1190,7 @@ def apply_filters(data, filters, event_name):
             else:
                 data_point_filter = f"{data_point['region_brand']}"
 
-            relevant_filters = {key: values for key, values in filters.items() if key in data_point}
+            relevant_filters = {key: values for key, values in curve_filters.items() if key in data_point}
 
             for key, values in relevant_filters.items():
                 if values and data_point[key] not in values:

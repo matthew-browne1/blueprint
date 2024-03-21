@@ -77,7 +77,7 @@ $(document).ready(function() {
 
     // Listen for 'dropdown_options' event and populate dropdowns
     chartsSocket.on('dropdown_options', function(data) {
-        populateDropdown('#dateFilterOptions', data.options.MonthYear);
+        populateDropdown('#dateFilter', data.options.MonthYear);
         populateDropdown('#channelFilter', data.options.Channel);
         populateDropdown('#channelgroupFilter', data.options['Channel Group']);
         populateDropdown('#regionFilter', data.options.Region);
@@ -1032,28 +1032,33 @@ const processedDataLaydown = data.reduce((acc, entry) => {
     return acc;
 },
 {});
-// Extract labels and datasets for laydown charts
-const laydown_scenario_labels = Object.keys(processedDataLaydown);
-const laydown_budgetData = [];
-const timePeriods = Object.keys(processedDataLaydown[laydown_scenario_labels[0]]);
-
-// Iterate through each scenario and time period to extract data
-laydown_scenario_labels.forEach(scenario => {
-    timePeriods.forEach(period => {
-        laydown_budgetData.push(processedDataLaydown[scenario][period] || 0);
+ // Extract labels and datasets for laydown charts
+    const laydown_scenario_labels = Object.keys(processedDataLaydown);
+    const timePeriods = Object.keys(processedDataLaydown[laydown_scenario_labels[0]]).sort((a, b) => {
+        const dateA = new Date(a);
+        const dateB = new Date(b);
+        return dateA - dateB;
     });
-});
 
-// 7. Laydown by Scenario Chart
-// 7a. data block
+    const laydown_budgetData = [];
+
+    // Iterate through each scenario and time period to extract data
+    laydown_scenario_labels.forEach(scenario => {
+        timePeriods.forEach(period => {
+            laydown_budgetData.push(processedDataLaydown[scenario][period] || 0);
+        });
+    });
+
+    // 7. Laydown by Scenario Chart
+    // 7a. data block
     const laydown_scenario_chartData = {
-      labels: timePeriods,
-      datasets: laydown_scenario_labels.map(scenario => ({
-        label: scenario,
-        data: timePeriods.map(period => processedDataLaydown[scenario][period] || 0), // Retrieve budget data for each scenario and period
-        backgroundColor: '#' + Math.random().toString(16).substr(-6), // Random background color for each scenario
-        borderWidth: 1,
-    })),
+        labels: timePeriods,
+        datasets: laydown_scenario_labels.map(scenario => ({
+            label: scenario,
+            data: timePeriods.map(period => processedDataLaydown[scenario][period] || 0), // Retrieve budget data for each scenario and period
+            backgroundColor: '#' + Math.random().toString(16).substr(-6), // Random background color for each scenario
+            borderWidth: 1,
+        })),
     };
 // 7b. config block
  const laydown_scenario_chartOptions = {
@@ -1169,18 +1174,24 @@ function generateChartsD(data) {
     return acc;
   }, {});
 
-    const laydown_channel_labels = Object.keys(processedDataChannel);
-    const laydown_channel_data = Object.keys(processedDataChannel[laydown_channel_labels[0]]);
+// Convert month-year strings to Date objects and sort them
+    const sortedMonthYears = Object.keys(processedDataChannel).sort((a, b) => {
+        const dateA = new Date(a);
+        const dateB = new Date(b);
+        return dateA - dateB;
+    });
+
+    const laydown_channel_data = Object.keys(processedDataChannel[sortedMonthYears[0]]);
 
     // 8a. data block
     const laydown_channel_chartData = {
-      labels: laydown_channel_labels,
-      datasets: laydown_channel_data.map(channel => ({
-        label: channel,
-        data: laydown_channel_labels.map(monthYear => processedDataChannel[monthYear][channel] || 0),
-        backgroundColor: '#' + Math.random().toString(16).substr(-6), // Random background color for each channel
-        borderWidth: 1,
-      })),
+        labels: sortedMonthYears,
+        datasets: laydown_channel_data.map(channel => ({
+            label: channel,
+            data: sortedMonthYears.map(monthYear => processedDataChannel[monthYear][channel] || 0),
+            backgroundColor: '#' + Math.random().toString(16).substr(-6), // Random background color for each channel
+            borderWidth: 1,
+        })),
     };
 
     // 8b. config block

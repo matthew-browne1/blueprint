@@ -1,3 +1,8 @@
+let response_curve_chart = null;
+let budget_response_chart = null;
+let budget_curve_chart = null;
+let roi_curve_chart = null;
+
 var chartsSocket = io.connect(window.location.origin,
      { timeout: 500000
 }
@@ -7,6 +12,14 @@ chartsSocket.on('connect', function() {
     console.log('Connected');
      });
 $(document).ready(function(){
+    var filtered_chartResponse = [];
+    var chartResponse = [];
+    var filtered_chartBudget = [];
+    var chartBudget = [];
+    var filtered_chartROI = [];
+    var chartROI = [];
+    var filtered_chartBudget_response = [];
+    var chartBudget_response = [];
 
    // Function to populate dropdown options
 function populateDropdown(selector, options) {
@@ -17,8 +30,6 @@ function populateDropdown(selector, options) {
         dropdown.append(option);
     });
 }
-
-
       // Function to collect and send filter selections to backend
     function applyFilters() {
         var filters = {
@@ -28,7 +39,6 @@ function populateDropdown(selector, options) {
         };
         console.log("Applying filters:", filters);
         chartsSocket.emit("apply_filter_curve", filters);
-        generateCharts();
     }
 
         // Listen for 'dropdown_options' event and populate dropdowns
@@ -45,18 +55,18 @@ function populateDropdown(selector, options) {
         applyFilters();
     });
 
-
 chartsSocket.emit("response_data");
+chartsSocket.emit("apply_curve_filter");
+
 chartsSocket.on('chart_response', function(data) {
-  var chartResponse = data.chartResponse;
+  chartResponse = data.chartResponse;
 
   console.log("fetched response data from back end");
-  console.log(chartResponse)
-  generateChartsA(chartResponse);
+  generateCurveChartsA();
   setDefaultSelections(chartResponse);
 });
-    function setDefaultSelections(chartResponse) {
-        // Check if chartResponse contains data
+
+function setDefaultSelections(chartResponse) {
         if (chartResponse.length > 0) {
             var defaultSelections = {
                 Region: chartResponse[0].Region,
@@ -70,29 +80,106 @@ chartsSocket.on('chart_response', function(data) {
             $('#optimisationFilter').val(defaultSelections['Optimisation Type']);
         }
     }
+
+chartsSocket.on('filtered_data_response', function(data) {
+  filtered_chartResponse = data.filtered_data;
+
+  console.log("fetched filtered response data from back end");
+  generateCurveChartsA();
+});
+
+function generateCurveChartsA() {
+    var title = "Curve Charts for ";
+    var dataToUse = [];
+
+    if (filtered_chartResponse.length > 0) {
+        dataToUse = filtered_chartResponse;
+    } else {
+        dataToUse = chartResponse;
+    }
+
+    if (dataToUse.length > 0) {
+        title += "Country - " + dataToUse[0].Region + ", Brand - " + dataToUse[0].Brand + ", Optimisation Type - " + dataToUse[0]['Optimisation Type'];
+    } else {
+        title += "No Data Available";
+    }
+
+    $('#dynamic-title').text(title);
+
+    if (dataToUse.length > 0) {
+        generateChartsA(dataToUse);
+    }
+}
+
 chartsSocket.emit("budget_data");
 chartsSocket.on('chart_budget', function(data) {
-  var chartBudget = data.chartBudget;
+  chartBudget = data.chartBudget;
 
   console.log("fetched budget data from back end");
-  generateChartsB(chartBudget);
+  generateCurveChartsB();
 });
+
+chartsSocket.on('filtered_data_budget', function(data) {
+  filtered_chartBudget = data.filtered_data;
+
+  console.log("fetched filtered budget data from back end");
+  generateCurveChartsB();
+});
+
+function generateCurveChartsB() {
+        if (filtered_chartBudget.length > 0) {
+            generateChartsB(filtered_chartBudget);
+        } else {
+            generateChartsB(chartBudget);
+        }
+    }
 
 chartsSocket.emit("roi_data");
 chartsSocket.on('chart_roi', function(data) {
-  var chartROI = data.chartROI;
+  chartROI = data.chartROI;
 
   console.log("fetched ROI data from back end");
-  generateChartsC(chartROI);
+  generateCurveChartsC();
 });
+
+chartsSocket.on('filtered_data_roi', function(data) {
+  filtered_chartROI = data.filtered_data;
+
+  console.log("fetched filtered ROI data from back end");
+  generateCurveChartsC();
+});
+
+function generateCurveChartsC() {
+        if (filtered_chartROI.length > 0) {
+            generateChartsC(filtered_chartROI);
+        } else {
+            generateChartsC(chartROI);
+        }
+    }
 
 chartsSocket.emit("budget_response_data");
 chartsSocket.on('chart_budget_response', function(data) {
-  var chartBudget_response = data.chartBudget_response;
+  chartBudget_response = data.chartBudget_response;
 
   console.log("fetched budget response data from back end");
-  generateChartsD(chartBudget_response);
+  generateCurveChartsD();
 });
+
+chartsSocket.on('filtered_data_budget_response', function(data) {
+  filtered_chartBudget_response = data.filtered_data;
+
+  console.log("fetched filtered budget response data from back end");
+  generateCurveChartsD();
+});
+
+function generateCurveChartsD() {
+        if (filtered_chartBudget_response.length > 0) {
+            generateChartsD(filtered_chartBudget_response);
+        } else {
+            generateChartsD(chartBudget_response);
+        }
+    }
+
 });
 
 function generateChartsA(data) {
@@ -144,12 +231,17 @@ function generateChartsA(data) {
          }
     }
 // 1c. render block
-    const response_curve_chart = new Chart(document.getElementById("response_curve_chart"),
-      {
-       type: 'line',
-       data: response_curve_chartData,
-        options: response_curve_chartOptions,
-    });
+   if (response_curve_chart === null) {
+        response_curve_chart = new Chart(document.getElementById("response_curve_chart"), {
+            type: 'line',
+            data: response_curve_chartData,
+            options: response_curve_chartOptions,
+        });
+    } else {
+        response_curve_chart.data = response_curve_chartData;
+        response_curve_chart.options = response_curve_chartOptions;
+        response_curve_chart.update();
+    }
 }
 function generateChartsB(data) {
     console.log("reaching generateChartsB method");
@@ -236,12 +328,17 @@ function generateChartsB(data) {
     };
 
     // 3c. render block
-    const budget_curve_chart = new Chart(document.getElementById("budget_curve_chart"),
-        {
+ if (budget_curve_chart === null) {
+        budget_curve_chart = new Chart(document.getElementById("budget_curve_chart"), {
             type: 'line',
             data: budget_chartData,
             options: budget_chartOptions,
         });
+    } else {
+        budget_curve_chart.data = budget_chartData;
+        budget_curve_chart.options = budget_chartOptions;
+        budget_curve_chart.update();
+    }
 }
 function generateChartsC(data) {
     console.log("reaching generateChartsC method");
@@ -313,13 +410,17 @@ function generateChartsC(data) {
          }
     }
 // 4c. render block
-     const roi_curve_chart = new Chart(document.getElementById("roi_curve_chart"),
-      {
-       type: 'line',
-       data: roi_chartData,
-        options: roi_chartOptions,
-    });
-
+    if (roi_curve_chart === null) {
+        roi_curve_chart = new Chart(document.getElementById("roi_curve_chart"), {
+            type: 'line',
+            data: roi_chartData,
+            options: roi_chartOptions,
+        });
+    } else {
+        roi_curve_chart.data = roi_chartData;
+        roi_curve_chart.options = roi_chartOptions;
+        roi_curve_chart.update();
+    }
    }
 function generateChartsD(data) {
     console.log("reaching generateChartsD method");
@@ -382,11 +483,15 @@ function generateChartsD(data) {
     };
 
     // 2c. render block
-    const budget_response_chart = new Chart(document.getElementById("response_budget_chart"),
-        {
+    if (budget_response_chart === null) {
+        budget_response_chart = new Chart(document.getElementById("response_budget_chart"), {
             type: 'line',
             data: budget_response_chartData,
             options: budget_response_chartOptions,
         });
-
+    } else {
+        budget_response_chart.data = budget_response_chartData;
+        budget_response_chart.options = budget_response_chartOptions;
+        budget_response_chart.update();
+    }
 }
