@@ -602,33 +602,34 @@ def run_optimise(dataDict):
 
         ST_input = ST_header_copy.to_dict('records')
         LT_input = LT_header_copy.to_dict('records')
-
+        
         if "dates" in data:
+          
             app.logger.info('dates found in data')
             print("dates in the datatosend")
-            print(data['dates'][0][:10])
-            print(data['dates'][1][:10])
+            #print(data['dates'][0][:10])
+            #print(data['dates'][1][:10])
             start_date = datetime.strptime(data['dates'][0][:10], "%Y-%m-%d")
             end_date = datetime.strptime(data['dates'][1][:10], "%Y-%m-%d")
-            print(f"start data: {start_date}, end_date: {end_date}, laydown_copy dates: {laydown_copy['Date']}")
+            #print(f"start data: {start_date}, end_date: {end_date}, laydown_copy dates: {laydown_copy['Date']}")
             laydown_copy = laydown_copy[(laydown_copy["Date"] >= start_date) & (laydown_copy["Date"] <= end_date)]
             seas_index_copy = seas_index_copy[(laydown_copy["Date"] >= start_date) & (seas_index_copy["Date"] <= end_date)]
-            print(laydown_copy)
-            print(seas_index_copy)
+            #print(laydown_copy)
+            #print(seas_index_copy)
             app.logger.info(start_date)
             app.logger.info(end_date)
 
         print(
             f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
 
-        # NEED TO ADD HANDLING SO THAT EDITS MADE TO TABLE DATA ARE ADDED TO THE ST_HEADER
 
-        print(f"laydown = {laydown_copy}")
-        print(f"CPU = {[entry['CPU'] for entry in ST_input]}")
+
+        #print(f"laydown = {laydown_copy}")
+        #print(f"CPU = {[entry['CPU'] for entry in ST_input]}")
 
         inputs_dict = {'ST_input': ST_input, 'LT_input': LT_input, 'laydown': laydown_copy, 'seas_index': seas_index_copy}
 
-        print(f"inputs per result: {inputs_per_result}")
+        #print(f"inputs per result: {inputs_per_result}")
         inputs_per_result[table_id] = deepcopy(inputs_dict)
         #print(f"inputs per result: {inputs_per_result}")
         min_spend_cap_list = [float(entry['Min Spend Cap']) for entry in ST_input]
@@ -636,7 +637,7 @@ def run_optimise(dataDict):
         laydown_copy.set_index('Date', inplace=True)
         #print(min_spend_cap_dict)
         #socketio.start_background_task(target=optimise, ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, ftol=ftol_input, ssize=ssize_input, table_id = table_id, scenario_name = scenario_name)
-        task_queue.put((ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budget, exh_budget, ftol_input, ssize_input, table_id, scenario_name))
+        task_queue.put((ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, ftol_input, ssize_input, table_id, scenario_name))
     except Exception as e:
         print('Error in user inputs')
         socketio.emit('opt_complete', {'data': table_id})
@@ -651,10 +652,10 @@ def run_optimise_task():
             break
         
         # Unpack the task arguments
-        ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budget, exh_budget, ftol, ssize, table_id, scenario_name = task
+        ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, ftol, ssize, table_id, scenario_name = task
         
         # Run the optimise task with provided arguments
-        optimise(ST_input=ST_input, LT_input=LT_input, laydown=laydown, seas_index=seas_index, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, ftol=ftol, ssize=ssize, table_id=table_id, scenario_name=scenario_name)
+        optimise(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, ftol=ftol, ssize=ssize, table_id=table_id, scenario_name=scenario_name)
         
         # Mark the task as done
         task_queue.task_done()
@@ -1006,6 +1007,7 @@ def welcome_page():
 def home():
     return render_template('Home.html', current_user=current_user)
 
+active_sessions = {}
 
 @app.route('/login', methods=['POST'])
 def login():
@@ -1013,12 +1015,13 @@ def login():
         username = request.form.get('uname')
         password = request.form.get('psw')
 
-        configurations = load_configurations()
-
         user = User.query.filter_by(username=username).first()
+        if user.id in active_sessions:
+            return 'User is already logged in', 403
 
         if user and bcrypt.check_password_hash(user.password, password):
             login_user(user, remember=True)  # Use Flask-Login's login_user
+            active_sessions[user.id] = True
             app.logger.info(f"User {username} logged in successfully.")
             app.logger.info(current_user.user_info)
             return redirect(url_for('blueprint'))
@@ -1047,6 +1050,9 @@ def save_configurations(configurations):
 @app.route('/logout')
 @login_required
 def logout():
+    user_id = current_user.id
+    if user_id in active_sessions:
+        del active_sessions[user_id]
     logout_user()
     return redirect(url_for('/home'))
 

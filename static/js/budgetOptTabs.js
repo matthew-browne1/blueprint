@@ -342,7 +342,7 @@ function initializeDataTable(tableID) {
                         var startDate = $("#start-date"+tableID).val();
                         var endDate = $("#end-date"+tableID).val();
                         var dateTuple = [startDate, endDate];
-                        if (dateButtonIsChecked) {
+                        if (!dateButtonIsChecked) {
                           dataToSend["dates"] = dateTuple;
                         }
                     console.log(dataToSend);
