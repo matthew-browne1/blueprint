@@ -138,7 +138,7 @@ class Optimise:
         # print(sum(pct_laydown))
 
         pam = pct_laydown * allocation
-        print(pam)
+        #print(pam)
         # carryover_list = np.zeros_like(pam)
         # carryover_list[0] = pam[0]
         # print(stream)
@@ -214,7 +214,8 @@ class Optimise:
                 LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict,
                 recorded_impressions, seas_dict, num_weeks, max_budget, exh_budget, return_type, objective_type)
 
-        initial_budgets = [min(max_spend_cap_dict[stream], max_budget / len(streams)) for stream in streams]
+        #initial_budgets = [min(max_spend_cap_dict[stream], max_budget / len(streams)) for stream in streams]
+        initial_budgets = [current_budget_dict[stream] for stream in streams]
 
         bounds = [(min_spend_cap_dict[stream], max_spend_cap_dict[stream]) for stream in streams]
 
@@ -283,6 +284,7 @@ class Optimise:
         opt_revenues_LT_df['Budget/Revenue'] = 'LT Revenue'
 
         #################################################
+        print("attempting to sum laydown")
         opt_laydown = laydown / laydown.sum()
         for stream in streams:
             opt_laydown[stream] = opt_laydown[stream] * opt_budgets_dict[stream]
@@ -302,6 +304,7 @@ class Optimise:
         curr_revenue_LT_df['Budget/Revenue'] = 'LT Revenue'
         
         #################################################
+        print("attempting to sum curr laydown")
         curr_laydown = laydown / laydown.sum()
         for stream in streams:
             curr_laydown[stream] = curr_laydown[stream] * current_budget_dict[stream]
@@ -324,6 +327,6 @@ class Optimise:
             print(f"Maximized Profit: {-result.fun}")
         else:
             print("Solver did not find an optimal solution.")
-            print(f"Solution failed using budget input of: {max_budget} with max total spend cap of: {sum(spend_cap_list)}")
+            print(f"Solution failed using budget input of: {max_budget} with max total spend cap of: {sum(max_spend_cap_list)}")
 
         return opt_budgets_dict, elapsed_time_seconds, output_df
