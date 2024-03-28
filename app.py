@@ -22,6 +22,9 @@ from io import BytesIO
 from copy import deepcopy
 import threading
 import queue
+import pyotp
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
 
 #from azure import identity
 
@@ -43,7 +46,6 @@ ra_server_uri = 'postgresql://postgres:' + urllib.parse.quote_plus("Gde3400@@") 
 
 # Create the new PostgreSQL URI for Azure
 
-
 app.config['SQLALCHEMY_DATABASE_URI'] = ra_server_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.config['SECRET_KEY'] = secrets.token_hex()
@@ -58,20 +60,24 @@ bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
+# Initialize Azure Key Vault client
+keyvault_url = "https://acblueprint-vault.vault.azure.net/"
+credential = DefaultAzureCredential()
+secret_client = SecretClient(vault_url=keyvault_url, credential=credential)
+
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(20), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
     user_info = db.relationship('UserInfo', backref='user', lazy=True)
-
+    secret_key = db.Column(db.String(16), nullable=False)
 
 class UserInfo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     full_name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-
 
 class Snapshot(db.Model):
     name = db.Column(db.String, nullable=False)
@@ -95,16 +101,54 @@ class Snapshot(db.Model):
 # database_handler.setLevel(logging.DEBUG)
 # app.logger.addHandler(database_handler)
 
-class PyomoLogHandler(logging.Handler):
-    def emit(self, record):
-        log_message = self.format(record)
-        db.session.add(Log(message=log_message))
+
+def generate_totp_info(user):
+    if not user.secret_key:
+        user.secret_key = pyotp.random_base32()
         db.session.commit()
+    totp = pyotp.TOTP(user.secret_key)
+    totp_url = totp.provisioning_uri(user.username, issuer_name="Blueprint")
+    return totp_url
 
 
-pyomo_logger = logging.getLogger('pyomo')
-pyomo_logger.addHandler(PyomoLogHandler())
+active_sessions = {}
 
+@app.route('/login', methods=['POST'])
+def login():
+    if request.method == 'POST':
+        username = request.form.get('uname')
+        password = request.form.get('psw')
+        user = User.query.filter_by(username=username).first()
+        if user.id in active_sessions:
+            return 'User is already logged in', 403
+
+        if user and bcrypt.check_password_hash(user.password, password):
+            totp = pyotp.TOTP(user.totp_secret)
+            session['otp_verified'] = False
+            if totp.verify(request.form.get("otp")):
+                session['otp_verified'] = True
+            if session.get('otp_verified'):
+                login_user(user, remember=True)
+                flash('You have been logged in successfully!', 'success')
+                active_sessions[user.id] = True
+                app.logger.info(f"User {username} logged in successfully.")
+                app.logger.info(current_user.user_info)
+            else:
+                flash('Invalid TOTP token. Please try again.', 'error')
+            return redirect(url_for('blueprint'))
+        else:
+            app.logger.info(f"Failed login attempt for user {username}.")
+            flash('Invalid username or password', 'error')
+            return redirect(url_for('login'))
+
+@app.route('/logout')
+@login_required
+def logout():
+    user_id = current_user.id
+    if user_id in active_sessions:
+        del active_sessions[user_id]
+    logout_user()
+    return redirect(url_for('/home'))
 
 class Log(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -128,10 +172,13 @@ def add_user(user_data):
     existing_user = User.query.filter_by(username=user_data['username']).first()
 
     if existing_user is None:
+        totp_secret = secrets.token_hex(8)
         hashed_password = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
-        new_user = User(username=user_data['username'], password=hashed_password)
+        new_user = User(username=user_data['username'], password=hashed_password,totp_secret=totp_secret)
         db.session.add(new_user)
         db.session.commit()
+
+        secret_client.set_secret(user_data['username'], totp_secret)
 
         new_user_info = UserInfo(full_name=user_data['full_name'], email=user_data['email'], user=new_user)
         db.session.add(new_user_info)
@@ -1007,28 +1054,6 @@ def welcome_page():
 def home():
     return render_template('Home.html', current_user=current_user)
 
-active_sessions = {}
-
-@app.route('/login', methods=['POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form.get('uname')
-        password = request.form.get('psw')
-
-        user = User.query.filter_by(username=username).first()
-        if user.id in active_sessions:
-            return 'User is already logged in', 403
-
-        if user and bcrypt.check_password_hash(user.password, password):
-            login_user(user, remember=True)  # Use Flask-Login's login_user
-            active_sessions[user.id] = True
-            app.logger.info(f"User {username} logged in successfully.")
-            app.logger.info(current_user.user_info)
-            return redirect(url_for('blueprint'))
-        else:
-            app.logger.info(f"Failed login attempt for user {username}.")
-            flash('Invalid username or password', 'error')
-            return redirect(url_for('login'))
 
 
 def load_configurations():
@@ -1046,15 +1071,6 @@ def save_configurations(configurations):
 
     return configurations
 
-
-@app.route('/logout')
-@login_required
-def logout():
-    user_id = current_user.id
-    if user_id in active_sessions:
-        del active_sessions[user_id]
-    logout_user()
-    return redirect(url_for('/home'))
 
 
 @app.route('/export_data')
