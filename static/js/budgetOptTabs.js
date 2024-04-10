@@ -451,27 +451,15 @@ function destroyTables(tableID) {
   }
 }
 function showResultsButton() {
-  var div = document.getElementById("results-div");
   var existingButton = document.getElementById("results-button");
-
-  if (existingButton) {
+  console.log("showing results button");
+  var computedStyle = window.getComputedStyle(existingButton);
+  if (computedStyle.display !== "none") {
+    console.log("results button display is not none");
     // If the button already exists, update its innerHTML to "Update Results"
-    existingButton.innerHTML = "Update Results";
+      existingButton.innerHTML = "Update Results";
   } else {
-    // If the button doesn't exist, create a new button and add it to the div
-    var buttonHtml =
-      '<button class="button-5" role="button" id="results-button">Show Results</button>';
-
-    // Create a new div element and set its innerHTML to the buttonHtml
-    var tempDiv = document.createElement("div");
-    tempDiv.innerHTML = buttonHtml;
-
-    // Append the first child of tempDiv (which is the newly created button element) to the actual div
-    div.appendChild(tempDiv.firstChild);
-
-    // Trigger a resize event (you may remove this line if it's not necessary)
-    var event = new Event("resize");
-    window.dispatchEvent(event);
+    existingButton.style.display = "inline-block";
   }
 }
 var tabSocket = io.connect(window.location.origin);

@@ -4,6 +4,8 @@ $(document).ready(function() {
   syncTabCounter();
   var optAllBtn = document.getElementById("optimise-all");
   optAllBtn.addEventListener("click", optAll);
+  var showResultsButton = document.getElementById("results-button");
+  showResultsButton.addEventListener("click", onResultsBtnClick);
 });
 var socket = io.connect(window.location.origin);
 socket.on("connect", function () {
@@ -354,31 +356,6 @@ function getDisabledRowIds(tableID) {
   return disabledRowIds;
 }
 
-function showResultsButton() {
-  var div = document.getElementById("results-div");
-  var existingButton = document.getElementById("results-button");
-
-  if (existingButton) {
-    // If the button already exists, update its innerHTML to "Update Results"
-    existingButton.innerHTML = "Update Results";
-  } else {
-    // If the button doesn't exist, create a new button and add it to the div
-    var buttonHtml =
-      '<button class="button-5" role="button" id="results-button">Show Results</button>';
-
-    // Create a new div element and set its innerHTML to the buttonHtml
-    var tempDiv = document.createElement("div");
-    tempDiv.innerHTML = buttonHtml;
-
-    // Append the first child of tempDiv (which is the newly created button element) to the actual div
-    div.appendChild(tempDiv.firstChild);
-
-    // Trigger a resize event (you may remove this line if it's not necessary)
-    var event = new Event("resize");
-    window.dispatchEvent(event);
-  }
-}
-
 function showLoadingOverlay(tableID) {
   document.getElementById("loading-overlay"+tableID).style.display = "block";
 }
@@ -507,23 +484,23 @@ function openNewTab() {
   window.open("/blueprint_results", "_blank");
   }
   
-  $("#results-div").on("click", "#results-button", function () {
-    console.log(tabNames);
-    console.log("results button clicked");
-    $.ajax({
-      type: "POST",
-      url: "/results_output",
-      contentType: "application/json",
-      data: JSON.stringify(tabNames),
-      success: function (response) {
-        console.log("results csv produced");
-        openNewTab();
-      },
-      error: function (error) {
-        console.error("Error triggering function:", error);
-      },
-    });
+function onResultsBtnClick() {
+  console.log(tabNames);
+  console.log("results button clicked");
+  $.ajax({
+    type: "POST",
+    url: "/results_output",
+    contentType: "application/json",
+    data: JSON.stringify(tabNames),
+    success: function (response) {
+      console.log("results csv produced");
+      openNewTab();
+    },
+    error: function (error) {
+      console.error("Error triggering function:", error);
+    },
   });
+}
 
 
 function fetchTabName(setID) {

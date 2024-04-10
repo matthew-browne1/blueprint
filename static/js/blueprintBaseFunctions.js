@@ -225,7 +225,7 @@ function initializeInitialTable() {
     return disabledRowIds;
   }
 
-  document.addEventListener("DOMContentLoaded", function () {
+
     var obj = document.getElementById("obj-input1");
     var exh = document.getElementById("exh-input1");
     var max = document.getElementById("max-input1");
@@ -268,7 +268,7 @@ function initializeInitialTable() {
       socket.emit("optimise", { dataToSend: dataToSend });
 
     });
-  });
+  
   $("#date-filter-button1").on("click", function () {
     var isChecked = $(this).prop("checked");
     var dateContainers = $(".date-inputs");
@@ -316,3 +316,9 @@ function sendTableIDsOnRefresh() {
     },
   });
 }
+
+var socket = io.connect(window.location.origin);
+
+socket.on("connect", function () {
+  console.log("connected to server");
+});

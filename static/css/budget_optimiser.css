@@ -534,6 +534,10 @@
   background-color: #FFFFFF;
   align-items: center;
   text-align: center;
+} 
+
+#results-button {
+  display: none;
 }
 
 .date-range-label {
