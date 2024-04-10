@@ -8,7 +8,7 @@ import pandas as pd
 import json
 import os
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import joinedload
+from sqlalchemy.orm import joinedload, sessionmaker
 from sqlalchemy import create_engine, text, Column, DateTime, Integer, func
 from datetime import datetime, date, time
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
@@ -48,7 +48,7 @@ ra_server_uri = 'postgresql://postgres:' + urllib.parse.quote_plus("Gde3400@@") 
 
 app.config['SQLALCHEMY_DATABASE_URI'] = ra_server_uri
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = secrets.token_hex()
+app.config['SECRET_KEY'] = "_XE8Q~rtTny~rLNZghrwIe_LjsgHf4ae2qacOcw2"
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['PROPAGATE_EXCEPTIONS'] = True
 app.config['DEBUG'] = True
@@ -65,6 +65,20 @@ keyvault_url = "https://acblueprint-vault.vault.azure.net/"
 credential = DefaultAzureCredential()
 secret_client = SecretClient(vault_url=keyvault_url, credential=credential)
 
+def get_database_credentials():
+    db_username = secret_client.get_secret("db-username").value
+    db_password = secret_client.get_secret("db-password").value
+    return db_username, db_password
+
+def connect_to_database():
+    db_username, db_password = get_database_credentials()
+    # Host and database details
+    host = "acblueprint-server.postgres.database.azure.com"
+    database_name = "acblueprint-db"
+    connection_string = f"postgresql://{db_username}:{db_password}@{host}/{database_name}"  # Replace with your database connection URL
+    engine = create_engine(connection_string, pool_pre_ping=True)
+    Session = sessionmaker(bind=engine)
+    return Session()
 
 class User(UserMixin, db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -88,20 +102,6 @@ class Snapshot(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     table_data = db.Column(db.Text, nullable=False)
 
-# class DatabaseHandler(logging.Handler):
-#     def emit(self, record):
-#         try:
-#             message = self.format(record)
-#             db.session.add(Log(message=message))
-#             db.session.commit()
-#         except Exception:
-#             self.handleError(record)
-
-# database_handler = DatabaseHandler()
-# database_handler.setLevel(logging.DEBUG)
-# app.logger.addHandler(database_handler)
-
-
 def generate_totp_info(user):
     if not user.secret_key:
         user.secret_key = pyotp.random_base32()
@@ -110,11 +110,11 @@ def generate_totp_info(user):
     totp_url = totp.provisioning_uri(user.username, issuer_name="Blueprint")
     return totp_url
 
-
 active_sessions = {}
 
 @app.route('/login', methods=['POST'])
 def login():
+
     if request.method == 'POST':
         username = request.form.get('uname')
         password = request.form.get('psw')
@@ -123,23 +123,34 @@ def login():
             return 'User is already logged in', 403
 
         if user and bcrypt.check_password_hash(user.password, password):
-            totp = pyotp.TOTP(user.totp_secret)
-            session['otp_verified'] = False
-            if totp.verify(request.form.get("otp")):
-                session['otp_verified'] = True
-            if session.get('otp_verified'):
-                login_user(user, remember=True)
-                flash('You have been logged in successfully!', 'success')
-                active_sessions[user.id] = True
-                app.logger.info(f"User {username} logged in successfully.")
-                app.logger.info(current_user.user_info)
-            else:
-                flash('Invalid TOTP token. Please try again.', 'error')
-            return redirect(url_for('blueprint'))
+            session['user_id'] = user.id
+            return redirect(url_for('verify_mfa'))
         else:
             app.logger.info(f"Failed login attempt for user {username}.")
             flash('Invalid username or password', 'error')
             return redirect(url_for('login'))
+
+@app.route('/verify_mfa', methods=['GET', 'POST'])
+def verify_mfa():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+
+    # Redirect users to Azure AD B2C for MFA
+    tenant_id = "your-tenant-id"
+    client_id = "your-client-id"
+    redirect_uri = "https://your-app-url.com/mfa_callback"
+    policy_name = "your-mfa-policy-name"
+
+    login_url = f"https://{tenant_id}.b2clogin.com/{tenant_id}.onmicrosoft.com/{policy_name}/oauth2/v2.0/authorize"
+    params = {
+        "client_id": client_id,
+        "redirect_uri": redirect_uri,
+        "response_type": "code",
+        "scope": "openid",
+        # Add any additional scopes or parameters as needed
+    }
+    login_url_with_params = login_url + '?' + urllib.parse.urlencode(params)
+    return redirect(login_url_with_params)
 
 @app.route('/logout')
 @login_required
@@ -154,7 +165,6 @@ class Log(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
     message = db.Column(db.String, nullable=False)
-
 
 @login_manager.user_loader
 def load_user(user_id):
