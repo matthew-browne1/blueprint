@@ -1,8 +1,7 @@
 import subprocess
-from azure.identity import DefaultAzureCredential
 import urllib
-from azure.keyvault.secrets import SecretClient
 from sqlalchemy import create_engine
+import pandas as pd
 
 def generate_requirements_file(output_file='requirements.txt'):
     # Run 'pip freeze' to get a list of installed packages and their versions
@@ -19,30 +18,48 @@ def generate_requirements_file(output_file='requirements.txt'):
 
 #generate_requirements_file()
 
-keyvault_url = "https://acblueprint-vault.vault.azure.net/"
+# keyvault_url = "https://acblueprint-vault.vault.azure.net/"
 
-# Initialize Azure credentials
-credential = DefaultAzureCredential()
+# # Initialize Azure credentials
+# credential = DefaultAzureCredential()
 
-# Initialize SecretClient
-secret_client = SecretClient(vault_url=keyvault_url, credential=credential)
+# # Initialize SecretClient
+# secret_client = SecretClient(vault_url=keyvault_url, credential=credential)
 
-# Retrieve secrets from Key Vault
-db_username_secret = secret_client.get_secret("db-username").value
-db_password_secret = secret_client.get_secret("db-password").value
+# # Retrieve secrets from Key Vault
+# db_username_secret = secret_client.get_secret("db-username").value
+# db_password_secret = secret_client.get_secret("db-password").value
 
-# Host and database details
-host = "acblueprint-server.postgres.database.azure.com"
-database_name = "acblueprint-db"
+# # Host and database details
+# host = "acblueprint-server.postgres.database.azure.com"
+# database_name = "acblueprint-db"
 
-# Construct connection string
-connection_string = f"postgresql://{db_username_secret}:{db_password_secret}@{host}/{database_name}"
+# # Construct connection string
+# connection_string = f"postgresql://{db_username_secret}:{db_password_secret}@{host}/{database_name}"
+
+def get_tables():
+    ra_server_uri = 'postgresql://postgres:' + urllib.parse.quote_plus("Gde3400@@") + '@192.168.1.2:5432/CPW Blueprint'
+
+    # Create the new PostgreSQL URI for Azure
 
 
-try:
-    engine = create_engine(connection_string)
-    # Check if the connection was successful
-    if engine.connect():
-        print("Connection to the database successful!")
-except Exception as e:
-    print("Failed to connect to the database:", e)
+    tables_to_download = ['All_Channel_Inputs', 'All_Laydown', 'All_Index']  # Replace 'table1', 'table2' with the names of your tables
+
+# Create a SQLAlchemy engine
+    engine = create_engine(ra_server_uri)
+
+    # Download tables as CSV files
+    for table_name in tables_to_download:
+        # Read the table directly into a pandas DataFrame
+        df = pd.read_sql_table(table_name, engine)
+
+        # Write the DataFrame to a CSV file
+        csv_filename = f"{table_name}.csv"
+        df.to_csv(csv_filename, index=False)
+
+        print(f"Table '{table_name}' downloaded and saved as '{csv_filename}'")
+
+    # Dispose the SQLAlchemy engine
+    engine.dispose()
+
+get_tables()
