@@ -14,7 +14,6 @@ from datetime import datetime, date, time
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 import urllib.parse
 from flask_bcrypt import Bcrypt
-
 import secrets
 import logging
 from optimiser import Optimise
@@ -23,10 +22,10 @@ from copy import deepcopy
 import threading
 import queue
 import pyotp
-from azure.identity import DefaultAzureCredential
+from azure.identity import DefaultAzureCredential, ManagedIdentityCredential, VisualStudioCodeCredential
 from azure.keyvault.secrets import SecretClient
 import app_config
-from identity.flask import Auth
+# from identity.flask import Auth
 from pathlib import Path
 from flask_session import Session
 import msal
@@ -38,29 +37,9 @@ app = Flask(__name__)
 socketio = SocketIO(app=app)
 
 task_queue = queue.Queue()
-
-def get_database_credentials():
-    db_username = secret_client.get_secret("db-username").value
-    db_password = secret_client.get_secret("db-password").value
-    return db_username, db_password
-
-db_username, db_password = get_database_credentials()
-# Host and database details
-host = "acblueprint-server.postgres.database.azure.com"
-database_name = "acblueprint-db"
-connection_string = f"postgresql://{db_username}:{db_password}@{host}/{database_name}"  # Replace with your database connection URL
-engine = create_engine(connection_string, pool_pre_ping=True)
-Session(app)
-
-from werkzeug.middleware.proxy_fix import ProxyFix
-app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
-
-db = SQLAlchemy(app)
-bcrypt = Bcrypt(app)
-
-# Initialize Azure Key Vault client
+additional_allowed_tenants = ["a4a4f1b7-a884-4404-9b7c-3325c40dcc28"]
 keyvault_url = "https://acblueprint-vault.vault.azure.net/"
-credential = DefaultAzureCredential()
+credential = DefaultAzureCredential(additionally_allowed_tenants=additional_allowed_tenants)
 secret_client = SecretClient(vault_url=keyvault_url, credential=credential)
 
 client_id = secret_client.get_secret("CLIENT-ID").value
@@ -77,6 +56,25 @@ app.config['AUTHORITY'] = authority
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['PROPAGATE_EXCEPTIONS'] = True
 app.config['DEBUG'] = True
+db_username = secret_client.get_secret("db-username").value
+db_password = secret_client.get_secret("db-password").value
+
+# Host and database details
+host = "acblueprint-server.postgres.database.azure.com"
+database_name = "acblueprint-db"
+connection_string = f"postgresql://{db_username}:{db_password}@{host}/{database_name}"  # Replace with your database connection URL
+
+app.config['SQLALCHEMY_DATABASE_URI'] = connection_string
+
+engine = create_engine(connection_string, pool_pre_ping=True)
+Session(app)
+
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
+
+db = SQLAlchemy(app)
+bcrypt = Bcrypt(app)
+
 # app.config["MSAL_CLIENT"] = msal.ConfidentialClientApplication(
 #     client_id,
 #     authority=authority,
@@ -1021,8 +1019,12 @@ def export_data():
         all_index.to_excel(writer, sheet_name='Seasonal Index', index=False)
 
     excel_buffer.seek(0)
-
-    return send_file(excel_buffer, download_name=f'{session['user']['oid']}_Input_File.xlsx', as_attachment=True)
+    
+    if session['user']['oid'] != None:
+        user_id = session['user']['oid']
+        return send_file(excel_buffer, download_name=f'{user_id}_Input_File.xlsx', as_attachment=True)
+    else:
+        pass
 
 def main():
     task_queue = queue.Queue()
