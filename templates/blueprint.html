@@ -21,7 +21,7 @@
         <img src="/static/images/RA Logo 1.png" class="logo">
     </div>
     <div class="nav-right">
-        <a href= "{{ url_for('export_data') }}" download="{{ current_user.user_info[0].id }}_Input_File.xlsx"class="button-4" id="export-data">Export Data  <i class="fa-solid fa-file-export"></i></a>
+        <a href= "{{ url_for('export_data') }}" download="{{ user_id }}_Input_File.xlsx"class="button-4" id="export-data">Export Data  <i class="fa-solid fa-file-export"></i></a>
         <img src="/static/images/blueprint logo.png" class="logo">
         <div class="nav-user-icon" onclick="settingsMenuToggle()">
             <img src="/static/images/User Login.png">
@@ -37,8 +37,8 @@
             <div class="user-profile">
                 <img src="/static/images/User Login.png">
                 <div>
-                    <p>{{ current_user.user_info[0].full_name }}</p>
-                    <a href="#">{{ current_user.user_info[0].email }}</a>
+                    <p>{{ user_id }}</p>
+                    <!-- <a href="#">{{ current_user.user_info[0].email }}</a> -->
                 </div>
             </div>
             <hr>

@@ -14,20 +14,20 @@
         <img src="/static/images/blueprint logo.png" alt="Blueprint Logo" class="welcome-bp-logo">
     </div>
 
-    
-
-    {% if current_user.is_authenticated %}
-        <p class="current-user-welcome-text">Currently logged-in user: {{ current_user.user_info[0].full_name }}</p>
-        <button class="continue-btn" onclick="redirectToBp()">Continue to Blueprint</button>
+    {% if g.identity_context_data.authenticated %}
+        <li>
+            <a class="nav-link" href="{{ url_for('token_details') }}">Hello {{ g.identity_context_data.username }}!</a>
+        </li>
+        <li>
+            <a href="{{ ms_id_url_for('sign_out') }}">Sign Out</a>
+        </li>
     {% else %}
 
-    <button onclick="openLoginForm()"
-            style="width:30%; height: 60px; font-size: 1.3rem;">Login
-    </button>
+    <a href="{{ ms_id_url_for('sign_in') }}">Sign In</a>
     {% endif %}
 </div>
 
-<div id="id01" class="bg-modal"></div>
+<!-- <div id="id01" class="bg-modal"></div>
 <div class="modal-content">
     <div class="modal-close"
          onclick="closeLoginForm()">&times;
@@ -57,7 +57,8 @@
             {% endif %}
         </form>
     </div>
-</div>
+</div> -->
+
 <script src="/static/js/main.js"></script>
 </body>
 </html>

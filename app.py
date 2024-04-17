@@ -14,7 +14,7 @@ from datetime import datetime, date, time
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 import urllib.parse
 from flask_bcrypt import Bcrypt
-from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
+
 import secrets
 import logging
 from optimiser import Optimise
@@ -27,6 +27,10 @@ from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 import app_config
 from identity.flask import Auth
+from pathlib import Path
+from flask_session import Session
+import msal
+from functools import wraps
 
 #from azure import identity
 
@@ -35,79 +39,66 @@ socketio = SocketIO(app=app)
 
 task_queue = queue.Queue()
 
-# executor = ProcessPoolExecutor()
+def get_database_credentials():
+    db_username = secret_client.get_secret("db-username").value
+    db_password = secret_client.get_secret("db-password").value
+    return db_username, db_password
 
-### TODO: WRITE A CLASS WHICH FETCHES CORRECT DB DETAILS
+db_username, db_password = get_database_credentials()
+# Host and database details
+host = "acblueprint-server.postgres.database.azure.com"
+database_name = "acblueprint-db"
+connection_string = f"postgresql://{db_username}:{db_password}@{host}/{database_name}"  # Replace with your database connection URL
+engine = create_engine(connection_string, pool_pre_ping=True)
+Session(app)
 
-azure_host = "blueprintalpha.postgres.database.azure.com"
-azure_user = "bptestadmin"
-azure_password = "Password!"
-azure_database = "postgres"
-
-ra_server_uri = 'postgresql://postgres:' + urllib.parse.quote_plus("Gde3400@@") + '@192.168.1.2:5432/CPW Blueprint'
-
-# Create the new PostgreSQL URI for Azure
-app.config.from_object(app_config)
-
-auth = Auth(
-    app,
-    authority=os.getenv("AUTHORITY"),
-    client_id=os.getenv("CLIENT_ID"),
-    client_credential=os.getenv("CLIENT_SECRET"),
-    redirect_uri=os.getenv("REDIRECT_URI"),
-    oidc_authority=os.getenv("OIDC_AUTHORITY"),
-    b2c_tenant_name=os.getenv('B2C_TENANT_NAME'),
-    b2c_signup_signin_user_flow=os.getenv('SIGNUPSIGNIN_USER_FLOW'),
-    b2c_edit_profile_user_flow=os.getenv('EDITPROFILE_USER_FLOW'),
-    b2c_reset_password_user_flow=os.getenv('RESETPASSWORD_USER_FLOW'),
-)
-
-app.config['SQLALCHEMY_DATABASE_URI'] = ra_server_uri
-app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-app.config['SECRET_KEY'] = "_XE8Q~rtTny~rLNZghrwIe_LjsgHf4ae2qacOcw2"
-app.config['SESSION_COOKIE_SECURE'] = True
-app.config['PROPAGATE_EXCEPTIONS'] = True
-app.config['DEBUG'] = True
-
-engine = create_engine(ra_server_uri)
+from werkzeug.middleware.proxy_fix import ProxyFix
+app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
 
 # Initialize Azure Key Vault client
 keyvault_url = "https://acblueprint-vault.vault.azure.net/"
 credential = DefaultAzureCredential()
 secret_client = SecretClient(vault_url=keyvault_url, credential=credential)
 
-def get_database_credentials():
-    db_username = secret_client.get_secret("db-username").value
-    db_password = secret_client.get_secret("db-password").value
-    return db_username, db_password
+client_id = secret_client.get_secret("CLIENT-ID").value
+client_secret = secret_client.get_secret("CLIENT-SECRET").value
+authority = secret_client.get_secret("authority").value
+scope=['tasks.read', 'tasks.write']
 
-def connect_to_database():
-    db_username, db_password = get_database_credentials()
-    # Host and database details
-    host = "acblueprint-server.postgres.database.azure.com"
-    database_name = "acblueprint-db"
-    connection_string = f"postgresql://{db_username}:{db_password}@{host}/{database_name}"  # Replace with your database connection URL
-    engine = create_engine(connection_string, pool_pre_ping=True)
-    Session = sessionmaker(bind=engine)
-    return Session()
+app.config.from_object(app_config)
 
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(20), unique=True, nullable=False)
-    password = db.Column(db.String(60), nullable=False)
-    user_info = db.relationship('UserInfo', backref='user', lazy=True)
-    secret_key = db.Column(db.String(16), nullable=False)
+app.config['CLIENT ID'] = client_id
+app.config['CLIENT_SECRET'] = client_secret
+app.config['AUTHORITY'] = authority
 
-class UserInfo(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    full_name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+app.config['SESSION_COOKIE_SECURE'] = True
+app.config['PROPAGATE_EXCEPTIONS'] = True
+app.config['DEBUG'] = True
+# app.config["MSAL_CLIENT"] = msal.ConfidentialClientApplication(
+#     client_id,
+#     authority=authority,
+#     client_credential=client_secret
+# )
+
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not session.get("user"):
+            # User is not authenticated, redirect to login page
+            return redirect(url_for("login", next=request.url))
+        return f(*args, **kwargs)
+    return decorated_function
+
+@app.route('/sign_in_status')
+def index():
+    return render_template('auth/status.html')
+
+@app.route('/token_details')
+def token_details():
+    return render_template('auth/token.html')
 
 class Snapshot(db.Model):
     name = db.Column(db.String, nullable=False)
@@ -118,114 +109,92 @@ class Snapshot(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     table_data = db.Column(db.Text, nullable=False)
 
-def generate_totp_info(user):
-    if not user.secret_key:
-        user.secret_key = pyotp.random_base32()
-        db.session.commit()
-    totp = pyotp.TOTP(user.secret_key)
-    totp_url = totp.provisioning_uri(user.username, issuer_name="Blueprint")
-    return totp_url
 
 active_sessions = {}
 
-@app.route('/login', methods=['POST'])
+@app.route("/login")
 def login():
+    # Technically we could use empty list [] as scopes to do just sign in,
+    # here we choose to also collect end user consent upfront
+    session["flow"] = _build_auth_code_flow(scopes=app_config.SCOPE)
+    auth_url=session["flow"]["auth_uri"]
+    version=msal.__version__
+    return redirect(auth_url)
 
-    if request.method == 'POST':
-        username = request.form.get('uname')
-        password = request.form.get('psw')
-        user = User.query.filter_by(username=username).first()
-        if user.id in active_sessions:
-            return 'User is already logged in', 403
+@app.route(app_config.REDIRECT_PATH)  # Its absolute URL must match your app's redirect_uri set in AAD
+def authorized():
+    try:
+        cache = _load_cache()
+        result = _build_msal_app(cache=cache).acquire_token_by_auth_code_flow(
+            session.get("flow", {}), request.args)
+        if "error" in result:
+            return render_template("auth_error.html", result=result)
+        session["user"] = result.get("id_token_claims")
+        _save_cache(cache)
+    except ValueError:  # Usually caused by CSRFF
+        pass  # Simply ignore them
+    return redirect(url_for("index"))
 
-        if user and bcrypt.check_password_hash(user.password, password):
-            session['user_id'] = user.id
-            return redirect(url_for('verify_mfa'))
-        else:
-            app.logger.info(f"Failed login attempt for user {username}.")
-            flash('Invalid username or password', 'error')
-            return redirect(url_for('login'))
-
-@app.route('/verify_mfa', methods=['GET', 'POST'])
-def verify_mfa():
-    if 'user_id' not in session:
-        return redirect(url_for('login'))
-
-    # Redirect users to Azure AD B2C for MFA
-    tenant_id = "your-tenant-id"
-    client_id = "your-client-id"
-    redirect_uri = "https://your-app-url.com/mfa_callback"
-    policy_name = "your-mfa-policy-name"
-
-    login_url = f"https://{tenant_id}.b2clogin.com/{tenant_id}.onmicrosoft.com/{policy_name}/oauth2/v2.0/authorize"
-    params = {
-        "client_id": client_id,
-        "redirect_uri": redirect_uri,
-        "response_type": "code",
-        "scope": "openid",
-        # Add any additional scopes or parameters as needed
-    }
-    login_url_with_params = login_url + '?' + urllib.parse.urlencode(params)
-    return redirect(login_url_with_params)
-
-@app.route('/logout')
-@login_required
+@app.route("/logout")
 def logout():
-    user_id = current_user.id
-    if user_id in active_sessions:
-        del active_sessions[user_id]
-    logout_user()
-    return redirect(url_for('/home'))
+    session.clear()  # Wipe out user and its token cache from session
+    return redirect(  # Also logout from your tenant's web session
+        app_config.AUTHORITY + "/oauth2/v2.0/logout" +
+        "?post_logout_redirect_uri=" + url_for("index", _external=True))
+
+# MSAL METHODS
+
+def _load_cache():
+    cache = msal.SerializableTokenCache()
+    if session.get("token_cache"):
+        cache.deserialize(session["token_cache"])
+    return cache
+
+def _save_cache(cache):
+    if cache.has_state_changed:
+        session["token_cache"] = cache.serialize()
+
+def _build_msal_app(cache=None, authority=None):
+    return msal.ConfidentialClientApplication(
+        app_config.CLIENT_ID, authority=authority or app_config.AUTHORITY,
+        client_credential=app_config.CLIENT_SECRET, token_cache=cache)
+
+def _build_auth_code_flow(authority=None, scopes=None):
+    return _build_msal_app(authority=authority).initiate_auth_code_flow(
+        scopes or [],
+        redirect_uri=url_for("authorized", _external=True))
+
+def _get_token_from_cache(scope=None):
+    cache = _load_cache()  # This web app maintains one cache per session
+    cca = _build_msal_app(cache=cache)
+    accounts = cca.get_accounts()
+    if accounts:  # So all account(s) belong to the current signed-in user
+        result = cca.acquire_token_silent(scope, account=accounts[0])
+        _save_cache(cache)
+        return result
+
+app.jinja_env.globals.update(_build_auth_code_flow=_build_auth_code_flow)  # Used in template
+
+
+
 
 class Log(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
     message = db.Column(db.String, nullable=False)
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.options(joinedload(User.user_info)).get(int(user_id))
-
-
-user_data = [
-    {'username': 'mattbrowne1', 'password': 'password123', 'full_name': 'Matthew Browne',
-     'email': 'matthew.browne@retailalchemy.co.uk'},
-    {'username': 'testuser', 'password': 'testpassword', 'full_name': 'John Doe', 'email': 'user2@example.com'},
-]
-
-
-def add_user(user_data):
-    existing_user = User.query.filter_by(username=user_data['username']).first()
-
-    if existing_user is None:
-        totp_secret = secrets.token_hex(8)
-        hashed_password = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
-        new_user = User(username=user_data['username'], password=hashed_password,totp_secret=totp_secret)
-        db.session.add(new_user)
-        db.session.commit()
-
-        secret_client.set_secret(user_data['username'], totp_secret)
-
-        new_user_info = UserInfo(full_name=user_data['full_name'], email=user_data['email'], user=new_user)
-        db.session.add(new_user_info)
-        db.session.commit()
-
-        app.logger.info(f"User '{user_data['username']}' added successfully.")
-    else:
-        app.logger.info(f"User '{user_data['username']}' already exists.")
-
 
 @app.route('/get_user_id', methods=['GET'])
 def get_user_id():
-    user_id = current_user.id
+    user_id = session['user']['oid']
     return jsonify({'user_id': user_id})
 
 
 @app.route('/save_snapshot', methods=['POST'])
-@login_required
+
 def save_snapshot():
     snapshot_name = request.json.get('name')
-    user_id = current_user.id
+    user_id = session['user']['oid']
     content = request.json.get('content')
     scenario_names = request.json.get('scenarioNames')
     current_table_ids = list(table_data.keys())
@@ -257,10 +226,9 @@ def save_snapshot():
 
 
 @app.route('/overwrite_save', methods=['POST'])
-@login_required
 def overwrite_save():
     snapshot_id = request.json.get('selectedSaveId')
-    user_id = current_user.id
+    user_id = session['user']['oid']
     content = request.json.get('content')
     scenario_names = request.json.get('scenarioNames')
     current_table_ids = list(table_data.keys())
@@ -286,10 +254,9 @@ def overwrite_save():
 
 
 @app.route('/load_snapshot')
-@login_required
 def load_snapshot():
     global table_data
-    user_id = current_user.id
+    user_id = session['user']['oid']
     snapshot = Snapshot.query.filter_by(user_id=user_id).first()
     table_data = json.loads(snapshot.table_data)
     content_list = snapshot.content
@@ -299,12 +266,9 @@ def load_snapshot():
 
 
 @app.route('/get_saves', methods=['GET'])
-@login_required
 def get_saves():
-    if not current_user.is_authenticated:
-        return jsonify({'error': 'User not authenticated'}), 401
 
-    user_saves = Snapshot.query.filter_by(user_id=current_user.id).all()
+    user_saves = Snapshot.query.filter_by(user_id=session['user']['oid']).all()
     saves_data = []
 
     for save in user_saves:
@@ -329,7 +293,6 @@ def toggle_states():
 
 
 @app.route('/load_selected_row', methods=['GET', 'POST'])
-@login_required
 def notify_selected_row():
     if request.method == 'POST':
         save_id = request.json.get('selectedSaveId')
@@ -339,7 +302,7 @@ def notify_selected_row():
     elif request.method == 'GET':
         save_id = session.get('save_id')
         session.pop('save_id', None)
-        save = Snapshot.query.filter_by(id=save_id, user_id=current_user.id).first()
+        save = Snapshot.query.filter_by(id=save_id, user_id=session['user']['oid']).first()
         if not save:
             return jsonify({'error': 'Unathorized access'}), 403
         else:
@@ -357,51 +320,6 @@ seas_index_table_name = 'seas_index'
 ST_db_table_name = 'ST_header'
 LT_db_table_name = "LT_header"
 laydown_table_name = "laydown"
-
-# seas_index.to_sql(seas_index_table_name, con=engine, index=False, if_exists='replace')
-# ST_header.to_sql(ST_db_table_name, con=engine, index=False, if_exists='replace')
-# LT_header.to_sql(LT_db_table_name, con=engine, index=False, if_exists='replace')
-# laydown.to_sql(laydown_table_name, con=engine, index=False, if_exists='replace')
-
-# laydown_query = 'select * FROM "laydown"'
-# laydown_fetched = pd.read_sql(laydown_query, con=engine)
-# ST_query = f'SELECT * FROM "ST_header"'
-# ST_input_fetched = pd.read_sql(ST_query, con=engine)
-# LT_query = f'SELECT * FROM "LT_header"'
-# LT_input_fetched = pd.read_sql(LT_query, con=engine)
-# si_query = f'SELECT * FROM "seas_index"'
-# seas_index_fetched = pd.read_sql(si_query, con=engine)
-
-# bud = sum(ST_input_fetched['Current_Budget'].to_list())
-# streams = []
-# for stream in ST_input_fetched['Channel']:
-#     streams.append(str(stream))
-
-# laydown = laydown_fetched
-# ST_header_dict = ST_input_fetched.to_dict("records")
-# LT_header_dict = LT_input_fetched.to_dict("records")
-# seas_index = seas_index_fetched.to_dict("records")
-
-# laydown_dates = laydown['Time_Period']
-
-# ### TABLE DATA ###
-
-# table_df = ST_input_fetched.copy()
-
-# dataTable_cols = ['Channel', 'Carryover', 'Alpha', 'Beta', 'Current_Budget', 'Min_Spend_Cap', 'Max_Spend_Cap', 'Laydown']
-
-# for col in table_df.columns:
-#     if col not in dataTable_cols:
-#         table_df.drop(columns=col, inplace=True)
-
-# table_dict = table_df.to_dict("records")
-
-# table_data = {"1":table_dict}
-# for var in table_data["1"]:
-#     var['Laydown'] = laydown[var['Channel']].tolist()
-
-
-# seas_index = seas_index_fetched
 
 
 num_weeks = 1000
@@ -952,12 +870,10 @@ def chart_budget_response():
             conn.close()
 
 @app.route('/blueprint_results')
-@login_required
 def blueprint_results():
     return render_template('blueprint_results.html')
 
 @app.route('/blueprint_curve')
-@login_required
 def blueprint_curve():
     return render_template('blueprint_curveresults.html')
 
@@ -971,10 +887,9 @@ def date_range():
 
 
 @app.route('/blueprint')
-@login_required
 def blueprint():
     app.logger.info(laydown_dates)
-    return render_template('blueprint.html', current_user=current_user)
+    return render_template('blueprint.html', user_id=session['user']['oid'])
 
 
 @app.route('/get_table_ids', methods=['GET'])
@@ -1069,17 +984,10 @@ def table_data_editor():
     return jsonify(response)
 
 
-@app.route('/')
-def welcome_page():
-    app.logger.info(current_user)
-    return render_template('Welcome.html', current_user=current_user)
-
-
-# Get request required pending login db sorted
-@app.route('/home', methods=['GET', 'POST'])
-def home():
-    return render_template('Home.html', current_user=current_user)
-
+# @app.route('/')
+# def welcome_page():
+#     app.logger.info(current_user)
+#     return render_template('Welcome.html', current_user=current_user)
 
 
 def load_configurations():
@@ -1098,9 +1006,7 @@ def save_configurations(configurations):
     return configurations
 
 
-
 @app.route('/export_data')
-@login_required
 def export_data():
     excel_buffer = BytesIO()
     with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
@@ -1116,7 +1022,7 @@ def export_data():
 
     excel_buffer.seek(0)
 
-    return send_file(excel_buffer, download_name=f'{current_user.id}_Input_File.xlsx', as_attachment=True)
+    return send_file(excel_buffer, download_name=f'{session['user']['oid']}_Input_File.xlsx', as_attachment=True)
 
 def main():
     task_queue = queue.Queue()
@@ -1130,4 +1036,4 @@ if __name__ == '__main__':
         db.create_all()
         # for user in user_data:
         #     add_user(user)
-        socketio.run(app=app, host='0.0.0.0', port=os.environ.get('PORT', 5000), debug=True)
+        socketio.run(app=app, ssl_context=("cert.pem","key.pem"))
