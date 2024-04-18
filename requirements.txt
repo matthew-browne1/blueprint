@@ -42,4 +42,3 @@ flask-socketio
 cryptography
 azure-identity
 azure-keyvault-secrets
-sqlalchemy-exc
