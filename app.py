@@ -9,7 +9,8 @@ import json
 import os
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import joinedload, sessionmaker
-from sqlalchemy import create_engine, text, Column, DateTime, Integer, func
+from sqlalchemy import create_engine, text, Column, DateTime, Integer, func, UUID
+import uuid
 from datetime import datetime, date, time
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 import urllib.parse
@@ -21,9 +22,6 @@ from io import BytesIO
 from copy import deepcopy
 import threading
 import queue
-import pyotp
-from azure.identity import DefaultAzureCredential, ManagedIdentityCredential, VisualStudioCodeCredential
-from azure.keyvault.secrets import SecretClient
 import app_config
 # from identity.flask import Auth
 from pathlib import Path
@@ -37,29 +35,15 @@ app = Flask(__name__)
 socketio = SocketIO(app=app)
 
 task_queue = queue.Queue()
-additional_allowed_tenants = ["a4a4f1b7-a884-4404-9b7c-3325c40dcc28"]
-keyvault_url = "https://acblueprint-vault.vault.azure.net/"
-credential = DefaultAzureCredential(additionally_allowed_tenants=additional_allowed_tenants)
-secret_client = SecretClient(vault_url=keyvault_url, credential=credential)
-
-client_id = secret_client.get_secret("CLIENT-ID").value
-client_secret = secret_client.get_secret("CLIENT-SECRET").value
-authority = secret_client.get_secret("authority").value
-scope=['tasks.read', 'tasks.write']
 
 app.config.from_object(app_config)
-
-app.config['CLIENT ID'] = client_id
-app.config['CLIENT_SECRET'] = client_secret
-app.config['AUTHORITY'] = authority
 
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['PROPAGATE_EXCEPTIONS'] = True
 app.config['DEBUG'] = True
-db_username = secret_client.get_secret("db-username").value
-db_password = secret_client.get_secret("db-password").value
+db_username = app_config.DB_USERNAME
+db_password = app_config.DB_PASSWORD
 
-# Host and database details
 host = "acblueprint-server.postgres.database.azure.com"
 database_name = "acblueprint-db"
 connection_string = f"postgresql://{db_username}:{db_password}@{host}/{database_name}"  # Replace with your database connection URL
@@ -67,6 +51,7 @@ connection_string = f"postgresql://{db_username}:{db_password}@{host}/{database_
 app.config['SQLALCHEMY_DATABASE_URI'] = connection_string
 
 engine = create_engine(connection_string, pool_pre_ping=True)
+app.config['SESSION_TYPE'] = 'filesystem'
 Session(app)
 
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -90,13 +75,6 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-@app.route('/sign_in_status')
-def index():
-    return render_template('auth/status.html')
-
-@app.route('/token_details')
-def token_details():
-    return render_template('auth/token.html')
 
 class Snapshot(db.Model):
     name = db.Column(db.String, nullable=False)
@@ -104,12 +82,26 @@ class Snapshot(db.Model):
     content = db.Column(db.String, nullable=False)
     table_ids = db.Column(db.String, nullable=False)
     scenario_names = db.Column(db.String, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.UUID(as_uuid=True), nullable=False, default=uuid.uuid4)
     table_data = db.Column(db.Text, nullable=False)
-
 
 active_sessions = {}
 
+@app.route("/")
+def index():
+    #if not session.get("user"):
+    #    return redirect(url_for("login"))
+
+    if not session.get("user"):
+        print("rendering index.html, user does not exist in session")
+        
+        session["flow"] = _build_auth_code_flow(scopes=app_config.SCOPE)
+        return render_template('index.html', auth_url=session["flow"]["auth_uri"], version=msal.__version__)
+    else:
+        print("rendering index.html, user exists in session")
+        print(session["user"]['oid'])
+        return render_template('index.html', user=session["user"], version=msal.__version__)
+    
 @app.route("/login")
 def login():
     # Technically we could use empty list [] as scopes to do just sign in,
@@ -154,11 +146,11 @@ def _save_cache(cache):
 
 def _build_msal_app(cache=None, authority=None):
     return msal.ConfidentialClientApplication(
-        app_config.CLIENT_ID, authority=authority or app_config.AUTHORITY,
+        client_id=app_config.CLIENT_ID, authority=app_config.AUTHORITY,
         client_credential=app_config.CLIENT_SECRET, token_cache=cache)
 
 def _build_auth_code_flow(authority=None, scopes=None):
-    return _build_msal_app(authority=authority).initiate_auth_code_flow(
+    return _build_msal_app(authority=app_config.AUTHORITY).initiate_auth_code_flow(
         scopes or [],
         redirect_uri=url_for("authorized", _external=True))
 
@@ -883,7 +875,7 @@ def date_range():
     app.logger.info(end_date)
     return jsonify({"startDate": start_date, "endDate": end_date})
 
-
+@login_required
 @app.route('/blueprint')
 def blueprint():
     app.logger.info(laydown_dates)

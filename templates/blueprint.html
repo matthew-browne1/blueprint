@@ -38,7 +38,7 @@
                 <img src="/static/images/User Login.png">
                 <div>
                     <p>{{ user_id }}</p>
-                    <!-- <a href="#">{{ current_user.user_info[0].email }}</a> -->
+                    
                 </div>
             </div>
             <hr>
@@ -58,7 +58,7 @@
             <div class="settings-links">
                 <img src="/static/images/Logout.png" class="settings-icon">
                 <div>
-                    <a href="#">Logout</a>
+                    <a href="{{ url_for('logout')}}">Logout</a>
                 </div>
             </div>
 
