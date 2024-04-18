@@ -1,1 +1,0 @@
--lpthread  -lm  -ldl  -L/usr/local/lib/gcc/x86_64-unknown-linux-gnu/4.3.2 -L/usr/local/lib/gcc/x86_64-unknown-linux-gnu/4.3.2/../../../../lib64 -L/lib/../lib64 -L/usr/lib/../lib64 -L/usr/local/lib/gcc/x86_64-unknown-linux-gnu/4.3.2/../../.. -lgfortranbegin -lgfortran -lm -lgcc_s
