@@ -32,7 +32,7 @@ from functools import wraps
 #from azure import identity
 
 app = Flask(__name__)
-socketio = SocketIO(app=app)
+socketio = SocketIO(app=app, async_mode='eventlet')
 
 task_queue = queue.Queue()
 
