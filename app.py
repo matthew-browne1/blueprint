@@ -1030,4 +1030,4 @@ if __name__ == '__main__':
         db.create_all()
         # for user in user_data:
         #     add_user(user)
-        socketio.run(app=app, ssl_context=("cert.pem","key.pem"))
+        socketio.run(app=app)
