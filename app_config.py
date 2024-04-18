@@ -3,7 +3,7 @@ from azure.identity import DefaultAzureCredential
 from azure.keyvault.secrets import SecretClient
 
 keyvault_url = "https://acblueprint-vault.vault.azure.net/"
-credential = DefaultAzureCredential()
+credential = DefaultAzureCredential(managed_identity_client_id='e80b105d-e738-49e0-93be-6fda83ee5301')
 secret_client = SecretClient(vault_url=keyvault_url, credential=credential)
 
 CLIENT_ID = secret_client.get_secret("CLIENT-ID").value
