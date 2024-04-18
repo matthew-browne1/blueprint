@@ -35,14 +35,9 @@ uvicorn==0.29.0
 Werkzeug==2.3.4
 wsproto==1.2.0
 msal
-functools
 thread
-json
 flask-session
-copy
 flask-bcrypt
-datetime
-uuid
 flask-socketio
 cryptography
 azure-identity
