@@ -34,3 +34,15 @@ tzdata==2023.3
 uvicorn==0.29.0
 Werkzeug==2.3.4
 wsproto==1.2.0
+msal
+functools
+threading
+queue
+json
+flask_session
+copy
+flask_bcrypt
+datetime
+uuid
+flask_socketio
+cryptography
