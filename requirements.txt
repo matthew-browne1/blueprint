@@ -37,7 +37,6 @@ wsproto==1.2.0
 msal
 functools
 thread
-queue
 json
 flask-session
 copy
