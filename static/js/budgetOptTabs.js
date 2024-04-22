@@ -482,8 +482,15 @@ tabSocket.on('connect', function() {
 
 tabSocket.on('opt_complete', function(data) {
   var tableID = data.data;
-  console.log('hiding the loading overlay for channel table '+tableID)
-  hideLoadingOverlay(tableID);
-  showResultsButton();
+  if (data.exception) {
+    var exception = data.exception
+    console.log("hiding the loading overlay due to an exception: " + exception)
+    hideLoadingOverlay(tableID);
+  } else {
+    console.log("Successful Optimisation: Hiding the loading overlay for channel table: " + tableID);
+    hideLoadingOverlay(tableID);
+    showResultsButton();
+  }
+  
 });
 

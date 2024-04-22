@@ -536,7 +536,7 @@ def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budge
     except Exception as e:
         with app.app_context():
             print(f"Error in task callback: {str(e)}")
-            socketio.emit('opt_complete', {'data': table_id})
+            socketio.emit('opt_complete', {'data': table_id, 'exception':str(e)})
 
 
 @socketio.on('optimise')
