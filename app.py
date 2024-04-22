@@ -592,6 +592,7 @@ def run_optimise(dataDict):
             #print(data['dates'][1][:10])
             start_date = datetime.strptime(data['dates'][0][:10], "%Y-%m-%d")
             end_date = datetime.strptime(data['dates'][1][:10], "%Y-%m-%d")
+            app.logger.info(f"adding optimisation between start date: {start_date} and end date: {end_date} to queue")
             #print(f"start data: {start_date}, end_date: {end_date}, laydown_copy dates: {laydown_copy['Date']}")
             laydown_copy = laydown_copy[(laydown_copy["Date"] >= start_date) & (laydown_copy["Date"] <= end_date)]
             seas_index_copy = seas_index_copy[(laydown_copy["Date"] >= start_date) & (seas_index_copy["Date"] <= end_date)]
@@ -600,7 +601,7 @@ def run_optimise(dataDict):
             app.logger.info(start_date)
             app.logger.info(end_date)
 
-        print(
+        app.logger.info(
             f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
 
 
@@ -620,8 +621,8 @@ def run_optimise(dataDict):
         #socketio.start_background_task(target=optimise, ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, ftol=ftol_input, ssize=ssize_input, table_id = table_id, scenario_name = scenario_name)
         task_queue.put((ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, ftol_input, ssize_input, table_id, scenario_name))
     except Exception as e:
-        print('Error in user inputs')
-        socketio.emit('opt_complete', {'data': table_id})
+        app.logger.info('Error in user inputs')
+        socketio.emit('opt_complete', {'data': table_id, 'exception': str(e)})
 
     return jsonify({'status': 'Task started in the background'})
 
@@ -689,7 +690,7 @@ def chart_data():
              'MonthYear']).sum(numeric_only=True)
         result_df.reset_index(inplace=True)
         chart_data = []
-        print("worked")
+        
         for index, row in result_df.iterrows():
             a = dict(row)
             chart_data.append(a)
@@ -973,28 +974,6 @@ def table_data_editor():
     return jsonify(response)
 
 
-# @app.route('/')
-# def welcome_page():
-#     app.logger.info(current_user)
-#     return render_template('Welcome.html', current_user=current_user)
-
-
-def load_configurations():
-    try:
-        with open('data\config.json', 'r') as config_file:
-            configurations = json.load(config_file)
-    except (FileNotFoundError, json.JSONDecodeError):
-        # Handle the case when the file doesn't exist or is empty
-        configurations = {}
-
-
-def save_configurations(configurations):
-    with open('config.json', 'w') as config_file:
-        json.dump(configurations, config_file, indent=2)
-
-    return configurations
-
-
 @app.route('/export_data')
 def export_data():
     excel_buffer = BytesIO()
@@ -1017,12 +996,6 @@ def export_data():
     else:
         pass
 
-def main():
-    task_queue = queue.Queue()
-    num_workers = 4
-    threads = []
-    for _ in range(num_workers):
-        t = threading.Thread(target=run_optimise)
 
 if __name__ == '__main__':
     with app.app_context():
