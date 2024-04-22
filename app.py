@@ -528,14 +528,14 @@ def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budge
     try:
         with app.app_context():
             result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown, seas_index=seas_index, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name, tolerance=ftol, step=ssize)
-            print(f"Task completed: {result} in {time_elapsed} time")
+            app.logger.info(f"Task completed: {result} in {time_elapsed} time")
             results[table_id] = result
             output_df_per_result[table_id] = output_df
-            print(f"total results: {results}")
+            # print(f"total results: {results}")
             socketio.emit('opt_complete', {'data': table_id})
     except Exception as e:
         with app.app_context():
-            print(f"Error in task callback: {str(e)}")
+            app.logger.info(f"Error in task callback causing optimisation not to run: {str(e)}")
             socketio.emit('opt_complete', {'data': table_id, 'exception':str(e)})
 
 
@@ -653,13 +653,12 @@ def results_output():
     print(tab_names)
     #print(inputs_per_result)
     output = create_output(output_df_per_result=output_df_per_result)
-    output.to_csv('output.csv')
 
     try:
         output.to_sql('Optimised CSV', engine, if_exists='replace', index=False)
-        app.logger.info("csv uploaded to db successfully")
+        app.logger.info("output (results) uploaded to cb successfully")
     except:
-        app.logger.info("csv db upload failed")
+        app.logger.info("output (resutls) db upload failed")
 
     return jsonify({"message": "csv exported successfully"})
 
