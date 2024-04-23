@@ -496,4 +496,3 @@ tabSocket.on('opt_complete', function(data) {
   }
   
 });
-
