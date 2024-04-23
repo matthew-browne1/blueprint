@@ -717,9 +717,13 @@ def results_output():
     #print(inputs_per_result)
     output = create_output(output_df_per_result=output_df_per_result)
     output.to_csv('output.csv')
-
+    output['Year'] = output['Date'].dt.year
+    mns_mc = pd.read_excel('ROIs and factors all regions.xlsx', sheet_name='factors')
+    merged_output = pd.merge(output, mns_mc, on=['Region','Brand','Year'], how='left')
+    merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
+    merged_output.to_csv('merged_output.csv')
     try:
-        output.to_sql('Optimised CSV', engine, if_exists='replace', index=False)
+        merged_output.to_sql('Optimised CSV', engine, if_exists='replace', index=False)
         app.logger.info("csv uploaded to db successfully")
     except:
         app.logger.info("csv db upload failed")
@@ -761,7 +765,7 @@ def chart_data():
 
         dropdown_options = {}
         for column in result_df.columns:
-            if column not in ['Opt Channel', 'Value']:
+            if column not in ['Opt Channel', 'Value', 'Volume']:
                 if column == 'Budget/Revenue':
                     dropdown_options[column] = [value for value in result_df[column].unique() if "Budget" not in value]
                 else:
@@ -790,6 +794,8 @@ def handle_apply_filter(filter_data):
                 filters["Budget/Revenue"].append("Budget")
         else:
             filters["Budget/Revenue"] = []
+
+        if "V"
 
         print('Received filter data:', filters)
         apply_filters(filters)
