@@ -45,16 +45,10 @@ h1 {
   color:#f1f1f2;
   font-family:Helvetica;
   text-align:center;
+  overflow-y: auto;
 }
-.sidepanel:before {
-  content:'';
-  position:absolute;
-  height:100%;
-  width:10px;
-  top:0;
-  left:100%;
-  background-image:linear-gradient(to left,#fff,rgba(0,0,0,0.3) 10px);
-  z-index:1;
+.sidepanel::-webkit-scrollbar {
+  width: 0;
 }
 .sidepanel span {
   position:relative;
@@ -75,31 +69,6 @@ h6 {
   width:calc(100% - 44px);
   background-color:#E9D985;
   margin:0 40px 0 22px;;
-}
-.circle {
-  position:absolute;
-  width:44px;
-  height:44px;
-  border-radius:50%;
-  font-size:16px;
-  background-color:#ef4581;
-  color:#f1f1f2;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  top:calc(50% - 22px);
-  left:calc(100% - 22px);
-  z-index:3;
-  cursor:pointer;
-}
-.fa-chevron-left {
-  margin-right:5px;
-}
-.fa-chevron-right {
-  margin-left:5px;
-}
-.hide {
-  display:none;
 }
 .filter-container {
     border: 1px solid #ccc;
@@ -125,6 +94,39 @@ input {
     width: 100%;
     padding: 5px;
     box-sizing: border-box;
+}
+.custom-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropdown-search {
+    width: 200px;
+    padding: 5px;
+    border: 1px solid #ccc;
+}
+
+.dropdown-options {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    z-index: 1;
+    background-color: #fff;
+    border: 1px solid #ccc;
+    max-height: 200px;
+    overflow-y: auto;
+    display: none;
+    color: black;
+    font-size: 12px;
+}
+
+.option {
+    padding: 5px;
+    cursor: pointer;
+}
+
+.option:hover {
+    background-color: #f0f0f0;
 }
 .nav-container {
     position: sticky;
