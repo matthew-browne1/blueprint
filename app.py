@@ -23,8 +23,8 @@ from copy import deepcopy
 import threading
 import queue
 import pyotp
-from azure.identity import DefaultAzureCredential
-from azure.keyvault.secrets import SecretClient
+# from azure.identity import DefaultAzureCredential
+# from azure.keyvault.secrets import SecretClient
 
 #from azure import identity
 
@@ -61,9 +61,9 @@ login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 
 # Initialize Azure Key Vault client
-keyvault_url = "https://acblueprint-vault.vault.azure.net/"
-credential = DefaultAzureCredential()
-secret_client = SecretClient(vault_url=keyvault_url, credential=credential)
+# keyvault_url = "https://acblueprint-vault.vault.azure.net/"
+# credential = DefaultAzureCredential()
+# secret_client = SecretClient(vault_url=keyvault_url, credential=credential)
 
 
 class User(UserMixin, db.Model):
@@ -71,7 +71,7 @@ class User(UserMixin, db.Model):
     username = db.Column(db.String(20), unique=True, nullable=False)
     password = db.Column(db.String(60), nullable=False)
     user_info = db.relationship('UserInfo', backref='user', lazy=True)
-    secret_key = db.Column(db.String(16), nullable=False)
+
 
 class UserInfo(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -102,13 +102,13 @@ class Snapshot(db.Model):
 # app.logger.addHandler(database_handler)
 
 
-def generate_totp_info(user):
-    if not user.secret_key:
-        user.secret_key = pyotp.random_base32()
-        db.session.commit()
-    totp = pyotp.TOTP(user.secret_key)
-    totp_url = totp.provisioning_uri(user.username, issuer_name="Blueprint")
-    return totp_url
+# def generate_totp_info(user):
+#     if not user.secret_key:
+#         user.secret_key = pyotp.random_base32()
+#         db.session.commit()
+#     totp = pyotp.TOTP(user.secret_key)
+#     totp_url = totp.provisioning_uri(user.username, issuer_name="Blueprint")
+#     return totp_url
 
 
 active_sessions = {}
@@ -123,18 +123,14 @@ def login():
             return 'User is already logged in', 403
 
         if user and bcrypt.check_password_hash(user.password, password):
-            totp = pyotp.TOTP(user.totp_secret)
-            session['otp_verified'] = False
-            if totp.verify(request.form.get("otp")):
-                session['otp_verified'] = True
-            if session.get('otp_verified'):
-                login_user(user, remember=True)
-                flash('You have been logged in successfully!', 'success')
-                active_sessions[user.id] = True
-                app.logger.info(f"User {username} logged in successfully.")
-                app.logger.info(current_user.user_info)
-            else:
-                flash('Invalid TOTP token. Please try again.', 'error')
+          
+         
+            login_user(user, remember=True)
+            flash('You have been logged in successfully!', 'success')
+            active_sessions[user.id] = True
+            app.logger.info(f"User {username} logged in successfully.")
+            app.logger.info(current_user.user_info)
+         
             return redirect(url_for('blueprint'))
         else:
             app.logger.info(f"Failed login attempt for user {username}.")
@@ -161,32 +157,32 @@ def load_user(user_id):
     return User.query.options(joinedload(User.user_info)).get(int(user_id))
 
 
-user_data = [
-    {'username': 'mattbrowne1', 'password': 'password123', 'full_name': 'Matthew Browne',
-     'email': 'matthew.browne@retailalchemy.co.uk'},
-    {'username': 'testuser', 'password': 'testpassword', 'full_name': 'John Doe', 'email': 'user2@example.com'},
-]
+# user_data = [
+#     {'username': 'mattbrowne1', 'password': 'password123', 'full_name': 'Matthew Browne',
+#      'email': 'matthew.browne@retailalchemy.co.uk'},
+#     {'username': 'testuser', 'password': 'testpassword', 'full_name': 'John Doe', 'email': 'user2@example.com'},
+# ]
 
 
-def add_user(user_data):
-    existing_user = User.query.filter_by(username=user_data['username']).first()
+# def add_user(user_data):
+#     existing_user = User.query.filter_by(username=user_data['username']).first()
 
-    if existing_user is None:
-        totp_secret = secrets.token_hex(8)
-        hashed_password = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
-        new_user = User(username=user_data['username'], password=hashed_password,totp_secret=totp_secret)
-        db.session.add(new_user)
-        db.session.commit()
+#     if existing_user is None:
+#         totp_secret = secrets.token_hex(8)
+#         hashed_password = bcrypt.generate_password_hash(user_data['password']).decode('utf-8')
+#         new_user = User(username=user_data['username'], password=hashed_password,totp_secret=totp_secret)
+#         db.session.add(new_user)
+#         db.session.commit()
 
-        secret_client.set_secret(user_data['username'], totp_secret)
+#         # secret_client.set_secret(user_data['username'], totp_secret)
 
-        new_user_info = UserInfo(full_name=user_data['full_name'], email=user_data['email'], user=new_user)
-        db.session.add(new_user_info)
-        db.session.commit()
+#         new_user_info = UserInfo(full_name=user_data['full_name'], email=user_data['email'], user=new_user)
+#         db.session.add(new_user_info)
+#         db.session.commit()
 
-        app.logger.info(f"User '{user_data['username']}' added successfully.")
-    else:
-        app.logger.info(f"User '{user_data['username']}' already exists.")
+#         app.logger.info(f"User '{user_data['username']}' added successfully.")
+#     else:
+#         app.logger.info(f"User '{user_data['username']}' already exists.")
 
 
 @app.route('/get_user_id', methods=['GET'])
