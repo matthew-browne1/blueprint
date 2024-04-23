@@ -778,6 +778,7 @@ def chart_response():
                 a["region_brand_opt"] = f"{a['region_brand']}_{a['Optimisation Type']}"
                 chart_response.append(a)
 
+
         dropdown_options1 = {}
         for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type", "region_brand",
                        "region_brand_opt"]:
