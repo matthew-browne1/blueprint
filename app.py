@@ -657,7 +657,7 @@ def results_output():
     output = create_output(output_df_per_result=output_df_per_result)
     output['Date'] = pd.to_datetime(output['Date'])
     output['Year'] = output['Date'].dt.year
-    mns_query = 'SELECT * FROM MNS_MC;'
+    mns_query = 'SELECT * FROM "MNS_MC";'
     mns_mc = pd.read_sql(mns_query, engine)
     merged_output = pd.merge(output, mns_mc, on=['Region','Brand','Year'], how='left')
     merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
@@ -917,7 +917,7 @@ def chart_budget_response():
     finally:
         if 'conn' in locals():
             conn.close()
-sql_query = "SELECT * FROM your_table;"
+
 
 @socketio.on("apply_filter_curve")
 def handle_curve_filter(curve_filter_data):

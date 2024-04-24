@@ -20,6 +20,36 @@ def generate_requirements_file(output_file='requirements.txt'):
 
 # generate_requirements_file()
 
+### RA SERVER FETCH
+
+def get_tables():
+    ra_server_uri = 'postgresql://postgres:' + urllib.parse.quote_plus("Gde3400@@") + '@192.168.1.2:5432/CPW Blueprint'
+
+    # Create the new PostgreSQL URI for Azure
+
+    tables_to_download = ["Optimal_TV_Laydown"]  
+
+# Create a SQLAlchemy engine
+    engine = create_engine(ra_server_uri)
+
+    # Download tables as CSV files
+    for table_name in tables_to_download:
+        # Read the table directly into a pandas DataFrame
+        df = pd.read_sql_table(table_name, engine)
+
+        # Write the DataFrame to a CSV file
+        csv_filename = f"{table_name}.csv"
+        df.to_csv(csv_filename, index=False)
+
+        print(f"Table '{table_name}' downloaded and saved as '{csv_filename}'")
+
+    # Dispose the SQLAlchemy engine
+    engine.dispose()
+
+# get_tables()
+
+### AZURE SERVER UPLOAD
+
 keyvault_url = "https://acblueprint-vault.vault.azure.net/"
 
 # Initialize Azure credentials
@@ -40,37 +70,10 @@ database_name = "acblueprint-db"
 connection_string = f"postgresql://{db_username_secret}:{db_password_secret}@{host}/{database_name}"
 engine = create_engine(connection_string)
 
-# def get_tables():
-#     ra_server_uri = 'postgresql://postgres:' + urllib.parse.quote_plus("Gde3400@@") + '@192.168.1.2:5432/CPW Blueprint'
-
-#     # Create the new PostgreSQL URI for Azure
-
-
-#     tables_to_download = ['Optimal_TV_Laydown', "Curves_Channel_Response_Blended", "Curves_Channel_Response_LT", "Curves_Channel_Response_ST"]  
-
-# # Create a SQLAlchemy engine
-#     engine = create_engine(ra_server_uri)
-
-#     # Download tables as CSV files
-#     for table_name in tables_to_download:
-#         # Read the table directly into a pandas DataFrame
-#         df = pd.read_sql_table(table_name, engine)
-
-#         # Write the DataFrame to a CSV file
-#         csv_filename = f"{table_name}.csv"
-#         df.to_csv(csv_filename, index=False)
-
-#         print(f"Table '{table_name}' downloaded and saved as '{csv_filename}'")
-
-#     # Dispose the SQLAlchemy engine
-#     engine.dispose()
-
-# get_tables()
-
+# vm filepath
 filepath = r"C:\Users\matthewbrowne\Desktop\Blueprint Production\blueprint\\"
 
-mns_mc = pd.read_excel(filepath+r'ROIs and factors all regions.xlsx', sheet_name='factors')
-csv_files = [r'Curves_Channel_Response_Blended.csv',r'Optimal_TV_Laydown.csv',r'Curves_Channel_Response_LT.csv',r'Curves_Channel_Response_ST.csv']
+csv_files = [r'Curves_Horizon.csv',r'Curves_Optimal_ROI.csv',r'Curves_Budget_Response.csv',r'Optimal_TV_Laydown.csv']
 
 for csv_file in csv_files:
     # Read CSV file into a pandas DataFrame
@@ -82,4 +85,7 @@ for csv_file in csv_files:
     # Write DataFrame to database as a table
     df.to_sql(name=table_name, con=engine, index=False, if_exists='replace')
 
-mns_mc.to_sql(name="MNS_MC", con=engine, index=False, if_exists='replace')
+# ra_server_uri = 'postgresql://postgres:' + urllib.parse.quote_plus("Gde3400@@") + '@192.168.1.2:5432/CPW Blueprint'
+# engine = create_engine(ra_server_uri)
+# mns_query = 'SELECT * FROM "Optimal_TV_Laydown";'
+# mns_mc = pd.read_sql(mns_query, engine)
