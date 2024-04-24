@@ -978,6 +978,36 @@ def chart_budget_response():
         if 'conn' in locals():
             conn.close()
 
+@socketio.on("tv_data")
+def tv_data():
+    global tv_data
+    try:
+        conn = engine.connect()
+        query = text('SELECT * FROM "Optimal_TV_Laydown";')
+        db_result = conn.execute(query)
+        rows = db_result.fetchall()
+        col_names = db_result.keys()
+        result_df = pd.DataFrame(rows, columns=col_names)
+        result_df['Date'] = pd.to_datetime(result_df['Date'])
+        result_df['MonthYear'] = result_df['Date'].dt.strftime('%b %Y')
+        result_df = result_df.groupby(
+            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Region', 'Brand', 'Channel Group', 'Channel', 'Optimised', 'MonthYear']).sum(numeric_only=True)
+        result_df.reset_index(inplace=True)
+        result_df = result_df.sort_values(by='MonthYear')
+        chart_data = []
+        for index, row in result_df.iterrows():
+            a = dict(row)
+            chart_data.append(a)
+        print("printing chart data for tv data")
+        print(chart_data)
+        socketio.emit('tv_chart_data', {'tv_chartData':chart_data})
+    except SQLAlchemyError as e:
+        print('Error executing query:', str(e))
+
+    finally:
+        if 'conn' in locals():
+            conn.close()
+
 
 @socketio.on("apply_filter_curve")
 def handle_curve_filter(curve_filter_data):
