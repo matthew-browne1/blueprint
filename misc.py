@@ -18,34 +18,35 @@ def generate_requirements_file(output_file='requirements.txt'):
     else:
         print("Failed to generate the requirements file.")
 
-generate_requirements_file()
+# generate_requirements_file()
 
-# keyvault_url = "https://acblueprint-vault.vault.azure.net/"
+keyvault_url = "https://acblueprint-vault.vault.azure.net/"
 
-# # Initialize Azure credentials
-# credential = DefaultAzureCredential()
+# Initialize Azure credentials
+credential = DefaultAzureCredential()
 
-# # Initialize SecretClient
-# secret_client = SecretClient(vault_url=keyvault_url, credential=credential)
+# Initialize SecretClient
+secret_client = SecretClient(vault_url=keyvault_url, credential=credential)
 
-# # Retrieve secrets from Key Vault
-# db_username_secret = secret_client.get_secret("db-username").value
-# db_password_secret = secret_client.get_secret("db-password").value
+# Retrieve secrets from Key Vault
+db_username_secret = secret_client.get_secret("db-username").value
+db_password_secret = secret_client.get_secret("db-password").value
 
-# # Host and database details
-# host = "acblueprint-server.postgres.database.azure.com"
-# database_name = "acblueprint-db"
+# Host and database details
+host = "acblueprint-server.postgres.database.azure.com"
+database_name = "acblueprint-db"
 
-# # Construct connection string
-# connection_string = f"postgresql://{db_username_secret}:{db_password_secret}@{host}/{database_name}"
-# engine = create_engine(connection_string)
+# Construct connection string
+connection_string = f"postgresql://{db_username_secret}:{db_password_secret}@{host}/{database_name}"
+engine = create_engine(connection_string)
+
 # def get_tables():
 #     ra_server_uri = 'postgresql://postgres:' + urllib.parse.quote_plus("Gde3400@@") + '@192.168.1.2:5432/CPW Blueprint'
 
 #     # Create the new PostgreSQL URI for Azure
 
 
-#     tables_to_download = ['All_Channel_Inputs', 'All_Laydown', 'All_Index']  # Replace 'table1', 'table2' with the names of your tables
+#     tables_to_download = ['Optimal_TV_Laydown', "Curves_Channel_Response_Blended", "Curves_Channel_Response_LT", "Curves_Channel_Response_ST"]  
 
 # # Create a SQLAlchemy engine
 #     engine = create_engine(ra_server_uri)
@@ -65,15 +66,17 @@ generate_requirements_file()
 #     engine.dispose()
 
 # get_tables()
+mns_mc = pd.read_excel('ROIs and factors all regions.xlsx', sheet_name='factors')
+csv_files = ['Curves_Channel_Response_Blended.csv','Optimal_TV_Laydown.csv','Curves_Channel_Response_LT.csv','Curves_Channel_Response_ST.csv']
 
-# csv_files = ['All_Channel_Inputs.csv','All_Index.csv','All_Laydown.csv']
+for csv_file in csv_files:
+    # Read CSV file into a pandas DataFrame
+    df = pd.read_csv(csv_file)
 
-# for csv_file in csv_files:
-#     # Read CSV file into a pandas DataFrame
-#     df = pd.read_csv(csv_file)
+    # Remove the file extension to get the table name
+    table_name = csv_file.split('.')[0]
 
-#     # Remove the file extension to get the table name
-#     table_name = csv_file.split('.')[0]
+    # Write DataFrame to database as a table
+    df.to_sql(name=table_name, con=engine, index=False, if_exists='replace')
 
-#     # Write DataFrame to database as a table
-#     df.to_sql(name=table_name, con=engine, index=False, if_exists='replace')
+mns_mc.to_sql(name="MNS_MC", con=engine, index=False, if_exists='replace')

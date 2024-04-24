@@ -1,10 +1,21 @@
+@font-face {
+  font-family: 'Carmen Sans Light';
+  src: url('carmen-sans-5.woff') format('woff');
+  font-weight: 300; /* Font weight of the light version */
+  font-style: normal; /* Font style, could be 'italic' for italic fonts */
+}
+
 * {
     outline: 0;
-    font-family: sans-serif
+    font-family: 'Carmen Sans Light', sans-serif;
+    font-weight: 300; 
+    font-size: 12pt; 
   }
   body {
-    background-color: #fafafa
-  }
+    margin: 0;
+    
+    
+}
   span.msg,
   span.choose {
     color: #555;

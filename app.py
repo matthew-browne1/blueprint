@@ -655,12 +655,17 @@ def results_output():
     print(tab_names)
     #print(inputs_per_result)
     output = create_output(output_df_per_result=output_df_per_result)
-
+    output.to_csv('output.csv')
+    output['Year'] = output['Date'].dt.year
+    mns_mc = pd.read_excel('ROIs and factors all regions.xlsx', sheet_name='factors')
+    merged_output = pd.merge(output, mns_mc, on=['Region','Brand','Year'], how='left')
+    merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
+    merged_output.to_csv('merged_output.csv')
     try:
-        output.to_sql('Optimised CSV', engine, if_exists='replace', index=False)
-        app.logger.info("output (results) uploaded to cb successfully")
+        merged_output.to_sql('Optimised CSV', engine, if_exists='replace', index=False)
+        app.logger.info("csv uploaded to db successfully")
     except:
-        app.logger.info("output (resutls) db upload failed")
+        app.logger.info("csv db upload failed")
 
     return jsonify({"message": "csv exported successfully"})
 
@@ -673,8 +678,10 @@ def create_output(output_df_per_result):
 
 
 @socketio.on("collect_data")
-def chart_data():
+def chart_data(data):
     global chart_data
+    metric = data['metric']
+    print(f"metric within chart_data method is {metric}")
     try:
         conn = engine.connect()
         query = text('SELECT * FROM "Optimised CSV";')
@@ -692,14 +699,14 @@ def chart_data():
         result_df.reset_index(inplace=True)
         result_df = result_df.sort_values(by='MonthYear')
         chart_data = []
-        
+        print("worked")
         for index, row in result_df.iterrows():
             a = dict(row)
             chart_data.append(a)
 
         dropdown_options = {}
         for column in result_df.columns:
-            if column not in ['Opt Channel', 'Value']:
+            if column not in ['Opt Channel', 'Value', 'Volume']:
                 if column == 'Budget/Revenue':
                     dropdown_options[column] = [value for value in result_df[column].unique() if "Budget" not in value]
                 else:
@@ -708,7 +715,7 @@ def chart_data():
         socketio.emit('dropdown_options', {'options': dropdown_options})
         print("Dropdown options sent")
 
-        socketio.emit('chart_data', {'chartData': chart_data})
+        socketio.emit('chart_data', {'chartData': chart_data, 'metric':metric})
         print("chart_data sent")
 
     except SQLAlchemyError as e:
@@ -719,10 +726,12 @@ def chart_data():
             conn.close()
 
 @socketio.on("apply_filter")
-def handle_apply_filter(filter_data):
+def handle_apply_filter(data):
     try:
-        filters = filter_data
-
+        filters = data['filters']
+        metric = data['metric']
+        print(filters)
+        print(metric)
         if "Budget/Revenue" in filters and filters["Budget/Revenue"]:
             if "Budget" not in filters["Budget/Revenue"]:
                 filters["Budget/Revenue"].append("Budget")
@@ -730,12 +739,14 @@ def handle_apply_filter(filter_data):
             filters["Budget/Revenue"] = []
 
         print('Received filter data:', filters)
-        apply_filters(filters)
+        apply_filters(filters, metric)
     except KeyError:
         print("KeyError: 'Budget/Revenue' not found in filter_data")
+        print(data)
 
-def apply_filters(filters):
+def apply_filters(filters, metric):
     try:
+        global filtered_data
         filtered_data = []
         print(filters)
 
@@ -750,12 +761,27 @@ def apply_filters(filters):
             if include_data_point:
                 filtered_data.append(data_point)
 
-        socketio.emit('filtered_data', {'filtered_data': filtered_data})
+        socketio.emit('filtered_data', {'filtered_data': filtered_data, 'metric':metric})
         print("Filtered chart data sent")
         print("Filtered data length:", len(filtered_data))
 
     except Exception as e:
         print('Error applying filter:', str(e))
+
+@socketio.on("volval")
+def volval_swap(data):
+    print(chart_data)
+    metric = str(data['metric'])
+
+    try:
+        socketio.emit('filtered_data', {'filtered_data': filtered_data, 'metric':metric})
+        print(metric)
+    except Exception as e:
+        print(e)
+        print(metric)
+        socketio.emit('chart_data', {'chartData': chart_data, 'metric':metric})
+
+            
 
 @socketio.on("response_data")
 def chart_response():
@@ -777,7 +803,6 @@ def chart_response():
                 a["region_brand"] = f"{a['Region']}_{a['Brand']}"
                 a["region_brand_opt"] = f"{a['region_brand']}_{a['Optimisation Type']}"
                 chart_response.append(a)
-
 
         dropdown_options1 = {}
         for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type", "region_brand",
