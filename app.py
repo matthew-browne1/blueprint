@@ -918,6 +918,23 @@ def chart_budget_response():
         if 'conn' in locals():
             conn.close()
 
+# @socketio.on("tv_data")
+# def tv_data():
+#     global tv_data
+#     try:
+#         conn = engine.connect()
+#         query = text('SELECT * FROM "Optimal_TV_Laydown";')
+#         db_result = conn.execute(query)
+#         tv_data = []
+#         col_names = db_result.keys()
+#         a = dict(zip(col_names, x))
+#         for x in db_result.fetchall():
+#             a = dict(zip(col_names, x))
+
+
+
+
+
 
 @socketio.on("apply_filter_curve")
 def handle_curve_filter(curve_filter_data):
