@@ -9,8 +9,7 @@
 </head>
 <body>
 <div class="title-container">
-    <h1>Blueprint Results</h1>
-    <img src="/static/images/blueprint logo.png" alt="Logo" class="logo">
+    <h1>blueprint<span class="special-letter">.</span></h1>
 </div>
 <div class="wrapper">
     <div class="sidepanel">
@@ -20,14 +19,14 @@
 
         <div class="filter-container">
             <h2 class="filter-title">Region</h2>
-            <select id="regionFilter">
+            <select id="regionFilter" class="multi-select-filter" >
                 <option>Select Region</option>
                 <!-- Add options as needed -->
             </select>
         </div>
         <div class="filter-container">
             <h2 class="filter-title">Brand</h2>
-            <select id="brandFilter">
+            <select id="brandFilter" class="multi-select-filter" >
                 <option>Select Brand</option>
                 <!-- Add options as needed -->
             </select>
@@ -35,7 +34,7 @@
         <div class="filter-container">
             <h2 class="filter-title">Optimisation Type</h2>
             <h6>Filters will only be applied to Response Curves</h6>
-            <select id="optimisationFilter">
+            <select id="optimisationFilter" class="multi-select-filter" >
                 <option>Select Optimisation Type</option>
                 <!-- Add options as needed -->
             </select>
@@ -51,27 +50,30 @@
         <a href="/blueprint_results">Curve Charts</a>
     </div>
     <div class="chart-container">
-        <div class="title-container" style="padding-top: 0px;" >
+        <div class="title-container2" style="padding-top: 0px;" >
             <h2 id = "dynamic-title" style="margin-top: 0px;margin-bottom: 0px;"> </h2>
         </div>
         <div class="chart-content" id="response_channel_group">
             Response Curve by Channel Group
-            <canvas id="response_curve_chart" width="1600" height="400"></canvas>
+            <canvas id="response_curve_chart" height="400"></canvas>
         </div>
         <div class="chart-content" id="response_budget">
             Budget Response Curve
-            <canvas id="response_budget_chart" width="1600" height="400"></canvas>
+            <canvas id="response_budget_chart" height="400"></canvas>
         </div>
-        <div>
-            <div class="chart-content" id="budget_curve">
-                Budget Curve
-                <canvas id="budget_curve_chart" width="1600" height="400"></canvas>
-            </div>
-            <div class="chart-content" id="roi_curve">
-                ROI Curve
-                <canvas id="roi_curve_chart" width="1600" height="400"></canvas>
-            </div>
+        <div class="chart-content" id="budget_curve">
+            Budget Curve
+            <canvas id="budget_curve_chart" height="400"></canvas>
         </div>
+        <div class="chart-content" id="roi_curve">
+            ROI Curve
+            <canvas id="roi_curve_chart" height="400"></canvas>
+        </div>
+        <div class="chart-content" id="roi_curve">
+            ROI Curve
+            <canvas id="roi_curve_chart" height="400"></canvas>
+        </div>
+     
     </div>
 
 </div>

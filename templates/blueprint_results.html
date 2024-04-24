@@ -10,8 +10,8 @@
 </head>
 <body>
 <div class="title-container">
-    <h1>Blueprint Results</h1>
-    <img src="/static/images/blueprint logo.png" alt="Logo" class="logo">
+    <h1>blueprint<span class="special-letter">.</span></h1>
+    <!-- <img src="/static/images/blueprint logo.png" alt="Logo" class="logo"> -->
 </div>
 <div class="wrapper">
     <div class="sidepanel">
@@ -20,47 +20,39 @@
         <div class="line"></div>
         <div class="filter-container">
             <h2 class="filter-title">Date</h2>
-            <select id="dateFilter" multiple>
+            <select class="multi-select-filter" id="dateFilter" multiple>
         </div>
 
         <div class="filter-container">
             <h2 class="filter-title">Region</h2>
-            <select id="regionFilter" multiple>
+            <select class="multi-select-filter" id="regionFilter" multiple>
             </select>
         </div>
         <div class="filter-container">
             <h2 class="filter-title">Brand</h2>
-            <select id="brandFilter" multiple>
+            <select class="multi-select-filter" id="brandFilter" multiple>
             </select>
         </div>
         <div class="filter-container">
             <h2 class="filter-title">Channel Group</h2>
-            <select id="channelgroupFilter" multiple>
+            <select class="multi-select-filter" id="channelgroupFilter" multiple>
             </select>
         </div>
         <div class="filter-container">
             <h2 class="filter-title">Channel</h2>
-            <select id="channelFilter" multiple>
+            <select class="multi-select-filter" id="channelFilter" multiple>
             </select>
         </div>
         <div class="filter-container">
             <h2 class="filter-title">Scenario</h2>
-            <select id="scenarioFilter" multiple>
+            <select class="multi-select-filter" id="scenarioFilter" multiple>
             </select>
         </div>
         <div class="filter-container">
             <h2 class="filter-title">Revenue Type</h2>
-            <select id="revenueFilter" multiple>
+            <select class="multi-select-filter" id="revenueFilter" multiple>
             </select>
         </div>
-        <!-- <div class="filter-container">
-            <h2 class="filter-title">Value/Volume</h2>
-            <select id="volValFilter">
-                <option value="value">Value</option>
-                <option value="volume">Volume</option>
-            </select>
-        </div> -->
-        
         <div class="filter-container" style="border: none;">
             <button id="applyFilters" class="button2">Apply Filters</button>
             <button id="clearFilters" class="button2">Clear Filters</button>
@@ -71,47 +63,55 @@
         <a href="#channel">Channel Charts</a>
         <a href="#laydown">Laydown Charts</a>
         <a href="/blueprint_curve">Curve Charts</a>
+        <div class="volval-container">
+            <div class="volval-radio-buttons">
+                <input type="radio" name="volval" id="volval1" value="Value" checked >
+                <label for="volval1">Value</label>
+                <input type="radio" name="volval" id="volval2" value="Volume" >
+                <label for="volval2">Volume</label>
+            </div>
+        </div>
     </div>
     <div class="chart-container">
         <section id="scenario">
             Scenario Charts
             <div class="chart-content" id="budget_scenario">
                 Budget by Scenario
-                <canvas id="budget_scenario_chart" width="1600" height="400"></canvas>
+                <canvas id="budget_scenario_chart" height="400px"></canvas>
             </div>
             <div class="chart-content" id="revenue_scenario">
                 Revenue by Scenario
-                <canvas id="revenue_scenario_chart" width="1600" height="400"></canvas>
+                <canvas id="revenue_scenario_chart" height="400px"></canvas>
             </div>
             <div class="chart-content" id="roi_scenario">
                 ROI by Scenario
-                <canvas id="roi_scenario_chart" width="1600" height="400"></canvas>
+                <canvas id="roi_scenario_chart" height="400px"></canvas>
             </div>
         </section>
         <section id="channel">
             Channel Charts
             <div class="chart-content" id="budget_channel">
                 Budget by Channel
-                <canvas id="budget_channel_chart" width="1600" height="400"></canvas>
+                <canvas id="budget_channel_chart" height="400px"></canvas>
             </div>
             <div class="chart-content" id="revenue_channel">
                 Revenue by Channel
-                <canvas id="revenue_channel_chart" width="1600" height="400"></canvas>
+                <canvas id="revenue_channel_chart" height="400px"></canvas>
             </div>
             <div class="chart-content" id="roi_channel">
                 ROI by Channel
-                <canvas id="roi_channel_chart" width="1600" height="400"></canvas>
+                <canvas id="roi_channel_chart" height="400px"></canvas>
             </div>
         </section>
         <section id="laydown">
             Laydown Charts
             <div class="chart-content" id="laydown_scenario">
                 Laydown by Scenario
-                <canvas id="laydown_scenario_chart" width="1600" height="400"></canvas>
+                <canvas id="laydown_scenario_chart" height="400px"></canvas>
             </div>
             <div class="chart-content" id="laydown_channel">
                 Laydown by Channel Group
-                <canvas id="laydown_channel_chart" width="1600" height="400"></canvas>
+                <canvas id="laydown_channel_chart" height="400px"></canvas>
                 <!--                <div class="dropdown">-->
                 <!--                    <select id="channel_dropdown">-->
                 <!--                    </select>-->

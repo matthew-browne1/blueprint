@@ -739,8 +739,10 @@ def create_output(output_df_per_result):
 
 
 @socketio.on("collect_data")
-def chart_data():
+def chart_data(data):
     global chart_data
+    metric = data['metric']
+    print(f"metric within chart_data method is {metric}")
     try:
         conn = engine.connect()
         query = text('SELECT * FROM "Optimised CSV";')
@@ -774,7 +776,7 @@ def chart_data():
         socketio.emit('dropdown_options', {'options': dropdown_options})
         print("Dropdown options sent")
 
-        socketio.emit('chart_data', {'chartData': chart_data})
+        socketio.emit('chart_data', {'chartData': chart_data, 'metric':metric})
         print("chart_data sent")
 
     except SQLAlchemyError as e:
@@ -785,25 +787,27 @@ def chart_data():
             conn.close()
 
 @socketio.on("apply_filter")
-def handle_apply_filter(filter_data):
+def handle_apply_filter(data):
     try:
-        filters = filter_data
-
+        filters = data['filters']
+        metric = data['metric']
+        print(filters)
+        print(metric)
         if "Budget/Revenue" in filters and filters["Budget/Revenue"]:
             if "Budget" not in filters["Budget/Revenue"]:
                 filters["Budget/Revenue"].append("Budget")
         else:
             filters["Budget/Revenue"] = []
 
-        if "V"
-
         print('Received filter data:', filters)
-        apply_filters(filters)
+        apply_filters(filters, metric)
     except KeyError:
         print("KeyError: 'Budget/Revenue' not found in filter_data")
+        print(data)
 
-def apply_filters(filters):
+def apply_filters(filters, metric):
     try:
+        global filtered_data
         filtered_data = []
         print(filters)
 
@@ -818,12 +822,27 @@ def apply_filters(filters):
             if include_data_point:
                 filtered_data.append(data_point)
 
-        socketio.emit('filtered_data', {'filtered_data': filtered_data})
+        socketio.emit('filtered_data', {'filtered_data': filtered_data, 'metric':metric})
         print("Filtered chart data sent")
         print("Filtered data length:", len(filtered_data))
 
     except Exception as e:
         print('Error applying filter:', str(e))
+
+@socketio.on("volval")
+def volval_swap(data):
+    print(chart_data)
+    metric = str(data['metric'])
+
+    try:
+        socketio.emit('filtered_data', {'filtered_data': filtered_data, 'metric':metric})
+        print(metric)
+    except Exception as e:
+        print(e)
+        print(metric)
+        socketio.emit('chart_data', {'chartData': chart_data, 'metric':metric})
+
+            
 
 @socketio.on("response_data")
 def chart_response():

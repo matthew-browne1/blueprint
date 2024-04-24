@@ -213,23 +213,26 @@ function generateChartsA(data) {
 };
 // 1b. config block
     const response_curve_chartOptions = {
-                 scales: {
-           x: {
-             type: 'linear',
-             position: 'bottom',
-             scaleLabel: {
-               display: true,
-               labelString: 'Budget'
-             }
-           },
-           y: {
-             scaleLabel: {
-               display: true,
-               labelString: 'Response Curve'
-             }
-           }
-         }
-    }
+      scales: {
+        x: {
+          type: "linear",
+          position: "bottom",
+          scaleLabel: {
+            display: true,
+            labelString: "Budget",
+          },
+        },
+        y: {
+          scaleLabel: {
+            display: true,
+            labelString: "Response Curve",
+          },
+        },
+      },
+      responsive: true,
+      maintainAspectRatio: true,
+      animation: true
+    };
 // 1c. render block
    if (response_curve_chart === null) {
         response_curve_chart = new Chart(document.getElementById("response_curve_chart"), {
@@ -309,22 +312,25 @@ function generateChartsB(data) {
 
     // 3b. config block
     const budget_chartOptions = {
-        scales: {
-            x: {
-                type: 'linear',
-                position: 'bottom',
-                scaleLabel: {
-                    display: true,
-                    labelString: 'Budget'
-                }
-            },
-            y: {
-                scaleLabel: {
-                    display: true,
-                    labelString: 'Profit'
-                }
-            }
-        }
+      scales: {
+        x: {
+          type: "linear",
+          position: "bottom",
+          scaleLabel: {
+            display: true,
+            labelString: "Budget",
+          },
+        },
+        y: {
+          scaleLabel: {
+            display: true,
+            labelString: "Profit",
+          },
+        },
+      },
+      responsive: true,
+      maintainAspectRatio: true,
+      animation: true,
     };
 
     // 3c. render block
@@ -392,23 +398,26 @@ function generateChartsC(data) {
 });
 // 4b. config block
         const roi_chartOptions = {
-                 scales: {
-           x: {
-             type: 'linear',
-             position: 'bottom',
-             scaleLabel: {
-               display: true,
-               labelString: 'Budget'
-             }
-           },
-           y: {
-             scaleLabel: {
-               display: true,
-               labelString: 'ST + LT ROI'
-             }
-           }
-         }
-    }
+          scales: {
+            x: {
+              type: "linear",
+              position: "bottom",
+              scaleLabel: {
+                display: true,
+                labelString: "Budget",
+              },
+            },
+            y: {
+              scaleLabel: {
+                display: true,
+                labelString: "ST + LT ROI",
+              },
+            },
+          },
+          responsive: true,
+          maintainAspectRatio: true,
+          animation: true,
+        };
 // 4c. render block
     if (roi_curve_chart === null) {
         roi_curve_chart = new Chart(document.getElementById("roi_curve_chart"), {
@@ -464,22 +473,25 @@ function generateChartsD(data) {
 
     // 2b. config block
     const budget_response_chartOptions = {
-        scales: {
-            x: {
-                type: 'linear',
-                position: 'bottom',
-                scaleLabel: {
-                    display: true,
-                    labelString: 'Budget'
-                }
-            },
-            y: {
-                scaleLabel: {
-                    display: true,
-                    labelString: 'Revenue'
-                }
-            }
-        }
+      scales: {
+        x: {
+          type: "linear",
+          position: "bottom",
+          scaleLabel: {
+            display: true,
+            labelString: "Budget",
+          },
+        },
+        y: {
+          scaleLabel: {
+            display: true,
+            labelString: "Revenue",
+          },
+        },
+      },
+      responsive: true,
+      maintainAspectRatio: true,
+      animation: true,
     };
 
     // 2c. render block

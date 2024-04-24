@@ -25,6 +25,7 @@ $(document).ready(function() {
 
     // Function to collect and send filter selections to backend
     function applyFilters() {
+      var currentlySelectedMetric = selectedMetric()
         var filters = {
             MonthYear: $('#dateFilter').val(),
             Region: $('#regionFilter').val(),
@@ -34,8 +35,9 @@ $(document).ready(function() {
             Scenario: $('#scenarioFilter').val(),
             "Budget/Revenue": $('#revenueFilter').val()
         };
+        
         console.log("Applying filters:", filters);
-        chartsSocket.emit("apply_filter", filters);
+        chartsSocket.emit("apply_filter", {'filters':filters,'metric':currentlySelectedMetric});
     }
 
     // Function to clear all filter selections
@@ -51,18 +53,24 @@ $(document).ready(function() {
         console.log('Connected');
     });
 
-    chartsSocket.emit("collect_data");
-    chartsSocket.emit("apply_filter");
+    var currentlySelectedMetric = selectedMetric()
+
+    chartsSocket.emit("collect_data",{"metric":currentlySelectedMetric});
+    // chartsSocket.emit("apply_filter", {"metric":currentlySelectedMetric});
 
     chartsSocket.on('chart_data', function(data) {
-        chartData = data.chartData; // Update chartData when received from backend
+        chartData = data.chartData;
+        var metric = selectedMetric();
+        console.log(metric);
         console.log("fetched chart data from back end");
-        generateCharts();
+        generateCharts(metric);
     });
 
     chartsSocket.on('filtered_data', function(data) {
-        filteredData = data.filtered_data; // Update filteredData when received from backend
-        generateCharts();
+        filteredData = data.filtered_data;
+        var metric = selectedMetric();
+        console.log(metric);
+        generateCharts(metric);
     });
 
     // Apply Filters button click event
@@ -131,17 +139,18 @@ $(document).ready(function() {
     }
 
     // Function to generate charts
-    function generateCharts() {
+    function generateCharts(metric) {
+      console.log(metric);
         if (filteredData.length > 0) {
-            generateChartsA(filteredData);
-            generateChartsB(filteredData);
-            generateChartsC(filteredData);
-            generateChartsD(filteredData);
+            generateChartsA(filteredData, metric);
+            generateChartsB(filteredData, metric);
+            generateChartsC(filteredData, metric);
+            generateChartsD(filteredData, metric);
         } else {
-            generateChartsA(chartData);
-            generateChartsB(chartData);
-            generateChartsC(chartData);
-            generateChartsD(chartData);
+            generateChartsA(chartData, metric);
+            generateChartsB(chartData, metric);
+            generateChartsC(chartData, metric);
+            generateChartsD(chartData, metric);
         }
     }
 
@@ -156,11 +165,36 @@ $(document).ready(function() {
             $this.val(selectedOptions);
         }
     });
+
+      const volvalButtons = document.querySelectorAll('input[type="radio"]');
+      volvalButtons.forEach((button) => {
+        button.addEventListener("change", function () {
+          
+          var metric = selectedMetric();
+          console.log("calling the generateCharts method with metric: "+metric);
+          generateCharts(metric);
+          
+        });
+      });
+
 });
 
 
-function generateChartsA(data) {
-    console.log("reaching generateChartsA method");
+function selectedMetric() {
+  const volvalButtons = document.querySelectorAll('input[type="radio"]');
+
+  for (var i = 0; i < volvalButtons.length; i++) {
+    if (volvalButtons[i].checked) {
+      console.log('currently selected metric ='+volvalButtons[i].value);
+      return volvalButtons[i].value;
+    }
+  }
+
+  return null; // Return null if no radio button is checked
+}
+function generateChartsA(data, metric) {
+    console.log("reaching generateChartsA method with metric: "+metric);
+
    // Process data for scenario charts
     const processedData = data.reduce((acc, entry) => {
       const key = entry.Scenario;
@@ -176,14 +210,14 @@ function generateChartsA(data) {
         ROI: 0
         };
       }
-
+      
        if (entry["Budget/Revenue"] === "LT Revenue") {
-          acc[key].LT_Revenue += entry.Value;
+          acc[key].LT_Revenue += entry[metric];
         } else if (entry["Budget/Revenue"] === "ST Revenue") {
-          acc[key].ST_Revenue += entry.Value;
+          acc[key].ST_Revenue += entry[metric];
         }
         else {
-        acc[key].Budget += entry.Value;
+        acc[key].Budget += entry[metric];
         }
 
      // Calculate ROIs
@@ -225,6 +259,7 @@ function splitLabel(maxWords) {
           label: "Budget",
           data: budgetData,
           backgroundColor: "#FF6961",
+          borderRadius: 15
         },
       ],
     };
@@ -272,17 +307,27 @@ function splitLabel(maxWords) {
           weight: 'bold',
         },
      callback: function(value, index, values) {
-          if (value < 1000000) {
-            return '£' + (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
-          } else {
-            return '£' + (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
-          }
+      var metric = selectedMetric();
+    
+          if ( metric == "Value" ) {
+              if (value < 1000000) {
+                return '£' + (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
+              } else {
+                return '£' + (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
+              }
+            } else {
+              if (value < 1000000) {
+                return (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
+              } else {
+                return (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
+              }
+            }
         }
       },
      },
   },
-  responsive: false,
-  maintainAspectRatio: false,
+  responsive: true,
+  maintainAspectRatio: true,
   layout: {
         padding: {
             top: 25,
@@ -295,11 +340,22 @@ function splitLabel(maxWords) {
       align: 'top',
       offset: 4,
       formatter: (value, context) => {
+        var metric = selectedMetric();
+     
+        if (metric == "Value") {
+        
         const formattedValue = value < 1000000
           ? '£' + (Math.round(value / 1000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'K'
           : '£' + (Math.round(value / 1000000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M';
 
         return formattedValue;
+        } else {
+          const formattedValue = value < 1000000
+          ? (Math.round(value / 1000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'K'
+          : (Math.round(value / 1000000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M';
+
+        return formattedValue;
+        }
       },
       labels: {
         title: {
@@ -322,7 +378,7 @@ function splitLabel(maxWords) {
     }
   },
   },
-  animation: false,
+  animation: true,
 };
  // 1c. render block
    if (budget_scenario_chart === null) {
@@ -345,17 +401,19 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
     const revenue_scenario_chartData = {
       labels: scenario_labels.map(splitLabel(3)),
       datasets: [
-                {
+        {
           label: "ST Revenue",
           data: st_revData,
           backgroundColor: "#FFC3A0",
-          stack: 'Stack 0',
+          stack: "Stack 0",
+          borderRadius: 15,
         },
-                {
+        {
           label: "LT Revenue",
           data: lt_revData,
           backgroundColor: "#74B3CE",
-          stack: 'Stack 0',
+          stack: "Stack 0",
+          borderRadius: 15,
         },
       ],
     };
@@ -412,8 +470,8 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
       },
      },
   },
-  responsive: false,
-  maintainAspectRatio: false,
+  responsive: true,
+  maintainAspectRatio: true,
   layout: {
         padding: {
             top: 25,
@@ -426,27 +484,48 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
       align: 'top',
       offset: 4,
       formatter: (value, context) => {
+        metric = selectedMetric();
         const percentageOfMax = value / maxBarValue;
-      if (percentageOfMax < 0.02) {
+        if (percentageOfMax < 0.02) {
         return '';
       }
+        if (metric == 'Value') {
+        
         const formattedValue = value < 1000000
           ? '£' + (Math.round(value / 1000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'K'
           : '£' + (Math.round(value / 1000000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M';
 
         return formattedValue;
+        } else {
+          const formattedValue = value < 1000000
+          ? (Math.round(value / 1000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'K'
+          : (Math.round(value / 1000000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M';
+
+        return formattedValue;
+        }
       },
       total: {
       color: 'black',
       anchor: 'center',
       align: 'center',
       formatter: (context) => {
+        metric = selectedMetric();
+        if (metric == "Value") {
+
         const totalValue = st_revData.reduce((acc, val, index) => acc + val + lt_revData[index], 0);
         const formattedTotalValue = totalValue < 1000000
           ? 'Total: £' + (Math.round(totalValue / 1000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'K'
           : 'Total: £' + (Math.round(totalValue / 1000000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M';
 
         return formattedTotalValue;
+      } else {
+        const totalValue = st_revData.reduce((acc, val, index) => acc + val + lt_revData[index], 0);
+        const formattedTotalValue = totalValue < 1000000
+          ? 'Total: ' + (Math.round(totalValue / 1000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'K'
+          : 'Total: ' + (Math.round(totalValue / 1000000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M';
+
+        return formattedTotalValue;
+      }
       },
       labels: {
         title: {
@@ -467,7 +546,7 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
     }
   },
   },
-  animation: false,
+  animation: true,
 };
 // 2c. render block
     if (revenue_scenario_chart === null) {
@@ -489,17 +568,19 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
     const roi_scenario_chartData = {
       labels: scenario_labels.map(splitLabel(3)),
       datasets: [
-                {
+        {
           label: "ST ROi",
           data: st_roiData,
           backgroundColor: "#B0A4E3",
-          stack: 'Stack 0',
+          stack: "Stack 0",
+          borderRadius: 15,
         },
-                {
+        {
           label: "LT ROI",
           data: lt_roiData,
           backgroundColor: "#94B0C2",
-          stack: 'Stack 0',
+          stack: "Stack 0",
+          borderRadius: 15,
         },
       ],
     };
@@ -547,13 +628,15 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
           weight: 'bold',
         },
      callback: function(value, index, values) {
+       
             return '£' + (Math.round(value)).toLocaleString('en-US');
-          }
+          
+        }
       },
      },
   },
-  responsive: false,
-  maintainAspectRatio: false,
+  responsive: true,
+  maintainAspectRatio: true,
   layout: {
         padding: {
             top: 25,
@@ -603,7 +686,7 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
     }
   },
   },
-  animation: false,
+  animation: true,
 };
 // 3c. render block
 if (roi_scenario_chart === null) {
@@ -620,7 +703,7 @@ if (roi_scenario_chart === null) {
     roi_scenario_chart.update();
 }
 }
-function generateChartsB(data) {
+function generateChartsB(data, metric) {
         console.log("reaching generateChartsB method");
 // Process data for channel charts
      const processedDataPerChannel = data.reduce((acc, entry) => {
@@ -642,12 +725,12 @@ function generateChartsB(data) {
         };
       }
        if (entry["Budget/Revenue"] === "LT Revenue") {
-          acc[scenarioKey].Channels[channelKey].LT_Revenue += entry.Value;
+          acc[scenarioKey].Channels[channelKey].LT_Revenue += entry[metric];
         } else if (entry["Budget/Revenue"] === "ST Revenue") {
-          acc[scenarioKey].Channels[channelKey].ST_Revenue += entry.Value;
+          acc[scenarioKey].Channels[channelKey].ST_Revenue += entry[metric];
         }
         else {
-        acc[scenarioKey].Channels[channelKey].Budget += entry.Value;
+        acc[scenarioKey].Channels[channelKey].Budget += entry[metric];
         }
 
      // Calculate ROIs
@@ -671,7 +754,8 @@ const channel_budget_data = scenarios.map((scenario, index) => {
     data: data,
     backgroundColor: `hsla(${(index * (360 / scenarios.length))}, 70%, 50%, 0.7)`, // Assigning different colors for each scenario
     borderColor: `hsla(${(index * (360 / scenarios.length))}, 70%, 50%, 1)`,
-    borderWidth: 1
+    borderWidth: 1,
+    borderRadius: 15
   };
 });
 const channel_revenue_data = scenarios.map((scenario, index) => {
@@ -683,9 +767,10 @@ const channel_revenue_data = scenarios.map((scenario, index) => {
   return {
     label: scenario,
     data: data,
-    backgroundColor: `hsla(${(index * (360 / scenarios.length))}, 70%, 50%, 0.7)`, // Assigning different colors for each scenario
-    borderColor: `hsla(${(index * (360 / scenarios.length))}, 70%, 50%, 1)`,
+    backgroundColor: `hsla(${index * (360 / scenarios.length)}, 70%, 50%, 0.7)`, // Assigning different colors for each scenario
+    borderColor: `hsla(${index * (360 / scenarios.length)}, 70%, 50%, 1)`,
     borderWidth: 1,
+    borderRadius: 15
   };
 });
 const channel_ROI_data = scenarios.map((scenario, index) => {
@@ -696,9 +781,10 @@ const channel_ROI_data = scenarios.map((scenario, index) => {
   return {
     label: scenario,
     data: data,
-    backgroundColor: `hsla(${(index * (360 / scenarios.length))}, 70%, 50%, 0.7)`, // Assigning different colors for each scenario
-    borderColor: `hsla(${(index * (360 / scenarios.length))}, 70%, 50%, 1)`,
+    backgroundColor: `hsla(${index * (360 / scenarios.length)}, 70%, 50%, 0.7)`, // Assigning different colors for each scenario
+    borderColor: `hsla(${index * (360 / scenarios.length)}, 70%, 50%, 1)`,
     borderWidth: 1,
+    borderRadius: 15
   };
 });
  // Function to generate random colors for each channel
@@ -774,17 +860,27 @@ function splitLabel(maxWords) {
           weight: 'bold',
         },
      callback: function(value, index, values) {
-          if (value < 1000000) {
+          metric = selectedMetric();
+          if (metric == "Value") {
+                      if (value < 1000000) {
             return '£' + (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
           } else {
             return '£' + (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
           }
+          } else {
+                      if (value < 1000000) {
+            return (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
+          } else {
+            return (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
+          }
+          }
+
         }
       },
      },
   },
-  responsive: false,
-  maintainAspectRatio: false,
+  responsive: true,
+  maintainAspectRatio: true,
   layout: {
         padding: {
             top: 25,
@@ -809,7 +905,7 @@ function splitLabel(maxWords) {
     }
   },
   },
-  animation: false,
+  animation: true,
 };
 // 4c. render block
 if (budget_channel_chart === null) {
@@ -875,17 +971,27 @@ const maxBarValue2 = Math.max(...totalRevenues);
           weight: 'bold',
         },
      callback: function(value, index, values) {
-          if (value < 1000000) {
+          metric = selectedMetric();
+          if (metric == "Value") {
+            if (value < 1000000) {
             return '£' + (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
           } else {
             return '£' + (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
+          } 
+          } else {
+            if (value < 1000000) {
+            return (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
+          } else {
+            return (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
           }
+          }
+
         }
       },
      },
   },
-  responsive: false,
-  maintainAspectRatio: false,
+  responsive: true,
+  maintainAspectRatio: true,
   layout: {
         padding: {
             top: 25,
@@ -910,7 +1016,7 @@ const maxBarValue2 = Math.max(...totalRevenues);
     }
   },
   },
-  animation: false,
+  animation: true,
 };
 // 5c. render block
 if (revenue_channel_chart === null) {
@@ -981,8 +1087,8 @@ const roi_channel_chartOptions = {
       },
     },
   },
-  responsive: false,
-  maintainAspectRatio: false,
+  responsive: true,
+  maintainAspectRatio: true,
   layout: {
     padding: {
       top: 25,
@@ -997,7 +1103,7 @@ const roi_channel_chartOptions = {
       }
     },
   },
-  animation: false,
+  animation: true,
 };
 
 // 6c. render block
@@ -1014,7 +1120,7 @@ if (roi_channel_chart === null) {
 }
 
 }
-function generateChartsC(data) {
+function generateChartsC(data, metric) {
         console.log("reaching generateChartsC method");
 // Process data for laydown scenario charts
 const processedDataLaydown = data.reduce((acc, entry) => {
@@ -1027,7 +1133,7 @@ const processedDataLaydown = data.reduce((acc, entry) => {
         acc[key][monthYear] = 0;
     }
     if (entry["Budget/Revenue"] === "Budget") {
-        acc[key][monthYear] += entry.Value;
+        acc[key][monthYear] += entry[metric];
     }
     return acc;
 },
@@ -1052,13 +1158,16 @@ const processedDataLaydown = data.reduce((acc, entry) => {
     // 7. Laydown by Scenario Chart
     // 7a. data block
     const laydown_scenario_chartData = {
-        labels: timePeriods,
-        datasets: laydown_scenario_labels.map(scenario => ({
-            label: scenario,
-            data: timePeriods.map(period => processedDataLaydown[scenario][period] || 0), // Retrieve budget data for each scenario and period
-            backgroundColor: '#' + Math.random().toString(16).substr(-6), // Random background color for each scenario
-            borderWidth: 1,
-        })),
+      labels: timePeriods,
+      datasets: laydown_scenario_labels.map((scenario) => ({
+        label: scenario,
+        data: timePeriods.map(
+          (period) => processedDataLaydown[scenario][period] || 0
+        ), // Retrieve budget data for each scenario and period
+        backgroundColor: "#" + Math.random().toString(16).substr(-6), // Random background color for each scenario
+        borderWidth: 1,
+        borderRadius: 15
+      })),
     };
 // 7b. config block
  const laydown_scenario_chartOptions = {
@@ -1113,8 +1222,8 @@ const processedDataLaydown = data.reduce((acc, entry) => {
       },
      },
   },
-  responsive: false,
-  maintainAspectRatio: false,
+  responsive: true,
+  maintainAspectRatio: true,
   layout: {
         padding: {
             top: 25,
@@ -1139,7 +1248,7 @@ const processedDataLaydown = data.reduce((acc, entry) => {
     }
   },
   },
-  animation: false,
+  animation: true,
 };
 // 7c. render block
 if (laydown_scenario_chart === null) {
@@ -1154,7 +1263,7 @@ if (laydown_scenario_chart === null) {
     laydown_scenario_chart.update();
 }
 }
-function generateChartsD(data) {
+function generateChartsD(data, metric) {
 // 8. Laydown by Channel Chart
 // Process data for laydown channel charts
   const processedDataChannel = data.reduce((acc, entry) => {
@@ -1169,7 +1278,7 @@ function generateChartsD(data) {
         acc[monthYear][channel] = 0;
       }
       if (entry["Budget/Revenue"] === "Budget") {
-        acc[monthYear][channel] += entry.Value;
+        acc[monthYear][channel] += entry[metric];
       }
     return acc;
   }, {});
@@ -1185,13 +1294,16 @@ function generateChartsD(data) {
 
     // 8a. data block
     const laydown_channel_chartData = {
-        labels: sortedMonthYears,
-        datasets: laydown_channel_data.map(channel => ({
-            label: channel,
-            data: sortedMonthYears.map(monthYear => processedDataChannel[monthYear][channel] || 0),
-            backgroundColor: '#' + Math.random().toString(16).substr(-6), // Random background color for each channel
-            borderWidth: 1,
-        })),
+      labels: sortedMonthYears,
+      datasets: laydown_channel_data.map((channel) => ({
+        label: channel,
+        data: sortedMonthYears.map(
+          (monthYear) => processedDataChannel[monthYear][channel] || 0
+        ),
+        backgroundColor: "#" + Math.random().toString(16).substr(-6), // Random background color for each channel
+        borderWidth: 1,
+        borderRadius: 15
+      })),
     };
 
     // 8b. config block
@@ -1247,8 +1359,8 @@ function generateChartsD(data) {
           },
         },
       },
-      responsive: false,
-      maintainAspectRatio: false,
+      responsive: true,
+      maintainAspectRatio: true,
       layout: {
         padding: {
           top: 25,
@@ -1274,7 +1386,7 @@ function generateChartsD(data) {
           }
         },
       },
-      animation: false,
+      animation: true,
     };
 
 // 8c. render block
@@ -1287,11 +1399,16 @@ function generateChartsD(data) {
     } else {
         // Update chart data
         laydown_channel_chart.data.labels = Object.keys(processedDataChannel);
-        laydown_channel_chart.data.datasets = Object.keys(processedDataChannel[laydown_channel_chart.data.labels[0]]).map(channel => ({
-            label: channel,
-            data: laydown_channel_chart.data.labels.map(monthYear => processedDataChannel[monthYear][channel] || 0),
-            backgroundColor: '#' + Math.random().toString(16).substr(-6), // Random background color for each channel
-            borderWidth: 1,
+        laydown_channel_chart.data.datasets = Object.keys(
+          processedDataChannel[laydown_channel_chart.data.labels[0]]
+        ).map((channel) => ({
+          label: channel,
+          data: laydown_channel_chart.data.labels.map(
+            (monthYear) => processedDataChannel[monthYear][channel] || 0
+          ),
+          backgroundColor: "#" + Math.random().toString(16).substr(-6), // Random background color for each channel
+          borderWidth: 1,
+          borderRadius: 15
         }));
         laydown_channel_chart.update(); // Update the chart
     }
