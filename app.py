@@ -655,7 +655,7 @@ def results_output():
     print(tab_names)
     #print(inputs_per_result)
     output = create_output(output_df_per_result=output_df_per_result)
-    output.to_csv('output.csv')
+    output['Date'] = pd.to_datetime(output['Date'])
     output['Year'] = output['Date'].dt.year
     mns_query = 'SELECT * FROM MNS_MC;'
     mns_mc = pd.read_sql(mns_query, engine)
@@ -917,7 +917,7 @@ def chart_budget_response():
     finally:
         if 'conn' in locals():
             conn.close()
-
+sql_query = "SELECT * FROM your_table;"
 
 @socketio.on("apply_filter_curve")
 def handle_curve_filter(curve_filter_data):
