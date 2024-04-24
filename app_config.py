@@ -14,7 +14,7 @@ DB_USERNAME = secret_client.get_secret("db-username").value
 DB_PASSWORD = secret_client.get_secret("db-password").value
 
 b2c_tenant = "acblueprint"
-signupsignin_user_flow = "B2C_1_signupsignin1_mfa"
+signupsignin_user_flow = "B2C_1_BP_STANDARD_USER_SIGN_IN"
 editprofile_user_flow = "B2C_1_profileediting1"
 
 resetpassword_user_flow = "B2C_1_passwordreset1"  # Note: Legacy setting.

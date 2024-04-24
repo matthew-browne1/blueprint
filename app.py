@@ -845,6 +845,11 @@ def chart_budget():
             a["region_brand"] = f"{a['Region']}_{a['Brand']}"
             chart_budget.append(a)
 
+        dropdown_options1 = {}
+        for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type", "region_brand",
+                       "region_brand_opt"]:
+            dropdown_options1[column] = list(set(row[column] for row in chart_response))
+
         default_option = dropdown_options1["region_brand"][0]
         chart_budget_default = [row for row in chart_budget if row["region_brand"] == default_option]
 
@@ -876,6 +881,11 @@ def chart_roi():
             a["region_brand"] = f"{a['Region']}_{a['Brand']}"
             chart_roi.append(a)
 
+        dropdown_options1 = {}
+        for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type", "region_brand",
+                       "region_brand_opt"]:
+            dropdown_options1[column] = list(set(row[column] for row in chart_response))
+
         default_option = dropdown_options1["region_brand"][0]
         chart_roi_default = [row for row in chart_roi if row["region_brand"] == default_option]
 
@@ -888,7 +898,6 @@ def chart_roi():
     finally:
         if 'conn' in locals():
             conn.close()
-
 
 @socketio.on("budget_response_data")
 def chart_budget_response():
@@ -904,6 +913,11 @@ def chart_budget_response():
             a = dict(zip(col_names, x))
             a["region_brand"] = f"{a['Region']}_{a['Brand']}"
             chart_budget_response.append(a)
+        
+        dropdown_options1 = {}
+        for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type", "region_brand",
+                       "region_brand_opt"]:
+            dropdown_options1[column] = list(set(row[column] for row in chart_response))
 
         default_option = dropdown_options1["region_brand"][0]
         chart_budget_response_default = [row for row in chart_budget_response if row["region_brand"] == default_option]
