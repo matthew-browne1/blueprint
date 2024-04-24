@@ -75,17 +75,23 @@ filepath = r"C:\Users\matthewbrowne\Desktop\Blueprint Production\blueprint\\"
 
 csv_files = [r'Curves_Horizon.csv',r'Curves_Optimal_ROI.csv',r'Curves_Budget_Response.csv',r'Optimal_TV_Laydown.csv']
 
-for csv_file in csv_files:
-    # Read CSV file into a pandas DataFrame
-    df = pd.read_csv(filepath+csv_file)
+# for csv_file in csv_files:
+#     # Read CSV file into a pandas DataFrame
+#     df = pd.read_csv(filepath+csv_file)
 
-    # Remove the file extension to get the table name
-    table_name = csv_file.split('.')[0]
+#     # Remove the file extension to get the table name
+#     table_name = csv_file.split('.')[0]
 
-    # Write DataFrame to database as a table
-    df.to_sql(name=table_name, con=engine, index=False, if_exists='replace')
+#     # Write DataFrame to database as a table
+#     df.to_sql(name=table_name, con=engine, index=False, if_exists='replace')
 
 # ra_server_uri = 'postgresql://postgres:' + urllib.parse.quote_plus("Gde3400@@") + '@192.168.1.2:5432/CPW Blueprint'
 # engine = create_engine(ra_server_uri)
 # mns_query = 'SELECT * FROM "Optimal_TV_Laydown";'
 # mns_mc = pd.read_sql(mns_query, engine)
+
+df = pd.read_excel(filepath+'ROIs and factors all regions.xlsx', sheet_name='factors')
+df.rename(columns={'Country':'Region'}, inplace=True)
+
+df.to_sql(name='MNS_MC', con=engine, index=False, if_exists='replace')
+
