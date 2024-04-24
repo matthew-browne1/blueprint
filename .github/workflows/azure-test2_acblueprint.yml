@@ -7,7 +7,7 @@ name: Build and deploy Python app to Azure Web App - ACBlueprint
 on:
   push:
     branches:
-      - azure-test
+      - azure-test2
   workflow_dispatch:
 
 jobs:
