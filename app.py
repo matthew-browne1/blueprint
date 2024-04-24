@@ -657,7 +657,8 @@ def results_output():
     output = create_output(output_df_per_result=output_df_per_result)
     output.to_csv('output.csv')
     output['Year'] = output['Date'].dt.year
-    mns_mc = pd.read_excel('ROIs and factors all regions.xlsx', sheet_name='factors')
+    mns_query = 'SELECT * FROM MNS_MC;'
+    mns_mc = pd.read_sql(mns_query, engine)
     merged_output = pd.merge(output, mns_mc, on=['Region','Brand','Year'], how='left')
     merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
     merged_output.to_csv('merged_output.csv')

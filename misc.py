@@ -66,12 +66,15 @@ engine = create_engine(connection_string)
 #     engine.dispose()
 
 # get_tables()
-mns_mc = pd.read_excel('ROIs and factors all regions.xlsx', sheet_name='factors')
-csv_files = ['Curves_Channel_Response_Blended.csv','Optimal_TV_Laydown.csv','Curves_Channel_Response_LT.csv','Curves_Channel_Response_ST.csv']
+
+filepath = r"C:\Users\matthewbrowne\Desktop\Blueprint Production\blueprint\\"
+
+mns_mc = pd.read_excel(filepath+r'ROIs and factors all regions.xlsx', sheet_name='factors')
+csv_files = [r'Curves_Channel_Response_Blended.csv',r'Optimal_TV_Laydown.csv',r'Curves_Channel_Response_LT.csv',r'Curves_Channel_Response_ST.csv']
 
 for csv_file in csv_files:
     # Read CSV file into a pandas DataFrame
-    df = pd.read_csv(csv_file)
+    df = pd.read_csv(filepath+csv_file)
 
     # Remove the file extension to get the table name
     table_name = csv_file.split('.')[0]
