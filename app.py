@@ -123,7 +123,7 @@ def authorized():
         _save_cache(cache)
     except ValueError:  # Usually caused by CSRFF
         pass  # Simply ignore them
-    return redirect(url_for("index"))
+    return redirect(url_for("blueprint"))
 
 @app.route("/logout")
 def logout():
@@ -1026,8 +1026,13 @@ def date_range():
 @login_required
 @app.route('/blueprint')
 def blueprint():
+    try:
+        user_id = session['user']['oid']
+    except Exception as e:
+        print("NO OID FOUND IN USER ATTRIBUTE CLAIMS")
+        user_id = "temp"
     app.logger.info(laydown_dates)
-    return render_template('blueprint.html', user_id=session['user']['oid'])
+    return render_template('blueprint.html', user_id=user_id)
 
 
 @app.route('/get_table_ids', methods=['GET'])
