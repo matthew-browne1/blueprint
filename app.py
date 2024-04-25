@@ -28,6 +28,15 @@ from pathlib import Path
 from flask_session import Session
 import msal
 from functools import wraps
+from flask_redis import FlaskRedis
+from redis.backoff import ExponentialBackoff
+from redis.retry import Retry
+from redis.client import Redis
+from redis.exceptions import (
+    BusyLoadingError,
+    ConnectionError,
+    TimeoutError
+)
 
 #from azure import identity
 
@@ -120,6 +129,7 @@ def authorized():
         if "error" in result:
             return render_template("auth_error.html", result=result)
         session["user"] = result.get("id_token_claims")
+        session['table_data'] = {"1": deepcopy(table_dict)}
         _save_cache(cache)
     except ValueError:  # Usually caused by CSRFF
         pass  # Simply ignore them
@@ -187,8 +197,8 @@ def save_snapshot():
     user_id = session['user']['oid']
     content = request.json.get('content')
     scenario_names = request.json.get('scenarioNames')
-    current_table_ids = list(table_data.keys())
-    table_data_json = json.dumps(table_data)
+    current_table_ids = list(session['table_data'].keys())
+    table_data_json = json.dumps(session['table_data'])
 
     table_ids_str = ','.join(map(str, current_table_ids))
 
@@ -221,8 +231,8 @@ def overwrite_save():
     user_id = session['user']['oid']
     content = request.json.get('content')
     scenario_names = request.json.get('scenarioNames')
-    current_table_ids = list(table_data.keys())
-    table_data_json = json.dumps(table_data)
+    current_table_ids = list(session['table_data'].keys())
+    table_data_json = json.dumps(session['table_data'])
 
     table_ids_str = ','.join(map(str, current_table_ids))
 
@@ -245,13 +255,13 @@ def overwrite_save():
 
 @app.route('/load_snapshot')
 def load_snapshot():
-    global table_data
+ 
     user_id = session['user']['oid']
     snapshot = Snapshot.query.filter_by(user_id=user_id).first()
-    table_data = json.loads(snapshot.table_data)
+    session['table_data'] = json.loads(snapshot.table_data)
     content_list = snapshot.content
     table_ids_list = snapshot.table_ids
-    app.logger.info(table_data.keys())
+ 
     return jsonify({'content': content_list, 'table_ids': table_ids_list})
 
 
@@ -299,8 +309,8 @@ def notify_selected_row():
             content_list = save.content
             table_ids_list = save.table_ids
             scenario_names = save.scenario_names
-            table_data = json.loads(save.table_data)
-            app.logger.info(table_data.keys())
+            session['table_data'] = json.loads(save.table_data)
+            app.logger.info(f"current table ids: {session['table_data'].keys()}")
             return jsonify({'content': content_list, 'table_ids': table_ids_list, 'scenario_names':scenario_names})
 
 
@@ -509,7 +519,7 @@ table_dict = table_df.to_dict("records")
 for var in table_dict:
     var['Laydown'] = laydown[var['Channel'] + "_" + var['Region'] + "_" + var['Brand']].tolist()
 
-table_data = {"1": deepcopy(table_dict)}
+
 bud = sum(ST_header['Current Budget'].to_list())
 
 # %% --------------------------------------------------------------------------
@@ -565,7 +575,7 @@ def run_optimise(dataDict):
         disabled_rows = list(data['disabledRows'])
         print(f"disabled row ids: {disabled_rows}")
 
-        current_table_df = pd.DataFrame.from_records(deepcopy(table_data[table_id]))
+        current_table_df = pd.DataFrame.from_records(deepcopy(session['table_data'][table_id]))
         removed_rows_df = current_table_df[current_table_df.row_id.isin(disabled_rows)].copy()
         removed_rows_df['Opt Channel'] = removed_rows_df.apply(
             lambda row: '_'.join([str(row['Channel']), str(row['Region']), str(row['Brand'])]), axis=1)
@@ -1037,7 +1047,7 @@ def blueprint():
 
 @app.route('/get_table_ids', methods=['GET'])
 def get_table_ids():
-    table_ids = list(table_data.keys())
+    table_ids = list(session['table_data'].keys())
     return jsonify({"success": True, "tableIds": table_ids})
 
 
@@ -1052,9 +1062,9 @@ def table_ids_sync():
 
         app.logger.info(f"received table ids: {received_table_ids}")
 
-        for table_id in list(table_data.keys()):
+        for table_id in list(session['table_data'].keys()):
             if table_id not in received_table_ids:
-                del table_data[table_id]
+                del session['table_data'][table_id]
                 app.logger.info(f"deleted tab: {table_id}")
 
         return jsonify({'success': True, 'message': 'Table data updated successfully'})
@@ -1069,20 +1079,19 @@ def table_ids_sync():
 
 @app.route('/sync_tab_counter', methods=['GET'])
 def sync_tab_counter():
-    last_number = list(table_data.keys())[-1]
+    last_number = list(session['table_data'].keys())[-1]
     return jsonify({'lastNumber': last_number})
 
 
 @app.route('/create_copy', methods=['POST'])
 def create_copy():
-    global table_data
 
     tableID = str(request.form.get('tableID'))
 
-    if tableID not in table_data.keys():
-        table_data[tableID] = deepcopy(table_dict)
+    if tableID not in list(session['table_data'].keys()):
+        session['table_data'][tableID] = deepcopy(table_dict)
 
-    app.logger.info(table_data.keys())
+    app.logger.info(f"table_data in {session['user']['name']}'s session = {session['table_data']}")
 
     return jsonify({"success": True, "table_id": tableID})
 
@@ -1091,32 +1100,31 @@ def create_copy():
 def channel_delete():
     deleted_tab = str(request.json.get("tabID"))
     app.logger.info(f"deleted tab: {deleted_tab}")
-    table_data.pop(deleted_tab)
+    session['table_data'].pop(deleted_tab)
     return jsonify({"success": "tab removed succesfully"})
 
 
 @app.route('/channel_main', methods=['GET'])
 def channel_main():
-    app.logger.info(table_data.keys())
-    return jsonify(table_data)
+    app.logger.info(session['table_data'].keys())
+    return jsonify(session['table_data'])
 
 
 @app.route('/table_data_editor', methods=['POST'])
 def table_data_editor():
-    global table_data
+
     try:
         data = request.get_json()
         print(data)
         table_id = str(data['tableId'])
         print(table_id)
-        target_table = table_data[table_id]
+        target_table = session['table_data'][table_id]
         if data['action'] == 'edit':
             for row_id, changes in data['data'].items():
                 row_index = int(row_id) - 1
                 for field, new_value in changes.items():
-                    table_data[table_id][row_index][field] = new_value
-        print(table_data["1"][row_index])
-        print(table_data[table_id][row_index])
+                    session['table_data'][table_id][row_index][field] = new_value
+
         return jsonify(data=target_table)
     except Exception as e:
         print("error processing data:", str(e))
