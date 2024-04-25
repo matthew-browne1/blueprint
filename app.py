@@ -999,7 +999,7 @@ def tv_data():
             a = dict(row)
             chart_data.append(a)
         print("printing chart data for tv data")
-        print(chart_data)
+      
         socketio.emit('tv_chart_data', {'tv_chartData':chart_data})
     except SQLAlchemyError as e:
         print('Error executing query:', str(e))
