@@ -28,7 +28,6 @@ from pathlib import Path
 from flask_session import Session
 import msal
 from functools import wraps
-from flask_redis import FlaskRedis
 from redis.backoff import ExponentialBackoff
 from redis.retry import Retry
 from redis.client import Redis
@@ -41,7 +40,9 @@ from redis.exceptions import (
 #from azure import identity
 
 app = Flask(__name__)
-socketio = SocketIO(app=app, async_mode='eventlet')
+socketio = SocketIO(app=app)
+
+#, async_mode='eventlet'
 
 task_queue = queue.Queue()
 
@@ -130,6 +131,13 @@ def authorized():
             return render_template("auth_error.html", result=result)
         session["user"] = result.get("id_token_claims")
         session['table_data'] = {"1": deepcopy(table_dict)}
+        session['output_df_per_result'] = {}
+        session['inputs_per_result'] = {}
+        session['results'] = {}
+        session['chart_data'] = []
+        session['chart_response'] = []
+        session['filtered_data'] = []
+        session['filtered_curve_data'] = []
         _save_cache(cache)
     except ValueError:  # Usually caused by CSRFF
         pass  # Simply ignore them
@@ -314,7 +322,7 @@ def notify_selected_row():
             return jsonify({'content': content_list, 'table_ids': table_ids_list, 'scenario_names':scenario_names})
 
 
-results = {}
+
 
 seas_index_table_name = 'seas_index'
 ST_db_table_name = 'ST_header'
@@ -370,7 +378,7 @@ def prep_total_rev_per_stream(stream, budget):
     return total_rev
 
 
-results = {}
+
 
 ST_header = pd.read_sql_table('All_Channel_Inputs', engine)
 # Show column headers without underscores!
@@ -519,30 +527,21 @@ table_dict = table_df.to_dict("records")
 for var in table_dict:
     var['Laydown'] = laydown[var['Channel'] + "_" + var['Region'] + "_" + var['Brand']].tolist()
 
-
 bud = sum(ST_header['Current Budget'].to_list())
 
 # %% --------------------------------------------------------------------------
 #
 # -----------------------------------------------------------------------------
 
-inputs_per_result = {}
-output_df_per_result = {}
-
 def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budget, exh_budget, ftol, ssize, table_id, scenario_name):
-
-    global results
-    global output_df_per_result
-
-    
 
     try:
         with app.app_context():
             result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown, seas_index=seas_index, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name, tolerance=ftol, step=ssize)
             app.logger.info(f"Task completed: {result} in {time_elapsed} time")
-            results[table_id] = result
-            output_df_per_result[table_id] = output_df
-            # print(f"total results: {results}")
+            session["results"][table_id] = result
+            session["output_df_per_result"][table_id] = output_df
+ 
             socketio.emit('opt_complete', {'data': table_id})
     except Exception as e:
         with app.app_context():
@@ -554,7 +553,7 @@ def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budge
 def run_optimise(dataDict):
 
     data = dict(dataDict.get('dataToSend'))
-    global inputs_per_result
+   
     table_id = str(data['tableID'])
     ST_header_copy = deepcopy(ST_header)
     LT_header_copy = deepcopy(LT_header)
@@ -623,7 +622,7 @@ def run_optimise(dataDict):
         inputs_dict = {'ST_input': ST_input, 'LT_input': LT_input, 'laydown': laydown_copy, 'seas_index': seas_index_copy}
 
         #print(f"inputs per result: {inputs_per_result}")
-        inputs_per_result[table_id] = deepcopy(inputs_dict)
+        session["inputs_per_result"][table_id] = deepcopy(inputs_dict)
         #print(f"inputs per result: {inputs_per_result}")
         min_spend_cap_list = [float(entry['Min Spend Cap']) for entry in ST_input]
         min_spend_cap_dict = dict(zip(streams, min_spend_cap_list))
@@ -660,11 +659,11 @@ optimise_thread.start()
 
 @app.route('/results_output', methods=['POST'])
 def results_output():
-    global inputs_per_result
+  
     tab_names = dict(request.json)
     print(tab_names)
     #print(inputs_per_result)
-    output = create_output(output_df_per_result=output_df_per_result)
+    output = create_output(output_df_per_result=session["output_df_per_result"])
     output['Date'] = pd.to_datetime(output['Date'])
     output['Year'] = output['Date'].dt.year
     mns_query = 'SELECT * FROM "MNS_MC";'
@@ -673,7 +672,7 @@ def results_output():
     merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
     merged_output.to_csv('merged_output.csv')
     try:
-        merged_output.to_sql('Optimised CSV', engine, if_exists='replace', index=False)
+        merged_output.to_sql(f'Blueprint_results_{session["user"]["oid"]}', engine, if_exists='replace', index=False)
         app.logger.info("csv uploaded to db successfully")
     except:
         app.logger.info("csv db upload failed")
@@ -690,13 +689,12 @@ def create_output(output_df_per_result):
 
 @socketio.on("collect_data")
 def chart_data(data):
-    global chart_data
+    
     metric = data['metric']
     print(f"metric within chart_data method is {metric}")
     try:
         conn = engine.connect()
-        query = text('SELECT * FROM "Optimised CSV";')
-
+        query = text(f'SELECT * FROM "Blueprint_results_{session["user"]["oid"]}";')
         db_result = conn.execute(query)
         rows = db_result.fetchall()
         columns = db_result.keys()
@@ -709,11 +707,10 @@ def chart_data(data):
              'MonthYear']).sum(numeric_only=True)
         result_df.reset_index(inplace=True)
         result_df = result_df.sort_values(by='MonthYear')
-        chart_data = []
-        print("worked")
+
         for index, row in result_df.iterrows():
             a = dict(row)
-            chart_data.append(a)
+            session['chart_data'].append(a)
 
         dropdown_options = {}
         for column in result_df.columns:
@@ -726,7 +723,7 @@ def chart_data(data):
         socketio.emit('dropdown_options', {'options': dropdown_options})
         print("Dropdown options sent")
 
-        socketio.emit('chart_data', {'chartData': chart_data, 'metric':metric})
+        socketio.emit('chart_data', {'chartData': session['chart_data'], 'metric':metric})
         print("chart_data sent")
 
     except SQLAlchemyError as e:
@@ -757,11 +754,10 @@ def handle_apply_filter(data):
 
 def apply_filters(filters, metric):
     try:
-        global filtered_data
-        filtered_data = []
+    
         print(filters)
 
-        for data_point in chart_data:
+        for data_point in session['chart_data']:
             include_data_point = True
 
             for key, values in filters.items():
@@ -770,38 +766,38 @@ def apply_filters(filters, metric):
                     break
 
             if include_data_point:
-                filtered_data.append(data_point)
+                session['filtered_data'].append(data_point)
 
-        socketio.emit('filtered_data', {'filtered_data': filtered_data, 'metric':metric})
+        socketio.emit('filtered_data', {'filtered_data': session['filtered_data'], 'metric':metric})
         print("Filtered chart data sent")
-        print("Filtered data length:", len(filtered_data))
+        print("Filtered data length:", len(session['filtered_data']))
 
     except Exception as e:
         print('Error applying filter:', str(e))
 
 @socketio.on("volval")
 def volval_swap(data):
-    print(chart_data)
+  
     metric = str(data['metric'])
 
     try:
-        socketio.emit('filtered_data', {'filtered_data': filtered_data, 'metric':metric})
+        socketio.emit('filtered_data', {'filtered_data': session['filtered_data'], 'metric':metric})
         print(metric)
     except Exception as e:
         print(e)
         print(metric)
-        socketio.emit('chart_data', {'chartData': chart_data, 'metric':metric})
+        socketio.emit('chart_data', {'chartData': session['chart_data'], 'metric':metric})
 
             
 
 @socketio.on("response_data")
 def chart_response():
-    global chart_response
-    global dropdown_options1
+
+    
     try:
         conn = engine.connect()
         tables = ["Curves_Channel_Response_Blended", "Curves_Channel_Response_LT", "Curves_Channel_Response_ST"]
-        chart_response = []
+     
 
         for table in tables:
             query = text(f'SELECT * FROM "{table}";')
@@ -813,20 +809,20 @@ def chart_response():
                 a["Optimisation Type"] = table.split("_")[3].upper()
                 a["region_brand"] = f"{a['Region']}_{a['Brand']}"
                 a["region_brand_opt"] = f"{a['region_brand']}_{a['Optimisation Type']}"
-                chart_response.append(a)
+                session['chart_response'].append(a)
 
-        dropdown_options1 = {}
+        session['dropdown_options1'] = {}
         for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type", "region_brand",
                        "region_brand_opt"]:
-            dropdown_options1[column] = list(set(row[column] for row in chart_response))
+            session['dropdown_options1'][column] = list(set(row[column] for row in session['chart_response']))
 
-        default_option = dropdown_options1["region_brand"][0]
-        default_option = default_option + "_" + chart_response[0]["Optimisation Type"]
-        chart_response_default = [row for row in chart_response if row["region_brand_opt"] == default_option]
+        default_option = session['dropdown_options1']["region_brand"][0]
+        default_option = default_option + "_" + session['chart_response'][0]["Optimisation Type"]
+        chart_response_default = [row for row in session['chart_response'] if row["region_brand_opt"] == default_option]
 
         print(default_option)
 
-        socketio.emit('dropdown_options1', {'options': dropdown_options1})
+        socketio.emit('dropdown_options1', {'options': session['dropdown_options1']})
         print("Curve Dropdown options sent")
 
         socketio.emit('chart_response', {'chartResponse': chart_response_default})
@@ -842,26 +838,26 @@ def chart_response():
 
 @socketio.on("budget_data")
 def chart_budget():
-    global chart_budget
+   
     try:
         conn = engine.connect()
         query = text('SELECT * FROM "Curves_Horizon";')
 
         db_result = conn.execute(query)
-        chart_budget = []
+        session['chart_budget'] = []
         col_names = db_result.keys()
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
             a["region_brand"] = f"{a['Region']}_{a['Brand']}"
-            chart_budget.append(a)
+            session['chart_budget'].append(a)
 
         dropdown_options1 = {}
         for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type", "region_brand",
                        "region_brand_opt"]:
-            dropdown_options1[column] = list(set(row[column] for row in chart_response))
+            dropdown_options1[column] = list(set(row[column] for row in session['chart_response']))
 
         default_option = dropdown_options1["region_brand"][0]
-        chart_budget_default = [row for row in chart_budget if row["region_brand"] == default_option]
+        chart_budget_default = [row for row in session['chart_budget'] if row["region_brand"] == default_option]
 
         print(default_option)
 
@@ -878,26 +874,26 @@ def chart_budget():
 
 @socketio.on("roi_data")
 def chart_roi():
-    global chart_roi
+    
     try:
         conn = engine.connect()
         query = text('SELECT * FROM "Curves_Optimal_ROI";')
 
         db_result = conn.execute(query)
-        chart_roi = []
+        session['chart_roi'] = []
         col_names = db_result.keys()
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
             a["region_brand"] = f"{a['Region']}_{a['Brand']}"
-            chart_roi.append(a)
+            session['chart_roi'].append(a)
 
         dropdown_options1 = {}
         for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type", "region_brand",
                        "region_brand_opt"]:
-            dropdown_options1[column] = list(set(row[column] for row in chart_response))
+            dropdown_options1[column] = list(set(row[column] for row in session['chart_response']))
 
         default_option = dropdown_options1["region_brand"][0]
-        chart_roi_default = [row for row in chart_roi if row["region_brand"] == default_option]
+        chart_roi_default = [row for row in session['chart_roi'] if row["region_brand"] == default_option]
 
         socketio.emit('chart_roi', {'chartROI': chart_roi_default})
         print("chart_roi sent")
@@ -911,26 +907,26 @@ def chart_roi():
 
 @socketio.on("budget_response_data")
 def chart_budget_response():
-    global chart_budget_response
+   
     try:
         conn = engine.connect()
         query = text('SELECT * FROM "Curves_Budget_Response";')
 
         db_result = conn.execute(query)
-        chart_budget_response = []
+        session['chart_budget_response'] = []
         col_names = db_result.keys()
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
             a["region_brand"] = f"{a['Region']}_{a['Brand']}"
-            chart_budget_response.append(a)
+            session['chart_budget_response'].append(a)
         
         dropdown_options1 = {}
         for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type", "region_brand",
                        "region_brand_opt"]:
-            dropdown_options1[column] = list(set(row[column] for row in chart_response))
+            dropdown_options1[column] = list(set(row[column] for row in session['chart_response']))
 
         default_option = dropdown_options1["region_brand"][0]
-        chart_budget_response_default = [row for row in chart_budget_response if row["region_brand"] == default_option]
+        chart_budget_response_default = [row for row in session['chart_budget_response'] if row["region_brand"] == default_option]
 
         socketio.emit('chart_budget_response', {'chartBudget_response': chart_budget_response_default})
         print("chart_budget_response sent")
@@ -941,23 +937,6 @@ def chart_budget_response():
     finally:
         if 'conn' in locals():
             conn.close()
-
-# @socketio.on("tv_data")
-# def tv_data():
-#     global tv_data
-#     try:
-#         conn = engine.connect()
-#         query = text('SELECT * FROM "Optimal_TV_Laydown";')
-#         db_result = conn.execute(query)
-#         tv_data = []
-#         col_names = db_result.keys()
-#         a = dict(zip(col_names, x))
-#         for x in db_result.fetchall():
-#             a = dict(zip(col_names, x))
-
-
-
-
 
 
 @socketio.on("apply_filter_curve")
@@ -973,19 +952,18 @@ def handle_curve_filter(curve_filter_data):
         unique_region_brand_opt = set(row["region_brand"] for row in chart_budget)
         print("Unique values in chart_budget:", unique_region_brand_opt)
 
-        apply_curve_filters(chart_response, curve_filters, 'filtered_data_response')
-        apply_curve_filters(chart_budget, curve_filters, 'filtered_data_budget')
-        apply_curve_filters(chart_roi, curve_filters, 'filtered_data_roi')
-        apply_curve_filters(chart_budget_response, curve_filters, 'filtered_data_budget_response')
+        apply_curve_filters(session['chart_response'], curve_filters, 'filtered_data_response')
+        apply_curve_filters(session['chart_budget'], curve_filters, 'filtered_data_budget')
+        apply_curve_filters(session['chart_roi'], curve_filters, 'filtered_data_roi')
+        apply_curve_filters(session['chart_budget_response'], curve_filters, 'filtered_data_budget_response')
 
     except Exception as e:
         print('Error applying filters:', str(e))
 
 def apply_curve_filters(data, curve_filters, event_name):
     try:
-        filtered_data = []
 
-        if data == chart_response:
+        if data == session['chart_response']:
             filter_key = 'region_brand_opt'
         else:
             filter_key = 'region_brand'
@@ -1006,11 +984,11 @@ def apply_curve_filters(data, curve_filters, event_name):
                     break
 
             if include_data_point:
-                filtered_data.append(data_point)
+                session['filtered_curve_data'].append(data_point)
 
-        socketio.emit(event_name, {'filtered_data': filtered_data})
+        socketio.emit(event_name, {'filtered_data': session['filtered_curve_data']})
         print("Filtered chart data sent for", event_name)
-        print("Filtered data length:", len(filtered_data))
+        print("Filtered data length:", len(session['filtered_curve_data']))
 
     except Exception as e:
         print('Error applying filter:', str(e))
