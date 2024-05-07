@@ -166,7 +166,7 @@ class Optimise:
         # total_rev += infsum
         return indexed_vals
     def blended_profit_max_scipy(ST_input, LT_input, laydown, seas_index, return_type, objective_type, max_budget,
-                             exh_budget, method, scenario_name, step, tolerance,
+                             exh_budget, method, scenario_name, step=0.1, tolerance=0.1,
                              num_weeks=1000):
         streams = [entry['Opt Channel'] for entry in ST_input]
 

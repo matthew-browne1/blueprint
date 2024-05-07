@@ -21,9 +21,7 @@ from optimiser import Optimise
 from io import BytesIO
 from copy import deepcopy
 import threading
-import queue
 import app_config
-# from identity.flask import Auth
 from pathlib import Path
 from flask_session import Session
 import msal
@@ -43,8 +41,6 @@ app = Flask(__name__)
 socketio = SocketIO(app=app)
 
 #, async_mode='eventlet'
-
-task_queue = queue.Queue()
 
 app.config.from_object(app_config)
 
@@ -138,6 +134,7 @@ def authorized():
         session['chart_response'] = []
         session['filtered_data'] = []
         session['filtered_curve_data'] = []
+        session['queue'] = []
         _save_cache(cache)
     except ValueError:  # Usually caused by CSRFF
         pass  # Simply ignore them
@@ -533,11 +530,11 @@ bud = sum(ST_header['Current Budget'].to_list())
 #
 # -----------------------------------------------------------------------------
 
-def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budget, exh_budget, ftol, ssize, table_id, scenario_name):
+def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budget, exh_budget, table_id, scenario_name):
 
     try:
         with app.app_context():
-            result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown, seas_index=seas_index, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name, tolerance=ftol, step=ssize)
+            result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown, seas_index=seas_index, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name)
             app.logger.info(f"Task completed: {result} in {time_elapsed} time")
             session["results"][table_id] = result
             session["output_df_per_result"][table_id] = output_df
@@ -566,8 +563,6 @@ def run_optimise(dataDict):
         obj_func = data['objectiveValue']
         exh_budget = data['exhaustValue']
         max_budget = int(data['maxValue'])
-        ftol_input = float(data['ftolValue'])
-        ssize_input = float(data['ssizeValue'])
         scenario_name = data['tabName']
         num_weeks = 1000
         blend = data['blendValue']
@@ -629,7 +624,7 @@ def run_optimise(dataDict):
         laydown_copy.set_index('Date', inplace=True)
         #print(min_spend_cap_dict)
         #socketio.start_background_task(target=optimise, ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, ftol=ftol_input, ssize=ssize_input, table_id = table_id, scenario_name = scenario_name)
-        task_queue.put((ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, ftol_input, ssize_input, table_id, scenario_name))
+        session['queue'].append((ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name))
     except Exception as e:
         app.logger.info('Error in user inputs')
         socketio.emit('opt_complete', {'data': table_id, 'exception': str(e)})
@@ -639,18 +634,19 @@ def run_optimise(dataDict):
 def run_optimise_task():
     while True:
         # Get the task from the queue (blocks until a task is available)
-        task = task_queue.get()
-        if task is None:
+        try:
+            task = session['queue'][0] 
+        except:
             break
         
         # Unpack the task arguments
-        ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, ftol, ssize, table_id, scenario_name = task
+        ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name = task
         
         # Run the optimise task with provided arguments
-        optimise(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, ftol=ftol, ssize=ssize, table_id=table_id, scenario_name=scenario_name)
+        optimise(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, table_id=table_id, scenario_name=scenario_name)
         
         # Mark the task as done
-        task_queue.task_done()
+        session['queue'].pop(0)
 
 # Start the thread to run optimise tasks
 optimise_thread = threading.Thread(target=run_optimise_task)

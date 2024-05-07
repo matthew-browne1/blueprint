@@ -9,6 +9,28 @@ $(document).ready(function () {
 
 });
 
+function editButton() {
+  var setText = document.getElementById("button-text1");
+  var newText = prompt("Rename Tab:");
+
+  if (newText !== null) {
+    setText.textContent = newText;
+    tabNames[1] = newText;
+  }
+}
+
+function editButtonTabs(tabID) {
+  var setText = document.getElementById("button-text" + tabID);
+  var newText = prompt("Rename Tab:");
+
+  if (newText !== null) {
+    setText.textContent = newText;
+    tabNames[tabID] = newText;
+    console.log(tabNames);
+  }
+  syncTabNames();
+}
+
 function openLoadPopup() {
   $("#loadPopup").show();
   initializeLoadTable();

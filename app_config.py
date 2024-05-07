@@ -26,8 +26,8 @@ redis_pw = secret_client.get_secret("REDIS-PASSWORD").value
 redis_url = secret_client.get_secret("REDIS-URL").value
 
 retry = Retry(ExponentialBackoff(), 3)
-SESSION_REDIS = Redis(host='')
-'acblueprint-cache.redis.cache.windows.net:6380,password=BVv8I47rMOKxdNEs8jYtYndo4neSMLQ2hAzCaPyDffU=,ssl=True,abortConnect=False'
+SESSION_REDIS = Redis.from_url(redis_url)
+
 b2c_tenant = "acblueprint"
 signupsignin_user_flow = "B2C_1_BP_STANDARD_USER_SIGN_IN"
 editprofile_user_flow = "B2C_1_profileediting1"
