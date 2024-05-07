@@ -8,14 +8,11 @@ import pandas as pd
 import json
 import os
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import joinedload, sessionmaker
 from sqlalchemy import create_engine, text, Column, DateTime, Integer, func, UUID
 import uuid
 from datetime import datetime, date, time
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-import urllib.parse
 from flask_bcrypt import Bcrypt
-import secrets
 import logging
 from optimiser import Optimise
 from io import BytesIO
@@ -26,14 +23,7 @@ from pathlib import Path
 from flask_session import Session
 import msal
 from functools import wraps
-from redis.backoff import ExponentialBackoff
-from redis.retry import Retry
-from redis.client import Redis
-from redis.exceptions import (
-    BusyLoadingError,
-    ConnectionError,
-    TimeoutError
-)
+
 
 #from azure import identity
 
