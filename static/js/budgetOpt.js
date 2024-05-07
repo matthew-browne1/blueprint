@@ -813,8 +813,10 @@ function optAll() {
         $("#cancelWarning").click(function () {
                 
           $("#warningPopup").hide();
-
-          hideLoadingOverlay(1);
+          
+          tableIds.forEach(function (tableId) {
+            hideLoadingOverlay(tableId);
+          });
         });
         } else {
         optAllArray.forEach(function(data) {
