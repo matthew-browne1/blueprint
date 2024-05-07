@@ -3,6 +3,7 @@ let budget_response_chart = null;
 let budget_curve_chart = null;
 let roi_curve_chart = null;
 let tv_curve_chart = null;
+let laydown_scenario_chart = null;
 
 var chartsSocket = io.connect(window.location.origin,
      { timeout: 500000
@@ -22,6 +23,7 @@ $(document).ready(function(){
     var filtered_chartBudget_response = [];
     var chartBudget_response = [];
     var tv_chartData = [];
+    var filtered_tv_chartData = [];
 
    // Function to populate dropdown options
 function populateDropdown(selector, options) {
@@ -188,10 +190,20 @@ chartsSocket.on("tv_chart_data", function(data) {
     generateCurveChartsE();
 })
 
-function generateCurveChartsE() {
-    generateChartsE(tv_chartData);
-}
+chartsSocket.on("filtered_tv_chartData", function (data) {
+  filtered_tv_chartData = data.filtered_data;
 
+  console.log("fetched filtered TV data from back end");
+  generateCurveChartsE();
+});
+
+function generateCurveChartsE() {
+    if (filtered_tv_chartData.length > 0) {
+      generateChartsE(filtered_tv_chartData);
+    } else {
+      generateChartsE(tv_chartData);
+    }
+}
 
 });
 
@@ -524,20 +536,27 @@ function generateChartsD(data) {
 function generateChartsE(data) {
     console.log("reaching generateChartsE method");
     const processedDataLaydown = data.reduce((acc, entry) => {
-        console.log(entry);
+        
         const key = entry.Optimised;
         const monthYear = entry.MonthYear;
         if (!acc[key]) {
           acc[key] = {};
         }
-        if (!acc[monthYear][key]) {
-          acc[monthYear][key] = 0;
+       
+        if (!acc[key][monthYear]) {
+          acc[key][monthYear] = 0;
         }
+      
         if (entry["Budget/Revenue"] === "Budget") {
-          acc[monthYear][key] += entry.Value;
+          const numericValue = parseFloat(entry.Value);
+          if (!isNaN(numericValue)) {
+            acc[key][monthYear] += numericValue;
+          } else {
+            console.error("Invalid numeric value:", entry.Value);
+          }
         }
         return acc;
-    });
+}, {});
 
     const laydown_scenario_labels = Object.keys(processedDataLaydown);
     const timePeriods = Object.keys(processedDataLaydown[laydown_scenario_labels[0]]).sort((a, b) => {

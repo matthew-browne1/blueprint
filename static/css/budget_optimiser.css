@@ -13,8 +13,6 @@
   }
   body {
     margin: 0;
-    
-    
 }
   span.msg,
   span.choose {
@@ -162,10 +160,15 @@
     outline: none;
     font-size: 15px;
     align-items: center;
+    background-color: #E8E3E2;
   }
 
 .collapsible:hover {
-  
+  background-color: #D1C7C5;
+}
+
+.collapsible .active {
+  background-color: #D1C7C5;
 }
 
 .fa-pen-to-square {
@@ -640,6 +643,20 @@
   height: 60%; /* Adjust the height as needed */
   overflow-y: auto; /* Enable vertical scrolling if needed */
 }
+.warning-popup-content {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #fff;
+  padding: 20px;
+  border-radius: 5px;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+  text-align: left;
+  width: 50%; /* Adjust the width as needed */
+  height: 20%; /* Adjust the height as needed */
+  overflow-y: auto; /* Enable vertical scrolling if needed */
+}
 
 #load-popup-close {
   position: absolute;
@@ -650,6 +667,14 @@
   margin-top: 10px;
 }
 #save-popup-close {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  font-size: 20px;
+  cursor: pointer;
+  margin-top: 10px;
+}
+#warning-popup-close {
   position: absolute;
   top: 10px;
   right: 10px;
@@ -669,6 +694,11 @@
   bottom: 10px;
   right: 10px;
   gap: 10px;
+}
+
+.warning-button-cont {
+  position: absolute;
+  bottom: 10px;
 }
 
 #overwriteSave {
@@ -747,10 +777,14 @@ tr {
 .sparkline {
   width:100%;
 }
-
-tbody tr.disabled {
-  color: #eee;
+tbody tr {
+  background-color: #C0E1C8;
 }
+tbody tr.disabled {
+  background-color: #FFFFFF;
+}
+
+
 
 .split-nav {
   display: flex;
@@ -770,4 +804,6 @@ tbody tr.disabled {
   flex-direction: row;
   gap: 20px;
   align-items: center;
+  justify-content: center;
 }
+

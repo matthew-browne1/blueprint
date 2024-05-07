@@ -288,16 +288,6 @@ def get_saves():
     return jsonify({'data': saves_data})
 
 
-@app.route('/toggle_states', methods=['POST'])
-def toggle_states():
-    try:
-        data = request.json
-
-        return jsonify({"message": "Toggle states saved successfully"})
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
-
-
 @app.route('/load_selected_row', methods=['GET', 'POST'])
 @login_required
 def notify_selected_row():
@@ -581,7 +571,7 @@ bud = sum(ST_header['Current Budget'].to_list())
 inputs_per_result = {}
 output_df_per_result = {}
 
-def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budget, exh_budget, ftol, ssize, table_id, scenario_name):
+def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budget, exh_budget, table_id, scenario_name):
 
     global results
     global output_df_per_result
@@ -590,7 +580,7 @@ def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budge
 
     try:
         with app.app_context():
-            result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown, seas_index=seas_index, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name, tolerance=ftol, step=ssize)
+            result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown, seas_index=seas_index, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name)
             print(f"Task completed: {result} in {time_elapsed} time")
             results[table_id] = result
             output_df_per_result[table_id] = output_df
@@ -619,8 +609,6 @@ def run_optimise(dataDict):
         obj_func = data['objectiveValue']
         exh_budget = data['exhaustValue']
         max_budget = int(data['maxValue'])
-        ftol_input = float(data['ftolValue'])
-        ssize_input = float(data['ssizeValue'])
         scenario_name = data['tabName']
         num_weeks = 1000
         blend = data['blendValue']
@@ -681,7 +669,7 @@ def run_optimise(dataDict):
         laydown_copy.set_index('Date', inplace=True)
         #print(min_spend_cap_dict)
         #socketio.start_background_task(target=optimise, ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, ftol=ftol_input, ssize=ssize_input, table_id = table_id, scenario_name = scenario_name)
-        task_queue.put((ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, ftol_input, ssize_input, table_id, scenario_name))
+        task_queue.put((ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name))
     except Exception as e:
         print('Error in user inputs')
         socketio.emit('opt_complete', {'data': table_id})
@@ -696,15 +684,14 @@ def run_optimise_task():
             break
         
         # Unpack the task arguments
-        ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, ftol, ssize, table_id, scenario_name = task
+        ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name = task
         
         # Run the optimise task with provided arguments
-        optimise(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, ftol=ftol, ssize=ssize, table_id=table_id, scenario_name=scenario_name)
+        optimise(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, table_id=table_id, scenario_name=scenario_name)
         
         # Mark the task as done
         task_queue.task_done()
 
-# Start the thread to run optimise tasks
 optimise_thread = threading.Thread(target=run_optimise_task)
 optimise_thread.daemon = True  # Set the thread as a daemon so it exits when the main thread exits
 optimise_thread.start()
@@ -979,7 +966,7 @@ def chart_budget_response():
             conn.close()
 
 @socketio.on("tv_data")
-def tv_data():
+def tv_data_process():
     global tv_data
     try:
         conn = engine.connect()
@@ -988,10 +975,13 @@ def tv_data():
         rows = db_result.fetchall()
         col_names = db_result.keys()
         result_df = pd.DataFrame(rows, columns=col_names)
+        def region_brand_combine(row):
+            return row['Region'] + '_' + row['Brand']
+        result_df['region_brand'] = result_df.apply(region_brand_combine, axis=1)
         result_df['Date'] = pd.to_datetime(result_df['Date'])
         result_df['MonthYear'] = result_df['Date'].dt.strftime('%b %Y')
         result_df = result_df.groupby(
-            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Region', 'Brand', 'Channel Group', 'Channel', 'Optimised', 'MonthYear']).sum(numeric_only=True)
+            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Region', 'Brand', 'Channel Group', 'Channel', 'Optimised', 'MonthYear', 'region_brand']).sum(numeric_only=True)
         result_df.reset_index(inplace=True)
         result_df = result_df.sort_values(by='MonthYear')
         chart_data = []
@@ -999,8 +989,8 @@ def tv_data():
             a = dict(row)
             chart_data.append(a)
         print("printing chart data for tv data")
-      
-        socketio.emit('tv_chart_data', {'tv_chartData':chart_data})
+        tv_data = chart_data
+        socketio.emit('tv_chart_data', {'tv_chartData':tv_data})
     except SQLAlchemyError as e:
         print('Error executing query:', str(e))
 
@@ -1026,6 +1016,7 @@ def handle_curve_filter(curve_filter_data):
         apply_curve_filters(chart_budget, curve_filters, 'filtered_data_budget')
         apply_curve_filters(chart_roi, curve_filters, 'filtered_data_roi')
         apply_curve_filters(chart_budget_response, curve_filters, 'filtered_data_budget_response')
+        apply_curve_filters(tv_data, curve_filters, 'filtered_tv_chartData')
 
     except Exception as e:
         print('Error applying filters:', str(e))
