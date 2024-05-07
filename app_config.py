@@ -4,11 +4,7 @@ from azure.keyvault.secrets import SecretClient
 from redis.backoff import ExponentialBackoff
 from redis.retry import Retry
 from redis.client import Redis
-from redis.exceptions import (
-    BusyLoadingError,
-    ConnectionError,
-    TimeoutError
-)
+
 
 
 keyvault_url = "https://acblueprint-vault.vault.azure.net/"

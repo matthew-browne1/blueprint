@@ -41,3 +41,4 @@ cryptography
 azure-identity
 azure-keyvault-secrets
 git+https://github.com/eventlet/eventlet
+redis
