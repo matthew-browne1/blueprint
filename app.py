@@ -8,12 +8,10 @@ import pandas as pd
 import json
 import os
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.orm import joinedload, sessionmaker
 from sqlalchemy import create_engine, text, Column, DateTime, Integer, func, UUID
 import uuid
 from datetime import datetime, date, time
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
-import urllib.parse
 from flask_bcrypt import Bcrypt
 import logging
 from optimiser import Optimise
