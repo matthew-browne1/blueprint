@@ -15,34 +15,27 @@ from datetime import datetime, date, time
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 import urllib.parse
 from flask_bcrypt import Bcrypt
-import secrets
 import logging
 from optimiser import Optimise
 from io import BytesIO
 from copy import deepcopy
-import threading
 import app_config
-from pathlib import Path
 from flask_session import Session
 import msal
 from functools import wraps
-from redis.backoff import ExponentialBackoff
-from redis.retry import Retry
-from redis.client import Redis
-from redis.exceptions import (
-    BusyLoadingError,
-    ConnectionError,
-    TimeoutError
-)
+from queue import Queue
+from opt_threads import CustomThread
 
 #from azure import identity
 
 app = Flask(__name__)
-socketio = SocketIO(app=app)
+socketio = SocketIO(app=app, manage_session=False, async_mode='eventlet')
 
 #, async_mode='eventlet'
 
 app.config.from_object(app_config)
+secret_key = os.urandom(24)
+app.secret_key = secret_key
 
 app.config['SESSION_COOKIE_SECURE'] = True
 app.config['PROPAGATE_EXCEPTIONS'] = True
@@ -65,6 +58,8 @@ app.wsgi_app = ProxyFix(app.wsgi_app, x_proto=1, x_host=1)
 
 db = SQLAlchemy(app)
 bcrypt = Bcrypt(app)
+
+session_queues = {}
 
 # app.config["MSAL_CLIENT"] = msal.ConfidentialClientApplication(
 #     client_id,
@@ -126,16 +121,17 @@ def authorized():
         if "error" in result:
             return render_template("auth_error.html", result=result)
         session["user"] = result.get("id_token_claims")
-        session['table_data'] = {"1": deepcopy(table_dict)}
-        session['output_df_per_result'] = {}
         session['inputs_per_result'] = {}
-        session['results'] = {}
         session['chart_data'] = []
         session['chart_response'] = []
         session['filtered_data'] = []
         session['filtered_curve_data'] = []
         session['queue'] = []
+        if 'session_id' not in session:
+            session['session_id'] = str(uuid.uuid4())
+        session.modified = True
         _save_cache(cache)
+        print("all session variables added to session object")
     except ValueError:  # Usually caused by CSRFF
         pass  # Simply ignore them
     return redirect(url_for("blueprint"))
@@ -530,28 +526,13 @@ bud = sum(ST_header['Current Budget'].to_list())
 #
 # -----------------------------------------------------------------------------
 
-def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budget, exh_budget, table_id, scenario_name):
-
-    try:
-        with app.app_context():
-            result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown, seas_index=seas_index, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name)
-            app.logger.info(f"Task completed: {result} in {time_elapsed} time")
-            session["results"][table_id] = result
-            session["output_df_per_result"][table_id] = output_df
- 
-            socketio.emit('opt_complete', {'data': table_id})
-    except Exception as e:
-        with app.app_context():
-            app.logger.info(f"Error in task callback causing optimisation not to run: {str(e)}")
-            socketio.emit('opt_complete', {'data': table_id, 'exception':str(e)})
-
-
 @socketio.on('optimise')
 def run_optimise(dataDict):
 
     data = dict(dataDict.get('dataToSend'))
    
     table_id = str(data['tableID'])
+    print(f"optimising current table with ID:{table_id}")
     ST_header_copy = deepcopy(ST_header)
     LT_header_copy = deepcopy(LT_header)
     laydown_copy = deepcopy(laydown)
@@ -564,12 +545,19 @@ def run_optimise(dataDict):
         exh_budget = data['exhaustValue']
         max_budget = int(data['maxValue'])
         scenario_name = data['tabName']
+        print(f"printing scenario name received from front end:{scenario_name}")
         num_weeks = 1000
         blend = data['blendValue']
         disabled_rows = list(data['disabledRows'])
         print(f"disabled row ids: {disabled_rows}")
-
+        print(f"current keys of table data in session:{session['table_data'].keys()}")
+        # if table_id not in list(session['table_data'].keys()):
+        #     session['table_data'][table_id] = deepcopy(table_dict)
+        #     app.logger.info(f"table_data in {session['user']['name']}'s session added to table id: {table_id}")
+        
         current_table_df = pd.DataFrame.from_records(deepcopy(session['table_data'][table_id]))
+        print("created copy of current table")
+        
         removed_rows_df = current_table_df[current_table_df.row_id.isin(disabled_rows)].copy()
         removed_rows_df['Opt Channel'] = removed_rows_df.apply(
             lambda row: '_'.join([str(row['Channel']), str(row['Region']), str(row['Brand'])]), axis=1)
@@ -609,57 +597,92 @@ def run_optimise(dataDict):
         app.logger.info(
             f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
 
-
-
         #print(f"laydown = {laydown_copy}")
         #print(f"CPU = {[entry['CPU'] for entry in ST_input]}")
 
         inputs_dict = {'ST_input': ST_input, 'LT_input': LT_input, 'laydown': laydown_copy, 'seas_index': seas_index_copy}
 
-        #print(f"inputs per result: {inputs_per_result}")
         session["inputs_per_result"][table_id] = deepcopy(inputs_dict)
-        #print(f"inputs per result: {inputs_per_result}")
+        
+     
         min_spend_cap_list = [float(entry['Min Spend Cap']) for entry in ST_input]
         min_spend_cap_dict = dict(zip(streams, min_spend_cap_list))
         laydown_copy.set_index('Date', inplace=True)
-        #print(min_spend_cap_dict)
-        #socketio.start_background_task(target=optimise, ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, ftol=ftol_input, ssize=ssize_input, table_id = table_id, scenario_name = scenario_name)
-        session['queue'].append((ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name))
     except Exception as e:
-        app.logger.info('Error in user inputs')
+        app.logger.info(f"error preparing optimisation inputs: {str(e)}")
+    try:
+        session_id = session['session_id']
+        queue = session_queues.setdefault(session_id, Queue())
+        print(scenario_name)
+        queue.put((ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name))
+
+        if not queue.empty():
+            result, output_df = start_optimise_thread(session_id)
+            session['output_df_per_result'][table_id] = output_df
+            session['results'][table_id] = result
+            print(session['output_df_per_result'])
+            session.modified = True
+
+    except Exception as e:
+        app.logger.info(f"error adding optimisation job to the queue: {str(e)}")
         socketio.emit('opt_complete', {'data': table_id, 'exception': str(e)})
 
     return jsonify({'status': 'Task started in the background'})
 
-def run_optimise_task():
-    while True:
-        # Get the task from the queue (blocks until a task is available)
-        try:
-            task = session['queue'][0] 
-        except:
-            break
-        
-        # Unpack the task arguments
-        ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name = task
-        
-        # Run the optimise task with provided arguments
-        optimise(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, table_id=table_id, scenario_name=scenario_name)
-        
-        # Mark the task as done
-        session['queue'].pop(0)
 
-# Start the thread to run optimise tasks
-optimise_thread = threading.Thread(target=run_optimise_task)
-optimise_thread.daemon = True  # Set the thread as a daemon so it exits when the main thread exits
-optimise_thread.start()
+def run_optimise_task(session_id):
+    with app.app_context():
+        queue = session_queues.get(session_id)
+        if queue is None:
+            return  # No queue found for this session
+        while True:
+            
+            print(f"job picked up from queue with session id: {session_id}")
+
+            task = queue.get()
+            
+            ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name = task
+            print(scenario_name)
+            try:
+                with app.app_context():
+                    result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name)
+                    app.logger.info(f"Task completed: {result} in {time_elapsed} time")
+                    
+                    socketio.emit('opt_complete', {'data': table_id})
+                    queue.task_done()
+                    return result, output_df
+
+            except Exception as e:
+        
+                app.logger.info(f"Error in task callback causing optimisation not to run: {str(e)}")
+                socketio.emit('opt_complete', {'data': table_id, 'exception':str(e)})
+                queue.task_done()
+            
+            
+
+def start_optimise_thread(session_id):
+    optimise_thread = CustomThread(target=run_optimise_task, args=(session_id,))
+    optimise_thread.daemon = True
+    optimise_thread.start()
+    result, output_df = optimise_thread.join()
+
+    print("printing result added to session object from customthread class")
+    print(result)
+    return result, output_df
+
 
 @app.route('/results_output', methods=['POST'])
 def results_output():
-  
+    
     tab_names = dict(request.json)
     print(tab_names)
+    print(f"results_output endpoint printing output df keys: {session['output_df_per_result'].keys()}")
+    with app.app_context():
+        print(session["output_df_per_result"])
     #print(inputs_per_result)
     output = create_output(output_df_per_result=session["output_df_per_result"])
+    print(output)
+    
     output['Date'] = pd.to_datetime(output['Date'])
     output['Year'] = output['Date'].dt.year
     mns_query = 'SELECT * FROM "MNS_MC";'
@@ -685,7 +708,7 @@ def create_output(output_df_per_result):
 
 @socketio.on("collect_data")
 def chart_data(data):
-    
+    session['chart_data'] = []
     metric = data['metric']
     print(f"metric within chart_data method is {metric}")
     try:
@@ -707,7 +730,7 @@ def chart_data(data):
         for index, row in result_df.iterrows():
             a = dict(row)
             session['chart_data'].append(a)
-
+        session.modified = True
         dropdown_options = {}
         for column in result_df.columns:
             if column not in ['Opt Channel', 'Value', 'Volume']:
@@ -715,7 +738,7 @@ def chart_data(data):
                     dropdown_options[column] = [value for value in result_df[column].unique() if "Budget" not in value]
                 else:
                     dropdown_options[column] = result_df[column].unique().tolist()
-
+        
         socketio.emit('dropdown_options', {'options': dropdown_options})
         print("Dropdown options sent")
 
@@ -750,9 +773,9 @@ def handle_apply_filter(data):
 
 def apply_filters(filters, metric):
     try:
-    
+        session['filtered_data'] = []
         print(filters)
-
+        #print(session['chart_data'])
         for data_point in session['chart_data']:
             include_data_point = True
 
@@ -763,7 +786,7 @@ def apply_filters(filters, metric):
 
             if include_data_point:
                 session['filtered_data'].append(data_point)
-
+        session.modified = True
         socketio.emit('filtered_data', {'filtered_data': session['filtered_data'], 'metric':metric})
         print("Filtered chart data sent")
         print("Filtered data length:", len(session['filtered_data']))
@@ -817,7 +840,7 @@ def chart_response():
         chart_response_default = [row for row in session['chart_response'] if row["region_brand_opt"] == default_option]
 
         print(default_option)
-
+        session.modified = True
         socketio.emit('dropdown_options1', {'options': session['dropdown_options1']})
         print("Curve Dropdown options sent")
 
@@ -856,7 +879,7 @@ def chart_budget():
         chart_budget_default = [row for row in session['chart_budget'] if row["region_brand"] == default_option]
 
         print(default_option)
-
+        session.modified = True
         socketio.emit('chart_budget', {'chartBudget': chart_budget_default})
         print("chart_budget sent")
 
@@ -890,7 +913,7 @@ def chart_roi():
 
         default_option = dropdown_options1["region_brand"][0]
         chart_roi_default = [row for row in session['chart_roi'] if row["region_brand"] == default_option]
-
+        session.modified = True
         socketio.emit('chart_roi', {'chartROI': chart_roi_default})
         print("chart_roi sent")
 
@@ -923,7 +946,7 @@ def chart_budget_response():
 
         default_option = dropdown_options1["region_brand"][0]
         chart_budget_response_default = [row for row in session['chart_budget_response'] if row["region_brand"] == default_option]
-
+        session.modified = True
         socketio.emit('chart_budget_response', {'chartBudget_response': chart_budget_response_default})
         print("chart_budget_response sent")
 
@@ -952,13 +975,15 @@ def handle_curve_filter(curve_filter_data):
         apply_curve_filters(session['chart_budget'], curve_filters, 'filtered_data_budget')
         apply_curve_filters(session['chart_roi'], curve_filters, 'filtered_data_roi')
         apply_curve_filters(session['chart_budget_response'], curve_filters, 'filtered_data_budget_response')
+        session.modified = True
 
     except Exception as e:
         print('Error applying filters:', str(e))
 
 def apply_curve_filters(data, curve_filters, event_name):
+    session['filtered_curve_data'] = []
     try:
-
+        
         if data == session['chart_response']:
             filter_key = 'region_brand_opt'
         else:
@@ -981,10 +1006,10 @@ def apply_curve_filters(data, curve_filters, event_name):
 
             if include_data_point:
                 session['filtered_curve_data'].append(data_point)
-
+        session.modified = True
         socketio.emit(event_name, {'filtered_data': session['filtered_curve_data']})
         print("Filtered chart data sent for", event_name)
-        print("Filtered data length:", len(session['filtered_curve_data']))
+        print("Filtered chart data length:", len(session['filtered_curve_data']))
 
     except Exception as e:
         print('Error applying filter:', str(e))
@@ -1015,6 +1040,10 @@ def blueprint():
     except Exception as e:
         print("NO OID FOUND IN USER ATTRIBUTE CLAIMS")
         user_id = "temp"
+    session['table_data'] = {"1": deepcopy(table_dict)}
+    session['output_df_per_result'] = {}
+    session['results'] = {}
+    session.modified = True
     app.logger.info(laydown_dates)
     return render_template('blueprint.html', user_id=user_id)
 
@@ -1040,7 +1069,8 @@ def table_ids_sync():
             if table_id not in received_table_ids:
                 del session['table_data'][table_id]
                 app.logger.info(f"deleted tab: {table_id}")
-
+        session.modified = True
+        print(f"table_ids_sync endpoint: {session['table_data'].keys()}")
         return jsonify({'success': True, 'message': 'Table data updated successfully'})
 
     except KeyError:
@@ -1062,11 +1092,9 @@ def create_copy():
 
     tableID = str(request.form.get('tableID'))
 
-    if tableID not in list(session['table_data'].keys()):
-        session['table_data'][tableID] = deepcopy(table_dict)
-
-    app.logger.info(f"table_data in {session['user']['name']}'s session = {session['table_data']}")
-
+    session['table_data'][tableID] = deepcopy(table_dict)
+    app.logger.info(f"table_data in {session['user']['name']}'s session added to table id: {tableID}")
+    session.modified = True
     return jsonify({"success": True, "table_id": tableID})
 
 
@@ -1075,12 +1103,16 @@ def channel_delete():
     deleted_tab = str(request.json.get("tabID"))
     app.logger.info(f"deleted tab: {deleted_tab}")
     session['table_data'].pop(deleted_tab)
+    session['output_df_per_result'].pop(deleted_tab)
+    session['results'].pop(deleted_tab)
+    session.modified = True
+    print(f"channel_delete endpoint: {session['table_data'].keys()}")
     return jsonify({"success": "tab removed succesfully"})
 
 
 @app.route('/channel_main', methods=['GET'])
 def channel_main():
-    app.logger.info(session['table_data'].keys())
+    app.logger.info(f"channel_main endpoint table_data keys: {session['table_data'].keys()}")
     return jsonify(session['table_data'])
 
 
@@ -1098,7 +1130,8 @@ def table_data_editor():
                 row_index = int(row_id) - 1
                 for field, new_value in changes.items():
                     session['table_data'][table_id][row_index][field] = new_value
-
+        print(f"table_data_editor endpoint: {session['table_data'].keys()}")
+        session.modified = True
         return jsonify(data=target_table)
     except Exception as e:
         print("error processing data:", str(e))
@@ -1106,6 +1139,7 @@ def table_data_editor():
             'data': 'error',
             'status': 'error'
         }
+    print(f"table_data_editor (error) endpoint: {session['table_data'].keys()}")
     return jsonify(response)
 
 

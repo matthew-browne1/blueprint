@@ -1141,7 +1141,7 @@ function initializeDataTable(tableID) {
         var blendValue = blend.value;
 
         var disabledRowIds = getDisabledRowIds();
-        var tabName = fetchTabName(1);
+        var tabName = fetchTabName(tableID);
 
         var dataToSend = {
           objectiveValue: objValue,
