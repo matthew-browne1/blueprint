@@ -64,11 +64,26 @@ $(document).ready(function () {
   // chartsSocket.emit("apply_filter", {"metric":currentlySelectedMetric});
 
   chartsSocket.on("chart_data", function (data) {
-    chartData = data.chartData;
-    var metric = selectedMetric();
-    console.log(metric);
-    console.log("fetched chart data from back end");
-    generateCharts(metric);
+    sessionID = data.sessionID;
+    $.ajax({
+      type: "GET",
+      url: "/get_session_id",
+      success: function (response) {
+        sessionIdFromBackend = response.session_id;
+        console.log("Session ID:", sessionId);
+        if (sessionIdFromBackend === sessionID) {
+          chartData = data.chartData;
+          var metric = selectedMetric();
+          console.log(metric);
+          console.log("fetched chart data from back end");
+          generateCharts(metric);
+        }
+      },
+      error: function (xhr, status, error) {
+        console.error("Error fetching session ID:", error);
+      },
+    });
+    
   });
 
   chartsSocket.on("filtered_data", function (data) {

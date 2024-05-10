@@ -743,7 +743,7 @@ def chart_data(data):
         socketio.emit('dropdown_options', {'options': dropdown_options})
         print("Dropdown options sent")
 
-        socketio.emit('chart_data', {'chartData': session['chart_data'], 'metric':metric})
+        socketio.emit('chart_data', {'chartData': session['chart_data'], 'metric':metric, 'sessionID':session_id})
         print("chart_data sent")
 
     except SQLAlchemyError as e:
