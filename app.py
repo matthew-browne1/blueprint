@@ -27,7 +27,7 @@ from opt_threads import CustomThread
 #from azure import identity
 
 app = Flask(__name__)
-socketio = SocketIO(app=app, manage_session=False)
+socketio = SocketIO(app=app, manage_session=False, async_mode='eventlet')
 
 #, async_mode='eventlet'
 
