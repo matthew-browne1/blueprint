@@ -2,7 +2,7 @@
 #
 # -----------------------------------------------------------------------------
 from flask import Flask, render_template, send_file, jsonify, request, url_for, redirect, flash, session, current_app
-from flask_socketio import SocketIO, emit
+from flask_socketio import SocketIO, emit, join_room, leave_room
 import numpy as np
 import pandas as pd
 import json
@@ -27,7 +27,7 @@ from opt_threads import CustomThread
 #from azure import identity
 
 app = Flask(__name__)
-socketio = SocketIO(app=app, manage_session=False, async_mode='eventlet')
+socketio = SocketIO(app=app, manage_session=False)
 
 #, async_mode='eventlet'
 
@@ -526,7 +526,8 @@ bud = sum(ST_header['Current Budget'].to_list())
 
 @socketio.on('optimise')
 def run_optimise(dataDict):
-
+    session_id = session.get('session_id')
+    join_room(session_id)
     data = dict(dataDict.get('dataToSend'))
    
     table_id = str(data['tableID'])
@@ -706,6 +707,8 @@ def create_output(output_df_per_result):
 
 @socketio.on("collect_data")
 def chart_data(data):
+    session_id = session.get('session_id')
+    join_room(session_id)
     session['chart_data'] = []
     metric = data['metric']
     print(f"metric within chart_data method is {metric}")
@@ -752,6 +755,8 @@ def chart_data(data):
 
 @socketio.on("apply_filter")
 def handle_apply_filter(data):
+    session_id = session.get('session_id')
+    join_room(session_id)
     try:
         filters = data['filters']
         metric = data['metric']
@@ -794,7 +799,8 @@ def apply_filters(filters, metric):
 
 @socketio.on("volval")
 def volval_swap(data):
-  
+    session_id = session.get('session_id')
+    join_room(session_id)
     metric = str(data['metric'])
 
     try:
@@ -809,7 +815,8 @@ def volval_swap(data):
 
 @socketio.on("response_data")
 def chart_response():
-
+    session_id = session.get('session_id')
+    join_room(session_id)
     
     try:
         conn = engine.connect()
@@ -855,7 +862,8 @@ def chart_response():
 
 @socketio.on("budget_data")
 def chart_budget():
-   
+    session_id = session.get('session_id')
+    join_room(session_id)
     try:
         conn = engine.connect()
         query = text('SELECT * FROM "Curves_Horizon";')
@@ -891,7 +899,8 @@ def chart_budget():
 
 @socketio.on("roi_data")
 def chart_roi():
-    
+    session_id = session.get('session_id')
+    join_room(session_id)
     try:
         conn = engine.connect()
         query = text('SELECT * FROM "Curves_Optimal_ROI";')
@@ -924,7 +933,8 @@ def chart_roi():
 
 @socketio.on("budget_response_data")
 def chart_budget_response():
-   
+    session_id = session.get('session_id')
+    join_room(session_id)
     try:
         conn = engine.connect()
         query = text('SELECT * FROM "Curves_Budget_Response";')
@@ -955,9 +965,42 @@ def chart_budget_response():
         if 'conn' in locals():
             conn.close()
 
+@socketio.on("tv_data")
+def tv_data_process():
+    try:
+        conn = engine.connect()
+        query = text('SELECT * FROM "Optimal_TV_Laydown";')
+        db_result = conn.execute(query)
+        rows = db_result.fetchall()
+        col_names = db_result.keys()
+        result_df = pd.DataFrame(rows, columns=col_names)
+        def region_brand_combine(row):
+            return row['Region'] + '_' + row['Brand']
+        result_df['region_brand'] = result_df.apply(region_brand_combine, axis=1)
+        result_df['Date'] = pd.to_datetime(result_df['Date'])
+        result_df['MonthYear'] = result_df['Date'].dt.strftime('%b %Y')
+        result_df = result_df.groupby(
+            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Region', 'Brand', 'Channel Group', 'Channel', 'Optimised', 'MonthYear', 'region_brand']).sum(numeric_only=True)
+        result_df.reset_index(inplace=True)
+        result_df = result_df.sort_values(by='MonthYear')
+        chart_data = []
+        for index, row in result_df.iterrows():
+            a = dict(row)
+            chart_data.append(a)
+        print("printing chart data for tv data")
+        session['tv_data'] = chart_data
+        socketio.emit('tv_chart_data', {'tv_chartData':session['tv_data']})
+    except SQLAlchemyError as e:
+        print('Error executing query:', str(e))
+
+    finally:
+        if 'conn' in locals():
+            conn.close()
 
 @socketio.on("apply_filter_curve")
 def handle_curve_filter(curve_filter_data):
+    session_id = session.get('session_id')
+    join_room(session_id)
     try:
         curve_filters = curve_filter_data
         if 'Region' in curve_filters and 'Brand' in curve_filters and 'Optimisation Type' in curve_filters:
@@ -973,6 +1016,7 @@ def handle_curve_filter(curve_filter_data):
         apply_curve_filters(session['chart_budget'], curve_filters, 'filtered_data_budget')
         apply_curve_filters(session['chart_roi'], curve_filters, 'filtered_data_roi')
         apply_curve_filters(session['chart_budget_response'], curve_filters, 'filtered_data_budget_response')
+        apply_curve_filters(session['tv_data'], curve_filters, 'filtered_tv_chartData')
         session.modified = True
 
     except Exception as e:
@@ -1038,6 +1082,7 @@ def blueprint():
     except Exception as e:
         print("NO OID FOUND IN USER ATTRIBUTE CLAIMS")
         user_id = "temp"
+        return redirect(url_for("login"))
     session['table_data'] = {"1": deepcopy(table_dict)}
     session['output_df_per_result'] = {}
     session['results'] = {}
@@ -1045,6 +1090,10 @@ def blueprint():
     app.logger.info(laydown_dates)
     return render_template('blueprint.html', user_id=user_id)
 
+@app.route('/get_session_id', methods=['GET'])
+def get_session_id():
+    session_id = session.get('session_id')  
+    return jsonify({'session_id': session_id})
 
 @app.route('/get_table_ids', methods=['GET'])
 def get_table_ids():
