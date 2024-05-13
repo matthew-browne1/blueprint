@@ -775,6 +775,7 @@ def handle_apply_filter(data):
         print(data)
 
 def apply_filters(filters, metric):
+    session_id = session.get('session_id')
     try:
         session['filtered_data'] = []
         print(filters)
@@ -790,7 +791,7 @@ def apply_filters(filters, metric):
             if include_data_point:
                 session['filtered_data'].append(data_point)
         session.modified = True
-        socketio.emit('filtered_data', {'filtered_data': session['filtered_data'], 'metric':metric})
+        socketio.emit('filtered_data', {'filtered_data': session['filtered_data'], 'metric':metric, 'sessionID':session_id})
         print("Filtered chart data sent")
         print("Filtered data length:", len(session['filtered_data']))
 
