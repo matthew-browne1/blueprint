@@ -64,12 +64,12 @@ $(document).ready(function () {
   // chartsSocket.emit("apply_filter", {"metric":currentlySelectedMetric});
 
   chartsSocket.on("chart_data", function (data) {
-    sessionID = data.sessionID;
+    var sessionID = data.sessionID;
     $.ajax({
       type: "GET",
       url: "/get_session_id",
       success: function (response) {
-        sessionIdFromBackend = response.session_id;
+        var sessionIdFromBackend = response.session_id;
         console.log("Session ID:", sessionId);
         if (sessionIdFromBackend === sessionID) {
           chartData = data.chartData;
