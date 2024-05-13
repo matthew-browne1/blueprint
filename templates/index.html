@@ -2,9 +2,9 @@
 {% block title %}Home{% endblock %}
 {% block content %}
 
-<h1>Welcome {{ user_name }}, to blueprint<span class="special-letter">.</span> v1.0</h1>
-
 {% if user %}
+
+<h2>Welcome {{ user_name }}, to blueprint<span class="special-letter">.</span> v1.0</h2>
 
 {% if config.get("ENDPOINT") %}
 <li><a href='/blueprint'>Go to Blueprint</a></li>
@@ -17,6 +17,7 @@
 <li><a href="/logout">Logout</a></li>
 
 {% else %}
+<h2>Welcome to blueprint<span class="special-letter">.</span> v1.0</h2>
 <li><a href='{{ auth_url }}'>Sign In</a></li>
 {% endif %}
 

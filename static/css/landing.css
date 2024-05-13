@@ -13,17 +13,28 @@
     font-size: 12pt; 
 }
 
+
 h1 {
     margin: 0;
     font-size: 4em;
     letter-spacing: 1px;
-    color: black; 
+    color: white; 
     font-weight: 200;
 
 .special-letter {
     color: #C58890;
 }
+}
+h2 {
+    margin: 0;
+    font-size: 3em;
+    letter-spacing: 1px;
+    color: black; 
+    font-weight: 100;
 
+.special-letter {
+    color: #C58890;
+}
 }
 .title-container {
     display: flex;
