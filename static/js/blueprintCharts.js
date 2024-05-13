@@ -88,10 +88,29 @@ $(document).ready(function () {
   });
 
   chartsSocket.on("filtered_data", function (data) {
-    filteredData = data.filtered_data;
-    var metric = selectedMetric();
-    console.log(metric);
-    generateCharts(metric);
+        var sessionID = data.sessionID;
+        console.log(
+          "filtered_data wants to update to session with ID:",
+          sessionID
+        );
+        $.ajax({
+          type: "GET",
+          url: "/get_session_id",
+          success: function (response) {
+            var sessionIdFromBackend = response.session_id;
+            console.log("Session ID of current session:", sessionIdFromBackend);
+            if (sessionIdFromBackend === sessionID) {
+              filteredData = data.filtered_data;
+              var metric = selectedMetric();
+              console.log(metric);
+              console.log("fetched chart data from back end");
+              generateCharts(metric);
+            }
+          },
+          error: function (xhr, status, error) {
+            console.error("Error fetching session ID:", error);
+          },
+        });
   });
 
   // Apply Filters button click event
