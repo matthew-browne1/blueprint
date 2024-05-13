@@ -97,9 +97,10 @@ def index():
         session["flow"] = _build_auth_code_flow(scopes=app_config.SCOPE)
         return render_template('index.html', auth_url=session["flow"]["auth_uri"], version=msal.__version__)
     else:
+        user_name = session['user']['name']
         print("rendering index.html, user exists in session")
         print(session["user"]['oid'])
-        return render_template('index.html', user=session["user"], version=msal.__version__)
+        return render_template('index.html', user=session["user"], user_name = user_name, version=msal.__version__)
     
 @app.route("/login")
 def login():
@@ -1079,6 +1080,7 @@ def date_range():
 @app.route('/blueprint')
 def blueprint():
     try:
+        user_name = session['user']['name']
         user_id = session['user']['oid']
     except Exception as e:
         print("NO OID FOUND IN USER ATTRIBUTE CLAIMS")
@@ -1089,7 +1091,7 @@ def blueprint():
     session['results'] = {}
     session.modified = True
     app.logger.info(laydown_dates)
-    return render_template('blueprint.html', user_id=user_id)
+    return render_template('blueprint.html', user_id=user_id, user_name=user_name)
 
 @app.route('/get_session_id', methods=['GET'])
 def get_session_id():

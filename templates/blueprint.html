@@ -22,27 +22,28 @@
     </div>
     <div class="nav-right">
         <a href= "{{ url_for('export_data') }}" download="{{ user_id }}_Input_File.xlsx"class="button-4" id="export-data">Export Data  <i class="fa-solid fa-file-export"></i></a>
-        <img src="/static/images/blueprint logo.png" class="logo">
         <div class="nav-user-icon" onclick="settingsMenuToggle()">
             <img src="/static/images/User Login.png">
         </div>
     </div>
 
     <div class="settings-menu">
-        <div id="dark-btn">
+        <!-- <div id="dark-btn">
             <span></span>
-        </div>
+        </div> -->
 
         <div class="settings-menu-inner">
             <div class="user-profile">
                 <img src="/static/images/User Login.png">
                 <div>
-                    <p>{{ user_id }}</p>
+                  <p>{{ user_name }} logged in with session ID:</p>
+                  <br>
+                  <p>{{ user_id }}</p>
                     
                 </div>
             </div>
             <hr>
-            <div class="settings-links">
+            <!-- <div class="settings-links">
                 <img src="/static/images/User Guide.png" class="settings-icon">
                 <div>
                     <a href="#">User Guide</a>
@@ -53,7 +54,7 @@
                 <div>
                     <a href="#">Feedback</a>
                 </div>
-            </div>
+            </div> -->
 
             <div class="settings-links">
                 <img src="/static/images/Logout.png" class="settings-icon">
