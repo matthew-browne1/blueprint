@@ -2,12 +2,9 @@
 {% block title %}Home{% endblock %}
 {% block content %}
 
-<h1>Microsoft Identity Python Web App</h1>
+<h1>Blueprint V1.0</h1>
 
 {% if user %}
-<h2>Claims:</h2>
-<pre>{{ user |tojson(indent=4) }}</pre>
-
 
 {% if config.get("ENDPOINT") %}
 <li><a href='/blueprint'>Go to Blueprint</a></li>

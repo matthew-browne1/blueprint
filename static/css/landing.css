@@ -1,0 +1,34 @@
+@font-face {
+    font-family: 'Carmen Sans Light';
+    src: url('carmen-sans-5.woff') format('woff');
+    font-weight: 300; /* Font weight of the light version */
+    font-style: normal; /* Font style, could be 'italic' for italic fonts */
+  }
+
+  body {
+    margin: 0;
+    background-color: #E8E3E2;
+    font-family: 'Carmen Sans Light', sans-serif;
+    font-weight: 300; 
+    font-size: 12pt; 
+}
+
+h1 {
+    margin: 0;
+    font-size: 4em;
+    letter-spacing: 1px;
+    color: white; 
+    font-weight: 200;
+
+.special-letter {
+    color: #C58890;
+}
+
+}
+.title-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 20px;
+    background-color: #656573;
+}
