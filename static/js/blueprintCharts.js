@@ -65,12 +65,13 @@ $(document).ready(function () {
 
   chartsSocket.on("chart_data", function (data) {
     var sessionID = data.sessionID;
+    console.log("chart_data wants to update to session with ID:", sessionID);
     $.ajax({
       type: "GET",
       url: "/get_session_id",
       success: function (response) {
         var sessionIdFromBackend = response.session_id;
-        console.log("Session ID:", sessionId);
+        console.log("Session ID of current session:", sessionIdFromBackend);
         if (sessionIdFromBackend === sessionID) {
           chartData = data.chartData;
           var metric = selectedMetric();
