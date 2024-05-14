@@ -17,6 +17,8 @@ $(document).ready(function () {
   var chartROI = [];
   var filtered_chartBudget_response = [];
   var chartBudget_response = [];
+  var tv_chartData = [];
+  var filtered_tv_chartData = [];
 
   // Function to populate dropdown options
   function populateDropdown(selector, options) {
