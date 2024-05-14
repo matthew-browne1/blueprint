@@ -195,6 +195,16 @@ function loadFunc() {
     console.log("No row selected.");
   }
 }
+function destroyTables(tableID) {
+  for (var i = 1; i < tableID; i++) {
+    console.log(i);
+    $("#channel" + i)
+      .DataTable()
+      .clear()
+      .destroy();
+    console.log("#channel" + i + " destroyed");
+  }
+}
 function saveFunc() {
   console.log("save button clicked");
 

@@ -191,7 +191,6 @@ def get_user_id():
 
 
 @app.route('/save_snapshot', methods=['POST'])
-
 def save_snapshot():
     snapshot_name = request.json.get('name')
     user_id = session['user']['oid']
