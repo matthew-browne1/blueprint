@@ -1278,6 +1278,22 @@ $(document).ready(function () {
   $("#save-list").click(function () {
     openSavePopup();
   });
+  $("#load-popup-close").click(function () {
+    closeLoadPopup();
+  });
+  $("#loadButtonPopup").click(function () {
+    loadFunc();
+  });
+  $("#save-popup-close").click(function () {
+    closeSavePopup();
+  });
+  $("#saveButtonPopup").click(function () {
+    saveFunc();
+  });
+  $("#overwriteSave").click(function () {
+    overwriteSave();
+  });
+
 });
 
 function editButton() {
