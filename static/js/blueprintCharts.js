@@ -230,7 +230,7 @@ function selectedMetric() {
 
   for (var i = 0; i < volvalButtons.length; i++) {
     if (volvalButtons[i].checked) {
-      console.log("currently selected metric =" + volvalButtons[i].value);
+      // console.log("currently selected metric =" + volvalButtons[i].value);
       return volvalButtons[i].value;
     }
   }
