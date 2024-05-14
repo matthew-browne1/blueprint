@@ -2,6 +2,7 @@ let response_curve_chart = null;
 let budget_response_chart = null;
 let budget_curve_chart = null;
 let roi_curve_chart = null;
+let laydown_scenario_chart = null;
 
 var chartsSocket = io.connect(window.location.origin, { timeout: 500000 });
 
@@ -190,25 +191,25 @@ $(document).ready(function () {
     }
   }
   chartsSocket.emit("tv_data");
-  chartsSocket.on("tv_chart_data", function(data) {
-    tv_chartData = data.tv_chartData
+  chartsSocket.on("tv_chart_data", function (data) {
+    tv_chartData = data.tv_chartData;
     generateCurveChartsE();
-});
+  });
 
   chartsSocket.on("filtered_tv_chartData", function (data) {
     filtered_tv_chartData = data.filtered_data;
 
     console.log("fetched filtered TV data from back end");
     generateCurveChartsE();
-});
+  });
 
-function generateCurveChartsE() {
+  function generateCurveChartsE() {
     if (filtered_tv_chartData.length > 0) {
       generateChartsE(filtered_tv_chartData);
     } else {
       generateChartsE(tv_chartData);
     }
-}
+  }
 });
 
 function generateChartsA(data) {
@@ -557,40 +558,41 @@ function generateChartsD(data) {
 function generateChartsE(data) {
   console.log("reaching generateChartsE method");
   const processedDataLaydown = data.reduce((acc, entry) => {
-      
-      const key = entry.Optimised;
-      const monthYear = entry.MonthYear;
-      if (!acc[key]) {
-        acc[key] = {};
+    const key = entry.Optimised;
+    const monthYear = entry.MonthYear;
+    if (!acc[key]) {
+      acc[key] = {};
+    }
+
+    if (!acc[key][monthYear]) {
+      acc[key][monthYear] = 0;
+    }
+
+    if (entry["Budget/Revenue"] === "Budget") {
+      const numericValue = parseFloat(entry.Value);
+      if (!isNaN(numericValue)) {
+        acc[key][monthYear] += numericValue;
+      } else {
+        console.error("Invalid numeric value:", entry.Value);
       }
-     
-      if (!acc[key][monthYear]) {
-        acc[key][monthYear] = 0;
-      }
-    
-      if (entry["Budget/Revenue"] === "Budget") {
-        const numericValue = parseFloat(entry.Value);
-        if (!isNaN(numericValue)) {
-          acc[key][monthYear] += numericValue;
-        } else {
-          console.error("Invalid numeric value:", entry.Value);
-        }
-      }
-      return acc;
-}, {});
+    }
+    return acc;
+  }, {});
 
   const laydown_scenario_labels = Object.keys(processedDataLaydown);
-  const timePeriods = Object.keys(processedDataLaydown[laydown_scenario_labels[0]]).sort((a, b) => {
-      const dateA = new Date(a);
-      const dateB = new Date(b);
-      return dateA - dateB;
+  const timePeriods = Object.keys(
+    processedDataLaydown[laydown_scenario_labels[0]]
+  ).sort((a, b) => {
+    const dateA = new Date(a);
+    const dateB = new Date(b);
+    return dateA - dateB;
   });
 
   const laydown_TvData = [];
   laydown_scenario_labels.forEach((scenario) => {
-      timePeriods.forEach((period) => {
-          laydown_TvData.push(processedDataLaydown[scenario][period] || 0);
-      });
+    timePeriods.forEach((period) => {
+      laydown_TvData.push(processedDataLaydown[scenario][period] || 0);
+    });
   });
 
   const laydown_scenario_chartData = {
@@ -605,106 +607,103 @@ function generateChartsE(data) {
       borderRadius: 15,
     })),
   };
-   const laydown_scenario_chartOptions = {
-     scales: {
-       x: {
-         stacked: false,
-         title: {
-           display: true,
-           text: "Month/Year",
-           font: {
-             family: "arial",
-             weight: "bold",
-             size: "16",
-           },
-         },
-         ticks: {
-           font: {
-             family: "Arial",
-             size: "12",
-             weight: "bold",
-           },
-         },
-         grid: {
-           display: false,
-         },
-         autoSkip: false,
-       },
-       y: {
-         stacked: false,
-         title: {
-           display: true,
-           text: "Budget",
-           font: {
-             family: "arial",
-             weight: "bold",
-             size: "16",
-           },
-         },
-         ticks: {
-           font: {
-             family: "Arial",
-             size: "12",
-             weight: "bold",
-           },
-           callback: function (value, index, values) {
-             if (value < 1000000) {
-               return (
-                 "£" + Math.round(value / 1000).toLocaleString("en-US") + "K"
-               );
-             } else {
-               return (
-                 "£" +
-                 Math.round(value / 1000000).toLocaleString("en-US") +
-                 "M"
-               );
-             }
-           },
-         },
-       },
-     },
-     responsive: true,
-     maintainAspectRatio: true,
-     layout: {
-       padding: {
-         top: 25,
-       },
-     },
-     plugins: {
-       legend: {
-         position: "top",
-         display: true,
-         labels: {
-           font: {
-             family: "Arial",
-             size: 12,
-             weight: "bold",
-           },
-         },
-       },
-       tooltip: {
-         callbacks: {
-           title: (context) => {
-             return context[0].label.replaceAll(",", " ");
-           },
-         },
-       },
-     },
-     animation: true,
-   };
-   if (laydown_scenario_chart === null) {
-     laydown_scenario_chart = new Chart(
-       document.getElementById("tv_curve_chart"),
-       {
-         type: "bar",
-         data: laydown_scenario_chartData,
-         options: laydown_scenario_chartOptions,
-       }
-     );
-   } else {
-     laydown_scenario_chart.data.labels = laydown_scenario_chartData.labels;
-     laydown_scenario_chart.data.datasets =
-       laydown_scenario_chartData.datasets;
-     laydown_scenario_chart.update();
-   }
+  const laydown_scenario_chartOptions = {
+    scales: {
+      x: {
+        stacked: false,
+        title: {
+          display: true,
+          text: "Month/Year",
+          font: {
+            family: "arial",
+            weight: "bold",
+            size: "16",
+          },
+        },
+        ticks: {
+          font: {
+            family: "Arial",
+            size: "12",
+            weight: "bold",
+          },
+        },
+        grid: {
+          display: false,
+        },
+        autoSkip: false,
+      },
+      y: {
+        stacked: false,
+        title: {
+          display: true,
+          text: "Budget",
+          font: {
+            family: "arial",
+            weight: "bold",
+            size: "16",
+          },
+        },
+        ticks: {
+          font: {
+            family: "Arial",
+            size: "12",
+            weight: "bold",
+          },
+          callback: function (value, index, values) {
+            if (value < 1000000) {
+              return (
+                "£" + Math.round(value / 1000).toLocaleString("en-US") + "K"
+              );
+            } else {
+              return (
+                "£" + Math.round(value / 1000000).toLocaleString("en-US") + "M"
+              );
+            }
+          },
+        },
+      },
+    },
+    responsive: true,
+    maintainAspectRatio: true,
+    layout: {
+      padding: {
+        top: 25,
+      },
+    },
+    plugins: {
+      legend: {
+        position: "top",
+        display: true,
+        labels: {
+          font: {
+            family: "Arial",
+            size: 12,
+            weight: "bold",
+          },
+        },
+      },
+      tooltip: {
+        callbacks: {
+          title: (context) => {
+            return context[0].label.replaceAll(",", " ");
+          },
+        },
+      },
+    },
+    animation: true,
+  };
+  if (laydown_scenario_chart === null) {
+    laydown_scenario_chart = new Chart(
+      document.getElementById("tv_curve_chart"),
+      {
+        type: "bar",
+        data: laydown_scenario_chartData,
+        options: laydown_scenario_chartOptions,
+      }
+    );
+  } else {
+    laydown_scenario_chart.data.labels = laydown_scenario_chartData.labels;
+    laydown_scenario_chart.data.datasets = laydown_scenario_chartData.datasets;
+    laydown_scenario_chart.update();
+  }
 }
