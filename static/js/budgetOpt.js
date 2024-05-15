@@ -14,12 +14,7 @@ $(document).ready(function () {
   syncTabCounter();
   var optAllBtn = document.getElementById("optimise-all");
   optAllBtn.addEventListener("click", optAll);
-  function showWarningPopup() {
-    $("warningPopup").show();
-  }
-  function closeWarningPopup() {
-    $("warningPopup").hide();
-  }
+
 });
 var socket = io.connect(window.location.origin);
 socket.on("connect", function () {
@@ -28,10 +23,23 @@ socket.on("connect", function () {
 
 var optResults = {};
 
+function showWarningPopup() {
+  $("warningPopup").show();
+}
+function closeWarningPopup() {
+  $("warningPopup").hide();
+}
+
+
+
 function newTabButtonInit() {
   document
     .getElementById("new-tab-button")
-    .addEventListener("click", function () {
+    .addEventListener("click", spawnNewTab)
+}
+
+
+function spawnNewTab() {
       tabCounter++;
 
       // Clone the HTML content and append it to the document
@@ -176,8 +184,7 @@ function newTabButtonInit() {
       var buttonName = document.getElementById("button-text" + tabCounter);
       tabNames[tabCounter] = buttonName.textContent;
       console.log(tabNames);
-    });
-}
+    }
 
 function syncTabCounter() {
   $.ajax({
@@ -543,19 +550,7 @@ function initializeInitialTable() {
     }
   });
 
-  function getDisabledRowIds() {
-    var disabledRowIds = [];
 
-    channelTable
-      .rows(".disabled")
-      .data()
-      .each(function (row) {
-        var rowId = row.row_id;
-        disabledRowIds.push(rowId);
-      });
-
-    return disabledRowIds;
-  }
 
   document.addEventListener("DOMContentLoaded", function () {
     var obj = document.getElementById("obj-input1");
@@ -572,7 +567,7 @@ function initializeInitialTable() {
       var maxValue = max.value;
       var blendValue = blend.value;
 
-      var disabledRowIds = getDisabledRowIds();
+      var disabledRowIds = getDisabledRowIds(1);
       var tabName = fetchTabName(1);
       console.log("tabName:" + tabName);
       var dataToSend = {
@@ -811,8 +806,10 @@ function optAll() {
         $("#cancelWarning").click(function () {
                 
           $("#warningPopup").hide();
-
-          hideLoadingOverlay(1);
+          
+          tableIds.forEach(function (tableId) {
+            hideLoadingOverlay(tableId);
+          });
         });
         } else {
         optAllArray.forEach(function(data) {
@@ -1110,19 +1107,7 @@ function initializeDataTable(tableID) {
           console.error("Error fetching dates:", error);
         },
       });
-      function getDisabledRowIds() {
-        var disabledRowIds = [];
 
-        tabChannelTable
-          .rows(".disabled")
-          .data()
-          .each(function (row) {
-            var rowId = row.row_id;
-            disabledRowIds.push(rowId);
-          });
-
-        return disabledRowIds;
-      }
 
       var obj = document.getElementById("obj-input" + tableID);
       var exh = document.getElementById("exh-input" + tableID);
@@ -1138,8 +1123,8 @@ function initializeDataTable(tableID) {
         var maxValue = max.value;
         var blendValue = blend.value;
 
-        var disabledRowIds = getDisabledRowIds();
-        var tabName = fetchTabName(1);
+        var disabledRowIds = getDisabledRowIds(tableID);
+        var tabName = fetchTabName(tableID);
 
         var dataToSend = {
           objectiveValue: objValue,
@@ -1163,7 +1148,24 @@ function initializeDataTable(tableID) {
         console.log(dataToSend);
 
         // Use jQuery AJAX to send the data to the Flask endpoint
-        tabSocket.emit("optimise", { dataToSend: dataToSend });
+        if (disabledRowIds.length < 85) {
+          $("#warningPopup").show();
+          $("#continueWarning").click(function () {
+            // Hide modal
+            $("#warningPopup").hide();
+            // Emit socket event
+            socket.emit("optimise", { dataToSend: dataToSend });
+          });
+  
+          // Event listener for close button
+          $("#cancelWarning").click(function () {
+            // Hide modal
+            $("#warningPopup").hide();
+            hideLoadingOverlay(tableID);
+          });
+        } else {
+          socket.emit("optimise", { dataToSend: dataToSend });
+        }
       });
     },
     error: function (error) {
@@ -1249,3 +1251,353 @@ tabSocket.on("opt_complete", function (data) {
   hideLoadingOverlay(tableID);
   showResultsButton();
 });
+
+// SAVEUI BELOW
+
+$(document).ready(function () {
+  $("#load-list").click(function () {
+    openLoadPopup();
+  });
+  $("#save-list").click(function () {
+    openSavePopup();
+  });
+  $("#load-popup-close").click(function () {
+    closeLoadPopup();
+  });
+  $("#loadButtonPopup").click(function () {
+    loadFunc();
+  });
+  $("#save-popup-close").click(function () {
+    closeSavePopup();
+  });
+  $("#saveButtonPopup").click(function () {
+    saveFunc();
+  });
+  $("#overwriteSave").click(function () {
+    overwriteSave();
+  });
+
+});
+
+function editButton() {
+  var setText = document.getElementById("button-text1");
+  var newText = prompt("Rename Tab:");
+
+  if (newText !== null) {
+    setText.textContent = newText;
+    tabNames[1] = newText;
+  }
+}
+
+function editButtonTabs(tabID) {
+  var setText = document.getElementById("button-text" + tabID);
+  var newText = prompt("Rename Tab:");
+
+  if (newText !== null) {
+    setText.textContent = newText;
+    tabNames[tabID] = newText;
+    console.log(tabNames);
+  }
+  syncTabNames();
+}
+
+function openLoadPopup() {
+  $("#loadPopup").show();
+  initializeLoadTable();
+}
+var savesTable;
+function closeLoadPopup() {
+  $("#loadPopup").hide();
+}
+function openSavePopup() {
+  $("#savePopup").show();
+  initializeSavesTable();
+}
+function closeSavePopup() {
+  $("#savePopup").hide();
+}
+
+var isSaveTableInitialized = false;
+var isLoadTableInitialized = false;
+var saveTable;
+var loadTable;
+
+function initializeLoadTable() {
+  if ($.fn.DataTable.isDataTable("#load-table")) {
+    console.log("load table already exists");
+    loadTable.ajax.reload();
+    return;
+  }
+
+  console.log("initializing snapshot load table");
+  loadTable = $("#load-table").DataTable({
+    dom: "Blfrtip",
+    ajax: {
+      url: "/get_saves",
+      contentType: "application/json",
+      dataSrc: "data",
+    },
+    columns: [{ data: "name" }, { data: "table_ids" }],
+    select: "single",
+    autoWidth: false,
+    rowId: "DT_RowId",
+  });
+  isLoadTableInitialized = true;
+}
+function initializeSavesTable() {
+  if ($.fn.DataTable.isDataTable("#saves-table")) {
+    console.log("saves table already exists");
+    saveTable.ajax.reload();
+    return;
+  }
+
+  console.log("initializing saves table");
+  saveTable = $("#saves-table").DataTable({
+    dom: "Blfrtip",
+    ajax: {
+      url: "/get_saves",
+      contentType: "application/json",
+      dataSrc: "data",
+    },
+    columns: [{ data: "name" }, { data: "table_ids" }],
+    select: "single",
+    autoWidth: false,
+    rowId: "DT_RowId",
+  });
+  saveTable.on("select", function () {
+    $("#overwriteSave").show();
+  });
+
+  saveTable.on("deselect", function () {
+    $("#overwriteSave").hide();
+  });
+  isSaveTableInitialized = true;
+}
+
+function reloadSaveTable() {
+  if (saveTable && $.fn.DataTable.isDataTable("#save-table")) {
+    console.log("save table reloading contents");
+    saveTable.ajax.reload();
+  } else {
+    console.log("save table not initialized");
+  }
+}
+
+function loadFunc() {
+  var selectedRow = $("#load-table")
+    .DataTable()
+    .rows({ selected: true })
+    .data()[0];
+
+  if (selectedRow) {
+    var selectedSaveId = selectedRow.DT_RowId;
+
+    $.ajax({
+      type: "POST",
+      url: "/load_selected_row",
+      contentType: "application/json",
+      data: JSON.stringify({ selectedSaveId: selectedSaveId }),
+      success: function (postResponse) {
+        console.log("POST request successful", postResponse);
+        console.log("commencing GET request");
+
+        $.ajax({
+          url: "/load_selected_row",
+          method: "GET",
+          contentType: "application/json",
+          success: function (response) {
+            if (
+              response &&
+              response.content &&
+              response.scenario_names
+            ) {
+              var scenarioNamesString = response.scenario_names;
+              var scenarioNamesArray = scenarioNamesString
+                .replace(/[{}""]/g, "")
+                .split(",");
+              
+             
+
+              var arrayToLoad = response.content;
+
+              console.log("printing the loaded array:", arrayToLoad);
+              // call buildDatatable funciton here
+              
+            }
+            sendTableIDsOnRefresh();
+            syncTabCounter();
+            closeLoadPopup();
+          },
+        });
+      },
+    });
+
+    console.log("Selected Save ID:", selectedSaveId);
+  } else {
+    console.log("No row selected.");
+  }
+}
+
+function enteredBudget(tableID) {
+  const budgetInput = document.getElementById('max-input'+tableID);
+  const budgetValue = budgetInput.value;
+  return budgetValue;
+}
+
+function selectedDropDownOptions(tableID) {
+  
+  const selectedKPI = document.getElementById('obj-input'+tableID);
+  const selectedBlendOption = document.getElementById('blend-input'+tableID);
+  const selectedBudgetOption = document.getElementById('exh-input'+tableID);
+
+  const kpiValue = selectedKPI.value;
+  const selectedBlendValue = selectedBlendOption.value;
+  const selectedBudgetValue = selectedBudgetOption.value;
+
+  var optionsArray = [kpiValue,selectedBlendValue, selectedBudgetValue];
+
+  return optionsArray;
+}
+
+function dateOptions(tableID) {
+  var dateArray = [];
+  var startDateElement = document.getElementById("start-date"+tableID);
+  var endDateElement = document.getElementById("end-date"+tableID);
+  var startDateValue = startDateElement.value;
+  var endDateValue = endDateElement.value;
+  var dateBool = null;
+  var dateButtonIsChecked = $("#date-filter-button"+tableID).prop("checked");
+  if (dateButtonIsChecked) {
+    dateBool = true;
+  } else {
+    dateBool = false;
+  }
+  dateArray = [startDateValue, endDateValue];
+  return [dateBool, dateArray];
+}
+
+
+function saveFunc() {
+  console.log("save button clicked");
+
+  var snapshotName = window.prompt("Please provide a name for this snapshot:");
+  if (snapshotName !== null) {
+    var objToSend = {};
+    $.ajax({
+      url: "get_table_ids",
+      method: "GET",
+      contentType: "application/json",
+      success: function (response) {
+        if (response && response.tableIds) {
+          console.log(response.tableIds);
+          var tableIds = response.tableIds;
+
+    
+          closeSavePopup();
+
+          // contentToSave captures the html of every tab, every table.
+          // var contentToSave = document.getElementById("all-content").innerHTML;
+          // I need to make it scan each table.
+
+            tableIds.forEach(function(tableID) {
+              var disabledRowIds = getDisabledRowIds(tableID);
+              var budget = enteredBudget(tableID);
+              var [dateBool, dateArray] = dateOptions(tableID);
+              var options = selectedDropDownOptions(tableID);
+              var savedDataFromTable = {
+                disabledRowIds: disabledRowIds,
+                enteredBudget: budget,
+                dateBool: dateBool,
+                dateArray: dateArray,
+                optionsArray: options
+              }
+              objToSend[tableID] = savedDataFromTable;
+            });
+           
+          }
+             
+          console.log("current tabNames are:");
+          console.log(tabNames);
+          $.ajax({
+            url: "/save_snapshot",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+              content: objToSend,
+              name: snapshotName,
+              scenarioNames: Object.values(tabNames),
+            }),
+            success: function (response) {
+              console.log(response);
+              
+            },
+            error: function (error) {
+              console.error("Error saving snapshot:", error);
+            },
+          });
+        
+      },
+    });
+  }
+}
+
+function overwriteSave() {
+  if (isSaveTableInitialized) {
+    var selectedRow = saveTable.row({ selected: true }).data();
+    if (selectedRow) {
+      var selectedSaveId = selectedRow.DT_RowId;
+      // Send a POST request to the Flask backend with the selected row data
+      $.ajax({
+        url: "get_table_ids",
+        method: "GET",
+        contentType: "application/json",
+        success: function (response) {
+          if (response && response.tableIds) {
+            console.log(response.tableIds);
+            var tableIds = response.tableIds;
+
+            destroyTables(tableIds.length + 1);
+            $("#saves-table").DataTable().destroy();
+            $("#load-table").DataTable().destroy();
+            console.log("saves and load tables destroyed");
+            isSaveTableInitialized = false;
+            isLoadTableInitialized = false;
+            closeSavePopup();
+            var contentToSave =
+              document.getElementById("all-content").innerHTML;
+            $.ajax({
+              url: "/overwrite_save",
+              method: "POST",
+              contentType: "application/json",
+              data: JSON.stringify({
+                selectedSaveId: selectedSaveId,
+                content: contentToSave,
+                scenarioNames: Object.values(tabNames),
+              }),
+              success: function (response) {
+                console.log(response);
+                initializeInitialTable();
+                tableIds.forEach(function (id) {
+                  initializeDataTable(id);
+                });
+                initializeSavesTable();
+                initializeLoadTable();
+                console.log("reinitialized all tables");
+                console.log("Save overwritten successfully:", response);
+                // Handle any further actions based on the backend response
+              },
+              error: function (error) {
+                console.error("Error overwriting save:", error);
+              },
+            });
+          }
+        },
+      });
+    }
+  }
+}
+
+function buildDatatableFromLoad (data) {
+  const {disabledRowIds, enteredBudget, dateBool, dateArray, optionsArray} = data;
+
+}

@@ -21,28 +21,29 @@
         <img src="/static/images/RA Logo 1.png" class="logo">
     </div>
     <div class="nav-right">
-        <a href= "{{ url_for('export_data') }}" download="{{ current_user.user_info[0].id }}_Input_File.xlsx"class="button-4" id="export-data">Export Data  <i class="fa-solid fa-file-export"></i></a>
-        <img src="/static/images/blueprint logo.png" class="logo">
+        <a href= "{{ url_for('export_data') }}" download="{{ user_id }}_Input_File.xlsx"class="button-4" id="export-data">Export Data  <i class="fa-solid fa-file-export"></i></a>
         <div class="nav-user-icon" onclick="settingsMenuToggle()">
             <img src="/static/images/User Login.png">
         </div>
     </div>
 
     <div class="settings-menu">
-        <div id="dark-btn">
+        <!-- <div id="dark-btn">
             <span></span>
-        </div>
+        </div> -->
 
         <div class="settings-menu-inner">
             <div class="user-profile">
                 <img src="/static/images/User Login.png">
                 <div>
-                    <p>{{ current_user.user_info[0].full_name }}</p>
-                    <a href="#">{{ current_user.user_info[0].email }}</a>
+                  <p>{{ user_name }} logged in with session ID:</p>
+                  <br>
+                  <p>{{ user_id }}</p>
+                    
                 </div>
             </div>
             <hr>
-            <div class="settings-links">
+            <!-- <div class="settings-links">
                 <img src="/static/images/User Guide.png" class="settings-icon">
                 <div>
                     <a href="#">User Guide</a>
@@ -53,17 +54,16 @@
                 <div>
                     <a href="#">Feedback</a>
                 </div>
-            </div>
+            </div> -->
 
             <div class="settings-links">
                 <img src="/static/images/Logout.png" class="settings-icon">
                 <div>
-                    <a href="#">Logout</a>
+                    <a href="{{ url_for('logout')}}">Logout</a>
                 </div>
             </div>
 
         </div>
-
 
     </div>
 </nav>
@@ -219,7 +219,7 @@
 </div>
 <div id="loadPopup" class="popup">
    <div class="popup-content">
-      <i class="fa-solid fa-x fa-xl close-icon" id="load-popup-close" onclick="closeLoadPopup()"></i>
+      <i class="fa-solid fa-x fa-xl close-icon" id="load-popup-close"></i>
       <h2>Choose a Saved Snapshot</h2>
       <div class="saves-cont">
          <table id="load-table" class="display">
@@ -234,12 +234,12 @@
             </tbody>
          </table>
       </div>
-      <button id="loadButtonPopup" class="button-4" onclick="loadFunc()">Load Snapshot</button>
+      <button id="loadButtonPopup" class="button-4">Load Snapshot</button>
    </div>
 </div>
 <div id="savePopup" class="popup">
    <div class="popup-content">
-      <i class="fa-solid fa-x fa-xl close-icon" id="save-popup-close" onclick="closeSavePopup()"></i>
+      <i class="fa-solid fa-x fa-xl close-icon" id="save-popup-close"></i>
       <h2>Overwrite Current Saves</h2>
       <div class="saves-cont">
          <table id="saves-table" class="display">
@@ -255,8 +255,8 @@
          </table>
       </div>
       <div class="save-button-cont">
-         <button id="saveButtonPopup" class="button-4" onclick="saveFunc()">Save New Snapshot</button>
-         <button id="overwriteSave" class="button-4" onclick="overwriteSave()">Overwrite Existing Snapshot</button>
+         <button id="saveButtonPopup" class="button-4">Save New Snapshot</button>
+         <button id="overwriteSave" class="button-4">Overwrite Existing Snapshot</button>
       </div>
    </div>
 </div>
@@ -284,7 +284,7 @@
 <script src="/static/js/dataTables.editor.js"></script>
 <script src="/static/js/editor.dataTables.js"></script>
 <script src="/static/js/sparklines.js"></script>
-<script src="static/js/saveUI.js"></script>
+<!-- <script src="static/js/saveUI.js"></script> -->
 <script src="/static/js/main.js"></script>
 </body>
 </html>

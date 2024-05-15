@@ -9,7 +9,7 @@ import json
 import os
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.orm import joinedload
-from sqlalchemy import create_engine, text, Column, DateTime, Integer, func
+from sqlalchemy import create_engine, text, Column, DateTime, Integer, LargeBinary, func
 from datetime import datetime, date, time
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 import urllib.parse
@@ -23,6 +23,7 @@ from copy import deepcopy
 import threading
 import queue
 import pyotp
+import pickle
 # from azure.identity import DefaultAzureCredential
 # from azure.keyvault.secrets import SecretClient
 
@@ -82,8 +83,7 @@ class UserInfo(db.Model):
 class Snapshot(db.Model):
     name = db.Column(db.String, nullable=False)
     id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.String, nullable=False)
-    table_ids = db.Column(db.String, nullable=False)
+    content = db.Column(db.LargeBinary, nullable=False)
     scenario_names = db.Column(db.String, nullable=False)
     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
     table_data = db.Column(db.Text, nullable=False)
@@ -206,15 +206,16 @@ def save_snapshot():
     # Check if a snapshot with the same name already exists for the current user
     existing_snapshot = Snapshot.query.filter_by(name=snapshot_name, user_id=user_id).first()
 
+    print(content)
+    pickled_string = pickle.dumps(content)
     if existing_snapshot:
         # Update the existing snapshot
-        existing_snapshot.content = content
-        existing_snapshot.table_ids = table_ids_str
+        existing_snapshot.content = pickled_string
         existing_snapshot.scenario_names = scenario_names
         existing_snapshot.table_data = table_data_json
     else:
         # Create a new snapshot
-        new_snapshot = Snapshot(name=snapshot_name, content=content, table_ids=table_ids_str, scenario_names=scenario_names, user_id=user_id,
+        new_snapshot = Snapshot(name=snapshot_name, content=pickled_string, scenario_names=scenario_names, user_id=user_id,
                                 table_data=table_data_json)
         db.session.add(new_snapshot)
 
@@ -225,13 +226,14 @@ def save_snapshot():
         db.session.rollback()
         return jsonify({'success': False, 'error': str(e)})
 
+  
 
 @app.route('/overwrite_save', methods=['POST'])
 @login_required
 def overwrite_save():
     snapshot_id = request.json.get('selectedSaveId')
     user_id = current_user.id
-    content = request.json.get('content')
+    content = pickle.dumps(request.json.get('content'))
     scenario_names = request.json.get('scenarioNames')
     current_table_ids = list(table_data.keys())
     table_data_json = json.dumps(table_data)
@@ -243,7 +245,6 @@ def overwrite_save():
 
     existing_snapshot = Snapshot.query.filter_by(id=snapshot_id, user_id=user_id).first()
     existing_snapshot.content = content
-    existing_snapshot.table_ids = table_ids_str
     existing_snapshot.table_data = table_data_json
     existing_snapshot.scenario_names = scenario_names
 
@@ -255,17 +256,17 @@ def overwrite_save():
         return jsonify({'success': False, 'error': str(e)})
 
 
-@app.route('/load_snapshot')
-@login_required
-def load_snapshot():
-    global table_data
-    user_id = current_user.id
-    snapshot = Snapshot.query.filter_by(user_id=user_id).first()
-    table_data = json.loads(snapshot.table_data)
-    content_list = snapshot.content
-    table_ids_list = snapshot.table_ids
-    app.logger.info(table_data.keys())
-    return jsonify({'content': content_list, 'table_ids': table_ids_list})
+# @app.route('/load_snapshot')
+# @login_required
+# def load_snapshot():
+#     global table_data
+#     user_id = current_user.id
+#     snapshot = Snapshot.query.filter_by(user_id=user_id).first()
+#     table_data = json.loads(snapshot.table_data)
+#     content_list = pickle.loads(snapshot.content)
+#     table_ids_list = snapshot.table_ids
+#     app.logger.info(table_data.keys())
+#     return jsonify({'content': content_list, 'table_ids': table_ids_list})
 
 
 @app.route('/get_saves', methods=['GET'])
@@ -276,17 +277,21 @@ def get_saves():
 
     user_saves = Snapshot.query.filter_by(user_id=current_user.id).all()
     saves_data = []
+    if user_saves:
+        for save in user_saves:
+            
+            table_ids = list(dict(pickle.loads(save.content)).keys())
+            
+            save_info = {
+                'DT_RowId': save.id,
+                'name': save.name,
+                'table_ids': table_ids
+            }
+            saves_data.append(save_info)
 
-    for save in user_saves:
-        save_info = {
-            'DT_RowId': save.id,
-            'name': save.name,
-            'table_ids': save.table_ids
-        }
-        saves_data.append(save_info)
-
-    return jsonify({'data': saves_data})
-
+        return jsonify({'data': saves_data})
+    else:
+        return jsonify({'data': []})
 
 @app.route('/load_selected_row', methods=['GET', 'POST'])
 @login_required
@@ -303,13 +308,11 @@ def notify_selected_row():
         if not save:
             return jsonify({'error': 'Unathorized access'}), 403
         else:
-            content_list = save.content
-            table_ids_list = save.table_ids
+            content_list = pickle.loads(save.content)
             scenario_names = save.scenario_names
             table_data = json.loads(save.table_data)
             app.logger.info(table_data.keys())
-            return jsonify({'content': content_list, 'table_ids': table_ids_list, 'scenario_names':scenario_names})
-
+            return jsonify({'content': content_list, 'scenario_names':scenario_names})
 
 results = {}
 
