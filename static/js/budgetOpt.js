@@ -2,13 +2,14 @@ var tabNames = { 1: "Scenario 1" };
 
 var tabCounter = 1;
 
-var initialButtonName = document.getElementById("button-text" + tabCounter);
-tabNames[tabCounter] = initialButtonName.textContent;
-console.log(tabNames);
+// var initialButtonName = document.getElementById("button-text" + tabCounter);
+// tabNames[tabCounter] = initialButtonName.textContent;
+// console.log(tabNames);
 
 
 $(document).ready(function () {
-  initializeInitialButton();
+  spawnNewTab(tabCounter);
+  //initializeInitialButton();
   sendTableIDsOnRefresh();
   newTabButtonInit();
   syncTabCounter();
@@ -35,12 +36,16 @@ function closeWarningPopup() {
 function newTabButtonInit() {
   document
     .getElementById("new-tab-button")
-    .addEventListener("click", spawnNewTab)
+    .addEventListener("click", spawnNewTabAndIncrementCounter)
 }
 
+function spawnNewTabAndIncrementCounter() {
+  tabCounter++; // Increment tabCounter
+  spawnNewTab(tabCounter); // Invoke spawnNewTab function
+}
 
-function spawnNewTab() {
-      tabCounter++;
+function spawnNewTab(tabCounter) {
+      
 
       // Clone the HTML content and append it to the document
       var tabContent = document.createElement("div");
@@ -165,7 +170,7 @@ function spawnNewTab() {
    </div>
 `;
 
-      var mainCont = document.getElementById("main-container");
+      var mainCont = document.getElementById("tab-container");
       mainCont.appendChild(tabContent);
       initializeCollapsibleButtons(tabCounter);
       initializeDataTable(tabCounter);
@@ -204,31 +209,7 @@ function syncTabCounter() {
   });
 }
 
-function initializeInitialButton() {
-  var content = document.getElementById("opt-tab1");
-  var coll = document.getElementById("col-btn1");
-  var table = document.getElementById("channel-container1");
-  var buttonsDiv = document.getElementById("buttons-div1");
-  coll.addEventListener("click", function () {
-    this.classList.toggle("active");
-    console.log("col-btn" + tabCounter);
-    switch (table.style.maxHeight) {
-      case "100%":
-        table.style.maxHeight = "0%";
-        table.style.opacity = 0;
-        content.style.maxHeight = buttonsDiv.scrollHeight + "px";
-        break;
-      case "0%":
-        table.style.maxHeight = "100%";
-        table.style.opacity = 1;
-        content.style.maxHeight = "100%";
-        break;
-    }
-  });
-  table.style.maxHeight = "0%";
-  table.style.opacity = 0;
-  content.style.maxHeight = buttonsDiv.scrollHeight + "px";
-}
+
 
 function initializeCollapsibleButtons(colID) {
   var content = document.getElementById("opt-tab" + colID);
@@ -334,298 +315,9 @@ function sendTableIDsOnRefresh() {
     },
   });
 }
-function initializeInitialTable() {
-  var channelTable = $("#channel1").DataTable({
-    dom: "Blfrtip",
-    destroy: true,
-    ajax: {
-      url: "/channel_main",
-      contentType: "application/json",
-      dataSrc: "1",
-    },
-    drawCallback: function () {
-      $(".sparkline1")
-        .map(function () {
-          return $("canvas", this).length ? null : this;
-        })
-        .sparkline("html", {
-          type: "line",
-          width: "250px",
-        });
-    },
-    columns: [
-      { data: null },
-      { data: "Region" },
-      { data: "Brand" },
-      { data: "Channel" },
-      // { data: "Beta", render: $.fn.DataTable.render.number(",", ".", 0, "") },
-      {
-        data: "Current Budget",
-        render: $.fn.DataTable.render.number(",", ".", 0, "£"),
-      },
-      {
-        data: "Min Spend Cap",
-        render: $.fn.DataTable.render.number(",", ".", 0, "£"),
-      },
-      {
-        data: "Max Spend Cap",
-        render: $.fn.DataTable.render.number(",", ".", 0, "£"),
-      },
-
-      {
-        data: "Laydown",
-        render: function (data, type, row, meta) {
-          return type === "display"
-            ? '<span class="sparkline1">' + data.toString() + "</span>"
-            : data;
-        },
-      },
-    ],
-    autoWidth: false,
-    columnDefs: [
-      { width: "50px", targets: 0 },
-      { width: "80px", targets: 1 },
-      { width: "80px", targets: 2 },
-      { width: "80px", targets: 3 },
-      { width: "80px", targets: 4 },
-      { width: "80px", targets: 5 },
-      { width: "80px", targets: 6 },
-      { width: "250px", targets: 7 },
-      {
-        targets: 0,
-        searchable: false,
-        orderable: false,
-        className: "dt-body-center",
-        render: function (data, type, full, meta) {
-          return '<input type="checkbox">';
-        },
-      },
-      { className: "dt-head-center", targets: [0, 1, 2, 3, 4, 5, 6, 7] },
-    ],
-    rowId: "row_id",
-    createdRow: function (row, data, dataIndex) {
-      $(row).addClass("disabled");
-    },
-  });
-
-  channelTable.rows().nodes().to$().addClass('disabled');
-  
-  $.ajax({
-    url: "/date_range",
-    type: "GET",
-    dataType: "json",
-    success: function (data) {
-      console.log("fetching and applying dates");
-      // Set the fetched dates as default values for date inputs
-
-      var startDate = new Date(data.startDate).toISOString().split("T")[0];
-      var endDate = new Date(data.endDate).toISOString().split("T")[0];
-
-      $("#start-date1").val(startDate);
-      $("#start-date1").prop("min", startDate);
-      $("#start-date1").prop("max", endDate);
-      $("#end-date1").val(endDate);
-      $("#end-date1").prop("min", startDate);
-      $("#end-date1").prop("max", endDate);
-    },
-    error: function (error) {
-      console.error("Error fetching dates:", error);
-    },
-  });
-
-  var channelEditor = new $.fn.dataTable.Editor({
-    ajax: {
-      type: "POST",
-      url: "/table_data_editor",
-      contentType: "application/json", // Set the content type to JSON
-      data: function (d) {
-        d.tableId = "1";
-        return JSON.stringify(d); // Convert the data to JSON string
-      },
-    },
-    table: "#channel1",
-    fields: [
-      {
-        label: "Min Spend Cap:",
-        name: "Min Spend Cap",
-      },
-      {
-        label: "Max Spend Cap:",
-        name: "Max Spend Cap",
-      },
-    ],
-    idSrc: "row_id",
-  });
-
-  channelTable.on(
-    "mouseenter",
-    "tbody td:nth-child(0), tbody td:nth-child(7), tbody td:nth-child(6)",
-    function (e) {
-      $(this).css({
-        cursor: "text",
-        userSelect: "none",
-      });
-    }
-  );
-
-  channelTable.on(
-    "mouseleave",
-    "tbody td:nth-child(0), tbody td:nth-child(7), tbody td:nth-child(6)",
-    function (e) {
-      $(this).css({
-        cursor: "default",
-        userSelect: "auto",
-      });
-    }
-  );
-
-  channelTable.on(
-    "click",
-    "tbody td:nth-child(7), tbody td:nth-child(6)",
-    function (e) {
-      channelEditor.inline(this);
-    }
-  );
-  // channelTable.on("page.dt", function () {
-  //   channelTable.ajax.reload(null, false);
-  // });
-  $("#example-select-all").on("click", function () {
-    // Get all rows with search applied
-    var rows = channelTable.rows({ search: "applied" }).nodes();
-    // Check/uncheck checkboxes for all rows in the table
-    $('input[type="checkbox"]', rows).prop("checked", this.checked);
-    if (!this.checked) {
-      $(rows).addClass("disabled");
-    } else {
-      $(rows).removeClass("disabled");
-    }
-  });
-
-  // Handle click on checkbox to set state of "Select all" control
-  $("#channel1 tbody").on("change", 'input[type="checkbox"]', function () {
-    // If checkbox is not checked
-    if (!this.checked) {
-      var el = $("#example-select-all").get(0);
-      // If "Select all" control is checked and has 'indeterminate' property
-      if (el && el.checked && "indeterminate" in el) {
-        // Set visual state of "Select all" control
-        // as 'indeterminate'
-        el.indeterminate = true;
-      }
-    }
-  });
-
-  // Handle form submission event
-  $("#frm-example").on("submit", function (e) {
-    var form = this;
-
-    // Iterate over all checkboxes in the table
-    channelTable.$('input[type="checkbox"]').each(function () {
-      // If checkbox doesn't exist in DOM
-      if (!$.contains(document, this)) {
-        // If checkbox is checked
-        if (this.checked) {
-          // Create a hidden element
-          $(form).append(
-            $("<input>")
-              .attr("type", "hidden")
-              .attr("name", this.name)
-              .val(this.value)
-          );
-        }
-      }
-    });
-  });
-
-  $("#channel1 tbody").on("change", 'input[type="checkbox"]', function () {
-    var row = $(this).closest("tr");
-    var rowId = channelTable.row(row).id();
-    var isChecked = $(this).prop("checked");
-    if (isChecked) {
-      channelTable.row(row).nodes().to$().removeClass("disabled");
-      console.log("removing class");
-    } else {
-      channelTable.row(row).nodes().to$().addClass("disabled");
-      console.log("adding class");
-    }
-  });
 
 
 
-  document.addEventListener("DOMContentLoaded", function () {
-    var obj = document.getElementById("obj-input1");
-    var exh = document.getElementById("exh-input1");
-    var max = document.getElementById("max-input1");
-    var optButton = document.getElementById("opt-button1");
-    var blend = document.getElementById("blend-input1");
-
-
-    optButton.addEventListener("click", function () {
-      showLoadingOverlay(1);
-      var objValue = obj.value;
-      var exhValue = exh.value;
-      var maxValue = max.value;
-      var blendValue = blend.value;
-
-      var disabledRowIds = getDisabledRowIds(1);
-      var tabName = fetchTabName(1);
-      console.log("tabName:" + tabName);
-      var dataToSend = {
-        objectiveValue: objValue,
-        exhaustValue: exhValue,
-        maxValue: maxValue,
-        blendValue: blendValue,
-        tableID: 1,
-
-        disabledRows: disabledRowIds,
-        tabName: tabName,
-      };
-
-      var dateButtonIsChecked = $("#date-filter-button1").prop("checked");
-      var startDate = $("#start-date1").val();
-      var endDate = $("#end-date1").val();
-      var dateTuple = [startDate, endDate];
-      if (dateButtonIsChecked) {
-        dataToSend["dates"] = dateTuple;
-      }
-      console.log(dataToSend);
-      
-      if (disabledRowIds.length < 85) {
-        $("#warningPopup").show();
-        $("#continueWarning").click(function () {
-          // Hide modal
-          $("#warningPopup").hide();
-          // Emit socket event
-          socket.emit("optimise", { dataToSend: dataToSend });
-        });
-
-        // Event listener for close button
-        $("#cancelWarning").click(function () {
-          // Hide modal
-          $("#warningPopup").hide();
-          hideLoadingOverlay(1);
-        });
-      } else {
-        socket.emit("optimise", { dataToSend: dataToSend });
-      }
-    });
-  });
-
-  $("#date-filter-button1").on("click", function () {
-    var isChecked = $(this).prop("checked");
-    var dateContainers = $(".date-inputs");
-
-    if (!isChecked) {
-      console.log("date button is unchecked");
-      dateContainers.addClass("greyed-out");
-    } else {
-      console.log("date button is checked");
-      dateContainers.removeClass("greyed-out");
-    }
-  });
-}
-
-initializeInitialTable();
 
 function getDisabledRowIds(tableID) {
   var disabledRowIds = [];
@@ -1416,12 +1108,12 @@ function loadFunc() {
                 .replace(/[{}""]/g, "")
                 .split(",");
               
-             
-
               var arrayToLoad = response.content;
 
               console.log("printing the loaded array:", arrayToLoad);
+              // clear tab-container, then build the loaded tabs
               // call buildDatatable funciton here
+              
               
             }
             sendTableIDsOnRefresh();
@@ -1598,6 +1290,15 @@ function overwriteSave() {
 }
 
 function buildDatatableFromLoad (data) {
-  const {disabledRowIds, enteredBudget, dateBool, dateArray, optionsArray} = data;
 
+  // array, int, bool, array, array
+
+  const {disabledRowIds, enteredBudget, dateBool, dateArray, optionsArray} = data;
+  const tableIds = Object.keys(data);
+
+  tableIds.forEach(function(tableID) {
+    spawnNewTab(tableID);
+  });
+    // creates new html for tabs and initialises datatables with the tableID.
+    
 }
