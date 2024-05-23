@@ -2,13 +2,14 @@ var tabNames = { 1: "Scenario 1" };
 
 var tabCounter = 1;
 
-var initialButtonName = document.getElementById("button-text" + tabCounter);
-tabNames[tabCounter] = initialButtonName.textContent;
-console.log(tabNames);
+// var initialButtonName = document.getElementById("button-text" + tabCounter);
+// tabNames[tabCounter] = initialButtonName.textContent;
+// console.log(tabNames);
 
 
 $(document).ready(function () {
-  initializeInitialButton();
+  spawnNewTab(tabCounter);
+  //initializeInitialButton();
   sendTableIDsOnRefresh();
   newTabButtonInit();
   syncTabCounter();
@@ -26,6 +27,7 @@ var optResults = {};
 function showWarningPopup() {
   $("warningPopup").show();
 }
+
 function closeWarningPopup() {
   $("warningPopup").hide();
 }
@@ -33,153 +35,10 @@ function closeWarningPopup() {
 function newTabButtonInit() {
   document
     .getElementById("new-tab-button")
-    .addEventListener("click", function () {
-      tabCounter++;
-
-      // Clone the HTML content and append it to the document
-      var tabContent = document.createElement("div");
-      tabContent.setAttribute("id", "new-tab" + tabCounter);
-      tabContent.innerHTML = `
-           <button type="button" id="col-btn${tabCounter}" class="collapsible">
-            <span id="button-text${tabCounter}">Scenario ${tabCounter}</span>
-            <span>&nbsp;</span>
-            <span>&nbsp;</span>
-            <i class="fa-solid fa-pen-to-square fa-lg" onclick="editButtonTabs(${tabCounter})"></i>
-            <i class="fa-solid fa-x fa-xl close-icon" id="close-button${tabCounter}"></i>
-         </button>
-           <div class="content" id="opt-tab${tabCounter}">
-            <div class="loading-overlay" id="loading-overlay${tabCounter}">
-               <div class="searchLoader">
-                  <svg id="loading-wheel" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
-                  <style>
-                  .st0{opacity:0.1;} .st1{opacity:0.33;} .st2{opacity:0.66;}
-                  </style>
-                  <path d="M30 0c1 0 1.8.8 1.8 1.8v7.8h-3.6V1.8C28.2.8 29 0 30 0zM1.8 28.2h7.8v3.6H1.8C.8 31.8 0 31 0 30s.8-1.8 1.8-1.8zM9.6 47.8l3.4-3.4 1.3-1.3 2.6 2.6-1.3 1.3-3.4 3.4-.9.9c-.4.4-.8.5-1.3.5s-.9-.2-1.3-.5c-.7-.7-.7-1.8 0-2.6l.9-.9z"/>
-                  <path class="st0" d="M48.7 8.8c.7-.7 1.8-.7 2.6 0 .7.7.7 1.8 0 2.6l-.9.9-3 3-.4.3-1.3 1.3-2.6-2.6 1.7-1.7 3.9-3.8z"/>
-                  <path d="M31.8 52.2v6.1c0 1-.8 1.8-1.8 1.8s-1.8-.8-1.8-1.8V50.4h3.6v1.8z"/>
-                  <path class="st1" d="M50.4 28.2h7.8c1 0 1.8.8 1.8 1.8s-.8 1.8-1.8 1.8h-7.8v-3.6z"/>
-                  <path d="M10.7 13.3l-1.9-1.9c-.7-.7-.7-1.8 0-2.6.7-.7 1.8-.7 2.6 0l4.3 4.3 1.3 1.3-2.6 2.6-3.7-3.7z"/>
-                  <path class="st2" d="M47 44.4l.4.4 3 3 .9.9c.7.7.7 1.8 0 2.6-.4.4-.8.5-1.3.5s-.9-.2-1.3-.5l-3.8-3.8-1.7-1.7 2.6-2.6 1.2 1.2z"/>
-                  </svg>
-            </div>
-         </div>
-      <div class="content-sub">
-         <div class="div-above-nav-bar" id="buttons-div${tabCounter}">
-               <div class="nav-model-left">
-                  <div class="split-nav">
-                     <div class="top-half-nav">
-                        <div class="obj-func">       
-                           <div class="dropdown" id="dd-obj${tabCounter}">
-                              <div class="select">
-                              <span>Select KPI</span>
-                              <i class="fa fa-chevron-left"></i>
-                           </div>
-                           <input type="hidden" name="objective" id="obj-input${tabCounter}">
-                           <ul class="dropdown-menu">
-                              <li id="profit">Profit</li>
-                              <li id="revenue">Revenue</li>
-                              <li id="roi">ROI</li>
-                           </ul>
-                        </div>
-                     </div>
-                     <div class="blend">       
-                     <div class="dropdown" id="dd-blend${tabCounter}">
-                        <div class="select">
-                           <span>Objective Function</span>
-                           <i class="fa fa-chevron-left"></i>
-                        </div>
-                        <input type="hidden" name="blend" id="blend-input${tabCounter}">
-                        <ul class="dropdown-menu">
-                           <li id="blend">Blended</li>
-                           <li id="st">ST</li>
-                           <li id="lt">LT</li>
-                        </ul>
-                     </div>
-                  </div>
-                  <div class="exh-bud">       
-                     <div class="dropdown" id="dd-exh${tabCounter}">
-                        <div class="select">
-                           <span>Budget Exhaustion</span>
-                           <i class="fa fa-chevron-left"></i>
-                        </div>
-                        <input type="hidden" name="exhaust-budget" id="exh-input${tabCounter}">
-                        <ul class="dropdown-menu">
-                           <li id="yes">Exhaust Budget</li>
-                           <li id="no">Do Not Exhaust Budget</li>
-                        </ul>
-                     </div>
-                  </div>
-               </div>
-               <div class="bottom-half-nav">
-                  <input type="number" id="max-input${tabCounter}" step="5000" placeholder="Enter Max Budget">
-                  
-               </div>
-            </div>
-            <div class="date-cont" id="date-cont">
-               <div class="date-range-label">
-                  <label for="end-date">Date Range Filter:</label>
-                  <div class="toggle-button-cover">
-                     <div class="button-cover">
-                        <div class="button d">
-                           <input type="checkbox" class="checkbox" id="date-filter-button${tabCounter}" />
-                           <div class="knobs"></div>
-                           <div class="layer"></div>
-                           </div>
-                        </div>
-                     </div>
-                  </div>
-                  <div class="date-inputs${tabCounter} greyed-out">
-                     <input type="date" name="start-date" id="start-date${tabCounter}" class="start-date" placeholder="Start date" />
-                     <input type="date" name="end-date" class="end-date" id="end-date${tabCounter}" placeholder="End date" />
-                  </div>
-                  </div>
-                  <div class="opt-cont-parent" id="opt-button-cont">
-                     <button class="button-4" role="button" id="opt-button${tabCounter}">Optimise</button>
-                  </div>
-               </div>
-            </div>
-            <div class="bo-container" id="channel-container${tabCounter}">
-            <table id="channel${tabCounter}" class="hover">
-               <thead>
-                  <tr>
-                     <th><input type="checkbox" name="select_all" value="1" id="example-select-all${tabCounter}" ></th>
-                     <th>Region</th>
-                     <th>Brand</th>
-                     <th>Channel</th>
-                     <th>Current Budget</th>
-                     <th>Min Spend Cap</th>
-                     <th>Max Spend Cap</th>
-                     <th>Laydown</th>
-                     </tr>
-                  </thead>
-               </table>
-            </div>
-         </div>
-      </div>
-   </div>
-`;
-
-      var mainCont = document.getElementById("main-container");
-      mainCont.appendChild(tabContent);
-      initializeCollapsibleButtons(tabCounter);
-      initializeDataTable(tabCounter);
-      //initializeButtons(tabCounter);
-      closeButtonTab(tabCounter);
-      dropdownButtons(tabCounter);
-      $(".sparkline").each(function () {
-        var $sparkline = $(this);
-        var sparklineData = $sparkline.text();
-        $sparkline.empty().sparkline(sparklineData, {
-          type: "line",
-          width: "250px",
-        });
-      });
-      // redrawAllTables(tabCounter);
-      var buttonName = document.getElementById("button-text" + tabCounter);
-      tabNames[tabCounter] = buttonName.textContent;
-      console.log(tabNames);
-    });
+    .addEventListener("click", spawnNewTabAndIncrementCounter)
 }
+
+
 
 function syncTabCounter() {
   $.ajax({
@@ -199,31 +58,7 @@ function syncTabCounter() {
   });
 }
 
-function initializeInitialButton() {
-  var content = document.getElementById("opt-tab1");
-  var coll = document.getElementById("col-btn1");
-  var table = document.getElementById("channel-container1");
-  var buttonsDiv = document.getElementById("buttons-div1");
-  coll.addEventListener("click", function () {
-    this.classList.toggle("active");
-    console.log("col-btn" + tabCounter);
-    switch (table.style.maxHeight) {
-      case "100%":
-        table.style.maxHeight = "0%";
-        table.style.opacity = 0;
-        content.style.maxHeight = buttonsDiv.scrollHeight + "px";
-        break;
-      case "0%":
-        table.style.maxHeight = "100%";
-        table.style.opacity = 1;
-        content.style.maxHeight = "100%";
-        break;
-    }
-  });
-  table.style.maxHeight = "0%";
-  table.style.opacity = 0;
-  content.style.maxHeight = buttonsDiv.scrollHeight + "px";
-}
+
 
 function initializeCollapsibleButtons(colID) {
   var content = document.getElementById("opt-tab" + colID);
@@ -329,310 +164,7 @@ function sendTableIDsOnRefresh() {
     },
   });
 }
-function initializeInitialTable() {
-  var channelTable = $("#channel1").DataTable({
-    dom: "Blfrtip",
-    destroy: true,
-    ajax: {
-      url: "/channel_main",
-      contentType: "application/json",
-      dataSrc: "1",
-    },
-    drawCallback: function () {
-      $(".sparkline1")
-        .map(function () {
-          return $("canvas", this).length ? null : this;
-        })
-        .sparkline("html", {
-          type: "line",
-          width: "250px",
-        });
-    },
-    columns: [
-      { data: null },
-      { data: "Region" },
-      { data: "Brand" },
-      { data: "Channel" },
-      // { data: "Beta", render: $.fn.DataTable.render.number(",", ".", 0, "") },
-      {
-        data: "Current Budget",
-        render: $.fn.DataTable.render.number(",", ".", 0, "£"),
-      },
-      {
-        data: "Min Spend Cap",
-        render: $.fn.DataTable.render.number(",", ".", 0, "£"),
-      },
-      {
-        data: "Max Spend Cap",
-        render: $.fn.DataTable.render.number(",", ".", 0, "£"),
-      },
 
-      {
-        data: "Laydown",
-        render: function (data, type, row, meta) {
-          return type === "display"
-            ? '<span class="sparkline1">' + data.toString() + "</span>"
-            : data;
-        },
-      },
-    ],
-    autoWidth: false,
-    columnDefs: [
-      { width: "50px", targets: 0 },
-      { width: "80px", targets: 1 },
-      { width: "80px", targets: 2 },
-      { width: "80px", targets: 3 },
-      { width: "80px", targets: 4 },
-      { width: "80px", targets: 5 },
-      { width: "80px", targets: 6 },
-      { width: "250px", targets: 7 },
-      {
-        targets: 0,
-        searchable: false,
-        orderable: false,
-        className: "dt-body-center",
-        render: function (data, type, full, meta) {
-          return '<input type="checkbox">';
-        },
-      },
-      { className: "dt-head-center", targets: [0, 1, 2, 3, 4, 5, 6, 7] },
-    ],
-    rowId: "row_id",
-    createdRow: function (row, data, dataIndex) {
-      $(row).addClass("disabled");
-    },
-  });
-
-  channelTable.rows().nodes().to$().addClass('disabled');
-  
-  $.ajax({
-    url: "/date_range",
-    type: "GET",
-    dataType: "json",
-    success: function (data) {
-      console.log("fetching and applying dates");
-      // Set the fetched dates as default values for date inputs
-
-      var startDate = new Date(data.startDate).toISOString().split("T")[0];
-      var endDate = new Date(data.endDate).toISOString().split("T")[0];
-
-      $("#start-date1").val(startDate);
-      $("#start-date1").prop("min", startDate);
-      $("#start-date1").prop("max", endDate);
-      $("#end-date1").val(endDate);
-      $("#end-date1").prop("min", startDate);
-      $("#end-date1").prop("max", endDate);
-    },
-    error: function (error) {
-      console.error("Error fetching dates:", error);
-    },
-  });
-
-  var channelEditor = new $.fn.dataTable.Editor({
-    ajax: {
-      type: "POST",
-      url: "/table_data_editor",
-      contentType: "application/json", // Set the content type to JSON
-      data: function (d) {
-        d.tableId = "1";
-        return JSON.stringify(d); // Convert the data to JSON string
-      },
-    },
-    table: "#channel1",
-    fields: [
-      {
-        label: "Min Spend Cap:",
-        name: "Min Spend Cap",
-      },
-      {
-        label: "Max Spend Cap:",
-        name: "Max Spend Cap",
-      },
-    ],
-    idSrc: "row_id",
-  });
-
-  channelTable.on(
-    "mouseenter",
-    "tbody td:nth-child(0), tbody td:nth-child(7), tbody td:nth-child(6)",
-    function (e) {
-      $(this).css({
-        cursor: "text",
-        userSelect: "none",
-      });
-    }
-  );
-
-  channelTable.on(
-    "mouseleave",
-    "tbody td:nth-child(0), tbody td:nth-child(7), tbody td:nth-child(6)",
-    function (e) {
-      $(this).css({
-        cursor: "default",
-        userSelect: "auto",
-      });
-    }
-  );
-
-  channelTable.on(
-    "click",
-    "tbody td:nth-child(7), tbody td:nth-child(6)",
-    function (e) {
-      channelEditor.inline(this);
-    }
-  );
-  // channelTable.on("page.dt", function () {
-  //   channelTable.ajax.reload(null, false);
-  // });
-  $("#example-select-all").on("click", function () {
-    // Get all rows with search applied
-    var rows = channelTable.rows({ search: "applied" }).nodes();
-    // Check/uncheck checkboxes for all rows in the table
-    $('input[type="checkbox"]', rows).prop("checked", this.checked);
-    if (!this.checked) {
-      $(rows).addClass("disabled");
-    } else {
-      $(rows).removeClass("disabled");
-    }
-  });
-
-  // Handle click on checkbox to set state of "Select all" control
-  $("#channel1 tbody").on("change", 'input[type="checkbox"]', function () {
-    // If checkbox is not checked
-    if (!this.checked) {
-      var el = $("#example-select-all").get(0);
-      // If "Select all" control is checked and has 'indeterminate' property
-      if (el && el.checked && "indeterminate" in el) {
-        // Set visual state of "Select all" control
-        // as 'indeterminate'
-        el.indeterminate = true;
-      }
-    }
-  });
-
-  // Handle form submission event
-  $("#frm-example").on("submit", function (e) {
-    var form = this;
-
-    // Iterate over all checkboxes in the table
-    channelTable.$('input[type="checkbox"]').each(function () {
-      // If checkbox doesn't exist in DOM
-      if (!$.contains(document, this)) {
-        // If checkbox is checked
-        if (this.checked) {
-          // Create a hidden element
-          $(form).append(
-            $("<input>")
-              .attr("type", "hidden")
-              .attr("name", this.name)
-              .val(this.value)
-          );
-        }
-      }
-    });
-  });
-
-  $("#channel1 tbody").on("change", 'input[type="checkbox"]', function () {
-    var row = $(this).closest("tr");
-    var rowId = channelTable.row(row).id();
-    var isChecked = $(this).prop("checked");
-    if (isChecked) {
-      channelTable.row(row).nodes().to$().removeClass("disabled");
-      console.log("removing class");
-    } else {
-      channelTable.row(row).nodes().to$().addClass("disabled");
-      console.log("adding class");
-    }
-  });
-
-  function getDisabledRowIds() {
-    var disabledRowIds = [];
-
-    channelTable
-      .rows(".disabled")
-      .data()
-      .each(function (row) {
-        var rowId = row.row_id;
-        disabledRowIds.push(rowId);
-      });
-
-    return disabledRowIds;
-  }
-
-  document.addEventListener("DOMContentLoaded", function () {
-    var obj = document.getElementById("obj-input1");
-    var exh = document.getElementById("exh-input1");
-    var max = document.getElementById("max-input1");
-    var optButton = document.getElementById("opt-button1");
-    var blend = document.getElementById("blend-input1");
-
-
-    optButton.addEventListener("click", function () {
-      showLoadingOverlay(1);
-      var objValue = obj.value;
-      var exhValue = exh.value;
-      var maxValue = max.value;
-      var blendValue = blend.value;
-
-      var disabledRowIds = getDisabledRowIds();
-      var tabName = fetchTabName(1);
-      console.log("tabName:" + tabName);
-      var dataToSend = {
-        objectiveValue: objValue,
-        exhaustValue: exhValue,
-        maxValue: maxValue,
-        blendValue: blendValue,
-        tableID: 1,
-
-        disabledRows: disabledRowIds,
-        tabName: tabName,
-      };
-
-      var dateButtonIsChecked = $("#date-filter-button1").prop("checked");
-      var startDate = $("#start-date1").val();
-      var endDate = $("#end-date1").val();
-      var dateTuple = [startDate, endDate];
-      if (dateButtonIsChecked) {
-        dataToSend["dates"] = dateTuple;
-      }
-      console.log(dataToSend);
-      
-      if (disabledRowIds.length < 85) {
-        $("#warningPopup").show();
-        $("#continueWarning").click(function () {
-          // Hide modal
-          $("#warningPopup").hide();
-          // Emit socket event
-          socket.emit("optimise", { dataToSend: dataToSend });
-        });
-
-        // Event listener for close button
-        $("#cancelWarning").click(function () {
-          // Hide modal
-          $("#warningPopup").hide();
-          hideLoadingOverlay(1);
-        });
-      } else {
-        socket.emit("optimise", { dataToSend: dataToSend });
-      }
-    });
-  });
-
-  $("#date-filter-button1").on("click", function () {
-    var isChecked = $(this).prop("checked");
-    var dateContainers = $(".date-inputs");
-
-    if (!isChecked) {
-      console.log("date button is unchecked");
-      dateContainers.addClass("greyed-out");
-    } else {
-      console.log("date button is checked");
-      dateContainers.removeClass("greyed-out");
-    }
-  });
-}
-
-initializeInitialTable();
 
 function getDisabledRowIds(tableID) {
   var disabledRowIds = [];
@@ -818,7 +350,7 @@ function optAll() {
             hideLoadingOverlay(tableId);
           });
         });
-        } else {
+                } else {
         optAllArray.forEach(function(data) {
           socket.emit("optimise", data);
         });
@@ -848,7 +380,6 @@ function dropdownButtons(dropdownId) {
       .find("input")
       .attr("value", $(this).attr("id"));
   });
-
   $("#dd-exh" + dropdownId).click(function () {
     $(this).attr("tabindex", 1).focus();
     $(this).toggleClass("active");
@@ -868,7 +399,6 @@ function dropdownButtons(dropdownId) {
       .find("input")
       .attr("value", $(this).attr("id"));
   });
-
   $("#dd-blend" + dropdownId).click(function () {
     $(this).attr("tabindex", 1).focus();
     $(this).toggleClass("active");
@@ -888,6 +418,156 @@ function dropdownButtons(dropdownId) {
       .find("input")
       .attr("value", $(this).attr("id"));
   });
+}
+
+function spawnNewTabAndIncrementCounter() {
+  tabCounter++; // Increment tabCounter
+  spawnNewTab(tabCounter); // Invoke spawnNewTab function
+}
+
+function spawnNewTab(tabCounter) {
+  // Clone the HTML content and append it to the document
+  var tabContent = document.createElement("div");
+  tabContent.setAttribute("id", "new-tab" + tabCounter);
+  tabContent.innerHTML = `
+           <button type="button" id="col-btn${tabCounter}" class="collapsible">
+            <span id="button-text${tabCounter}">Scenario ${tabCounter}</span>
+            <span>&nbsp;</span>
+            <span>&nbsp;</span>
+            <i id="edit-tab-button${tabCounter}" class="fa-solid fa-pen-to-square fa-lg"></i>
+            <i class="fa-solid fa-x fa-xl close-icon" id="close-button${tabCounter}"></i>
+         </button>
+           <div class="content" id="opt-tab${tabCounter}">
+            <div class="loading-overlay" id="loading-overlay${tabCounter}">
+               <div class="searchLoader">
+                  <svg id="loading-wheel" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
+                  <style>
+                  .st0{opacity:0.1;} .st1{opacity:0.33;} .st2{opacity:0.66;}
+                  </style>
+                  <path d="M30 0c1 0 1.8.8 1.8 1.8v7.8h-3.6V1.8C28.2.8 29 0 30 0zM1.8 28.2h7.8v3.6H1.8C.8 31.8 0 31 0 30s.8-1.8 1.8-1.8zM9.6 47.8l3.4-3.4 1.3-1.3 2.6 2.6-1.3 1.3-3.4 3.4-.9.9c-.4.4-.8.5-1.3.5s-.9-.2-1.3-.5c-.7-.7-.7-1.8 0-2.6l.9-.9z"/>
+                  <path class="st0" d="M48.7 8.8c.7-.7 1.8-.7 2.6 0 .7.7.7 1.8 0 2.6l-.9.9-3 3-.4.3-1.3 1.3-2.6-2.6 1.7-1.7 3.9-3.8z"/>
+                  <path d="M31.8 52.2v6.1c0 1-.8 1.8-1.8 1.8s-1.8-.8-1.8-1.8V50.4h3.6v1.8z"/>
+                  <path class="st1" d="M50.4 28.2h7.8c1 0 1.8.8 1.8 1.8s-.8 1.8-1.8 1.8h-7.8v-3.6z"/>
+                  <path d="M10.7 13.3l-1.9-1.9c-.7-.7-.7-1.8 0-2.6.7-.7 1.8-.7 2.6 0l4.3 4.3 1.3 1.3-2.6 2.6-3.7-3.7z"/>
+                  <path class="st2" d="M47 44.4l.4.4 3 3 .9.9c.7.7.7 1.8 0 2.6-.4.4-.8.5-1.3.5s-.9-.2-1.3-.5l-3.8-3.8-1.7-1.7 2.6-2.6 1.2 1.2z"/>
+                  </svg>
+            </div>
+         </div>
+      <div class="content-sub">
+         <div class="div-above-nav-bar" id="buttons-div${tabCounter}">
+               <div class="nav-model-left">
+                  <div class="split-nav">
+                     <div class="top-half-nav">
+                        <div class="obj-func">       
+                           <div class="dropdown" id="dd-obj${tabCounter}">
+                              <div class="select">
+                              <span>Select KPI</span>
+                              <i class="fa fa-chevron-left"></i>
+                           </div>
+                           <input type="hidden" name="objective" id="obj-input${tabCounter}">
+                           <ul class="dropdown-menu">
+                              <li id="profit">Profit</li>
+                              <li id="revenue">NNS</li>
+                              <li id="roi">ROI</li>
+                           </ul>
+                        </div>
+                     </div>
+                     <div class="blend">       
+                     <div class="dropdown" id="dd-blend${tabCounter}">
+                        <div class="select">
+                           <span>Objective Function</span>
+                           <i class="fa fa-chevron-left"></i>
+                        </div>
+                        <input type="hidden" name="blend" id="blend-input${tabCounter}">
+                        <ul class="dropdown-menu">
+                           <li id="blend">Blended</li>
+                           <li id="st">ST</li>
+                           <li id="lt">LT</li>
+                        </ul>
+                     </div>
+                  </div>
+                  <div class="exh-bud">       
+                     <div class="dropdown" id="dd-exh${tabCounter}">
+                        <div class="select">
+                           <span>Budget Exhaustion</span>
+                           <i class="fa fa-chevron-left"></i>
+                        </div>
+                        <input type="hidden" name="exhaust-budget" id="exh-input${tabCounter}">
+                        <ul class="dropdown-menu">
+                           <li id="yes">Exhaust Budget</li>
+                           <li id="no">Do Not Exhaust Budget</li>
+                        </ul>
+                     </div>
+                  </div>
+               </div>
+               <div class="bottom-half-nav">
+                  <input type="number" id="max-input${tabCounter}" step="5000" placeholder="Enter Max Budget">
+                  
+               </div>
+            </div>
+            <div class="date-cont" id="date-cont">
+               <div class="date-range-label">
+                  <label for="end-date">Date Range Filter:</label>
+                  <div class="toggle-button-cover">
+                     <div class="button-cover">
+                        <div class="button d">
+                           <input type="checkbox" class="checkbox" id="date-filter-button${tabCounter}" />
+                           <div class="knobs"></div>
+                           <div class="layer"></div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div class="date-inputs${tabCounter} greyed-out">
+                     <input type="date" name="start-date" id="start-date${tabCounter}" class="start-date" placeholder="Start date" />
+                     <input type="date" name="end-date" class="end-date" id="end-date${tabCounter}" placeholder="End date" />
+                  </div>
+                  </div>
+                  <div class="opt-cont-parent" id="opt-button-cont">
+                     <button class="button-4" role="button" id="opt-button${tabCounter}">Optimise</button>
+                  </div>
+               </div>
+            </div>
+            <div class="bo-container" id="channel-container${tabCounter}">
+            <table id="channel${tabCounter}" class="hover">
+               <thead>
+                  <tr>
+                     <th><input type="checkbox" name="select_all" value="1" id="example-select-all${tabCounter}" ></th>
+                     <th>Region</th>
+                     <th>Brand</th>
+                     <th>Channel</th>
+                     <th>Current Budget</th>
+                     <th>Min Spend Cap</th>
+                     <th>Max Spend Cap</th>
+                     <th>Laydown</th>
+                     </tr>
+                  </thead>
+               </table>
+            </div>
+         </div>
+      </div>
+   </div>
+`;
+
+  var mainCont = document.getElementById("tab-container");
+  mainCont.appendChild(tabContent);
+  initializeCollapsibleButtons(tabCounter);
+  initializeDataTable(tabCounter);
+  editButtonTabs(tabCounter);
+  closeButtonTab(tabCounter);
+  dropdownButtons(tabCounter);
+  $(".sparkline").each(function () {
+    var $sparkline = $(this);
+    var sparklineData = $sparkline.text();
+    $sparkline.empty().sparkline(sparklineData, {
+      type: "line",
+      width: "250px",
+    });
+  });
+  // redrawAllTables(tabCounter);
+  var buttonName = document.getElementById("button-text" + tabCounter);
+  tabNames[tabCounter] = buttonName.textContent;
+  console.log(tabNames);
 }
 
 function initializeDataTable(tableID) {
@@ -924,15 +604,27 @@ function initializeDataTable(tableID) {
           { data: "Channel" },
           {
             data: "Current Budget",
-            render: $.fn.DataTable.render.number(",", ".", 0, "£"),
+            render: function (data, type, row) {
+              return (
+                $.fn.DataTable.render.number(",", ".", 0).display(data) + " CHF"
+              );
+            },
           },
           {
             data: "Min Spend Cap",
-            render: $.fn.DataTable.render.number(",", ".", 0, "£"),
+            render: function (data, type, row) {
+              return (
+                $.fn.DataTable.render.number(",", ".", 0).display(data) + " CHF"
+              );
+            },
           },
           {
             data: "Max Spend Cap",
-            render: $.fn.DataTable.render.number(",", ".", 0, "£"),
+            render: function (data, type, row) {
+              return (
+                $.fn.DataTable.render.number(",", ".", 0).display(data) + " CHF"
+              );
+            },
           },
           {
             data: "Laydown",
@@ -963,9 +655,9 @@ function initializeDataTable(tableID) {
             orderable: false,
             className: "dt-body-center",
             render: function (data, type, full, meta) {
-              return (
-                '<input type="checkbox">'
-              );
+              return `<input type="checkbox" id="checkbox${tableID}-${
+                meta.row + 1
+              }">`;
             },
           },
           { className: "dt-head-center", targets: [0, 1, 2, 3, 4, 5, 6, 7] },
@@ -1086,9 +778,11 @@ function initializeDataTable(tableID) {
           if (isChecked) {
             tabChannelTable.row(row).nodes().to$().removeClass("disabled");
             console.log("removing class");
+            console.log(rowId);
           } else {
             tabChannelTable.row(row).nodes().to$().addClass("disabled");
             console.log("adding class");
+            console.log(rowId);
           }
         }
       );
@@ -1114,19 +808,7 @@ function initializeDataTable(tableID) {
           console.error("Error fetching dates:", error);
         },
       });
-      function getDisabledRowIds() {
-        var disabledRowIds = [];
 
-        tabChannelTable
-          .rows(".disabled")
-          .data()
-          .each(function (row) {
-            var rowId = row.row_id;
-            disabledRowIds.push(rowId);
-          });
-
-        return disabledRowIds;
-      }
 
       var obj = document.getElementById("obj-input" + tableID);
       var exh = document.getElementById("exh-input" + tableID);
@@ -1142,7 +824,7 @@ function initializeDataTable(tableID) {
         var maxValue = max.value;
         var blendValue = blend.value;
 
-        var disabledRowIds = getDisabledRowIds();
+        var disabledRowIds = getDisabledRowIds(tableID);
         var tabName = fetchTabName(tableID);
 
         var dataToSend = {
@@ -1234,6 +916,7 @@ function destroyTables(tableID) {
     console.log("#channel" + i + " destroyed");
   }
 }
+
 function showResultsButton() {
   var div = document.getElementById("results-div");
   var existingButton = document.getElementById("results-button");
@@ -1258,18 +941,18 @@ function showResultsButton() {
     window.dispatchEvent(event);
   }
 }
-var tabSocket = io.connect(window.location.origin);
 
-tabSocket.on("connect", function () {
-  console.log("connected to server");
-});
 
-tabSocket.on("opt_complete", function (data) {
+
+
+socket.on("opt_complete", function (data) {
   var tableID = data.data;
   console.log("hiding the loading overlay for channel table " + tableID);
   hideLoadingOverlay(tableID);
   showResultsButton();
 });
+
+// SAVEUI BELOW
 
 $(document).ready(function () {
   $("#load-list").click(function () {
@@ -1293,28 +976,21 @@ $(document).ready(function () {
   $("#overwriteSave").click(function () {
     overwriteSave();
   });
-
 });
 
-function editButton() {
-  var setText = document.getElementById("button-text1");
-  var newText = prompt("Rename Tab:");
-
-  if (newText !== null) {
-    setText.textContent = newText;
-    tabNames[1] = newText;
-  }
-}
-
 function editButtonTabs(tabID) {
-  var setText = document.getElementById("button-text" + tabID);
-  var newText = prompt("Rename Tab:");
+  var editBtn = document.getElementById("edit-tab-button"+tabID);
+  editBtn.addEventListener("click", function() {
+    var setText = document.getElementById("button-text" + tabID);
+    var newText = prompt("Rename Tab:");
 
-  if (newText !== null) {
-    setText.textContent = newText;
-    tabNames[tabID] = newText;
-    console.log(tabNames);
-  }
+    if (newText !== null) {
+      setText.textContent = newText;
+      tabNames[tabID] = newText;
+      console.log(tabNames);
+    }
+  });
+
   syncTabNames();
 }
 
@@ -1361,6 +1037,7 @@ function initializeLoadTable() {
   });
   isLoadTableInitialized = true;
 }
+
 function initializeSavesTable() {
   if ($.fn.DataTable.isDataTable("#saves-table")) {
     console.log("saves table already exists");
@@ -1400,6 +1077,159 @@ function reloadSaveTable() {
   }
 }
 
+function enteredBudget(tableID) {
+  const budgetInput = document.getElementById('max-input'+tableID);
+  const budgetValue = budgetInput.value;
+  return budgetValue;
+}
+
+function selectedDropDownOptions(tableID) {
+  
+  const selectedKPI = document.getElementById('obj-input'+tableID);
+  const selectedBlendOption = document.getElementById('blend-input'+tableID);
+  const selectedBudgetOption = document.getElementById('exh-input'+tableID);
+
+  const kpiValue = selectedKPI.value;
+  const selectedBlendValue = selectedBlendOption.value;
+  const selectedBudgetValue = selectedBudgetOption.value;
+
+  var optionsArray = [kpiValue,selectedBlendValue, selectedBudgetValue];
+
+  return optionsArray;
+}
+
+function dateOptions(tableID) {
+  var dateArray = [];
+  var startDateElement = document.getElementById("start-date"+tableID);
+  var endDateElement = document.getElementById("end-date"+tableID);
+  var startDateValue = startDateElement.value;
+  var endDateValue = endDateElement.value;
+  var dateBool = null;
+  var dateButtonIsChecked = $("#date-filter-button"+tableID).prop("checked");
+  if (dateButtonIsChecked) {
+    dateBool = true;
+  } else {
+    dateBool = false;
+  }
+  dateArray = [startDateValue, endDateValue];
+  return [dateBool, dateArray];
+}
+
+
+function saveFunc() {
+  console.log("save button clicked");
+
+  var snapshotName = window.prompt("Please provide a name for this snapshot:");
+  if (snapshotName !== null) {
+    var objToSend = {};
+    $.ajax({
+      url: "get_table_ids",
+      method: "GET",
+      contentType: "application/json",
+      success: function (response) {
+        if (response && response.tableIds) {
+          console.log(response.tableIds);
+          var tableIds = response.tableIds;
+    
+          closeSavePopup();
+
+            tableIds.forEach(function(tableID) {
+              var disabledRowIds = getDisabledRowIds(tableID);
+              var budget = enteredBudget(tableID);
+              var [dateBool, dateArray] = dateOptions(tableID);
+              var options = selectedDropDownOptions(tableID);
+              var savedDataFromTable = {
+                disabledRowIds: disabledRowIds,
+                enteredBudget: budget,
+                dateBool: dateBool,
+                dateArray: dateArray,
+                optionsArray: options
+              }
+              objToSend[tableID] = savedDataFromTable;
+            });
+           
+          }
+             
+          console.log("current tabNames are:");
+          console.log(tabNames);
+          $.ajax({
+            url: "/save_snapshot",
+            method: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({
+              content: objToSend,
+              name: snapshotName,
+              scenarioNames: tabNames,
+            }),
+            success: function (response) {
+              console.log(response);
+              
+            },
+            error: function (error) {
+              console.error("Error saving snapshot:", error);
+            },
+          });
+        
+      },
+    });
+  }
+}
+
+function overwriteSave() {
+
+    var selectedRow = saveTable.row({ selected: true }).data();
+    if (selectedRow) {
+      var selectedSaveId = selectedRow.DT_RowId;
+      var objToSend = {};
+      // Send a POST request to the Flask backend with the selected row data
+      $.ajax({
+        url: "get_table_ids",
+        method: "GET",
+        contentType: "application/json",
+        success: function (response) {
+          if (response && response.tableIds) {
+            console.log(response.tableIds);
+            var tableIds = response.tableIds;
+
+            closeSavePopup();
+            tableIds.forEach(function (tableID) {
+              var disabledRowIds = getDisabledRowIds(tableID);
+              var budget = enteredBudget(tableID);
+              var [dateBool, dateArray] = dateOptions(tableID);
+              var options = selectedDropDownOptions(tableID);
+              var savedDataFromTable = {
+                disabledRowIds: disabledRowIds,
+                enteredBudget: budget,
+                dateBool: dateBool,
+                dateArray: dateArray,
+                optionsArray: options,
+              };
+              objToSend[tableID] = savedDataFromTable;
+            });
+          }
+            $.ajax({
+              url: "/overwrite_save",
+              method: "POST",
+              contentType: "application/json",
+              data: JSON.stringify({
+                content: objToSend,
+                scenarioNames: tabNames,
+                selectedSaveId:selectedSaveId
+              }),
+              success: function (response) {
+                console.log(response);
+
+              },
+              error: function (error) {
+                console.error("Error overwriting save:", error);
+              },
+            });
+          }
+        });
+      }
+    }
+     
+
 function loadFunc() {
   var selectedRow = $("#load-table")
     .DataTable()
@@ -1423,49 +1253,18 @@ function loadFunc() {
           method: "GET",
           contentType: "application/json",
           success: function (response) {
-            if (
-              response &&
-              response.content &&
-              response.table_ids &&
-              response.scenario_names
-            ) {
-              var tableIdsString = response.table_ids;
-              var scenarioNamesString = response.scenario_names;
-              var scenarioNamesArray = scenarioNamesString
-                .replace(/[{}""]/g, "")
-                .split(",");
-              var tableIdsArray = tableIdsString.split(",").map(function (id) {
-                return parseInt(id.trim(), 10);
-              });
-              const dictionary = tableIdsArray.reduce((acc, key, index) => {
-                acc[key] = scenarioNamesArray[index];
-                return acc;
-              }, {});
-              tabNames = dictionary;
-              var startingFromSecondElement = tableIdsArray.slice(1);
+            if (response && response.content && response.scenario_names) {
+              
+              var scenarioNameObj = response.scenario_names;
+              var arrayToLoad = response.content;
 
-              var contentToLoad = response.content;
-              document.getElementById("all-content").innerHTML = contentToLoad;
+              console.log("printing the loaded array:", arrayToLoad);
+              var tabContainer = document.getElementById("tab-container");
+              tabContainer.innerHTML = '';
+              initializeDataTableFromSave(arrayToLoad, scenarioNameObj);
+              syncTabCounter();
 
-              initializeInitialButton();
-              initializeInitialTable();
-              dropdownButtons(1);
-              //initializeButtons(1);
-              newTabButtonInit();
-              console.log("attempting to reinitialize load and save table");
-
-              initializeLoadTable();
-              initializeSavesTable();
-
-              startingFromSecondElement.forEach(function (id) {
-                dropdownButtons(id);
-                initializeDataTable(id);
-                // attachButtonListenersToDataTable(id);
-                // redrawAllSparklines(id);
-                initializeCollapsibleButtons(id);
-                //initializeButtons(id);
-                closeButtonTab(id);
-              });
+              // call buildDatatable funciton here
             }
             sendTableIDsOnRefresh();
             syncTabCounter();
@@ -1481,117 +1280,523 @@ function loadFunc() {
   }
 }
 
-function saveFunc() {
-  console.log("save button clicked");
+function initializeDataTableFromSave(data, scenarioNameObj) {
 
-  var snapshotName = window.prompt("Please provide a name for this snapshot:");
-  if (snapshotName !== null) {
-    $.ajax({
-      url: "get_table_ids",
-      method: "GET",
-      contentType: "application/json",
-      success: function (response) {
-        if (response && response.tableIds) {
-          console.log(response.tableIds);
-          var tableIds = response.tableIds;
+  const tableIds = Object.keys(data);
 
-          destroyTables(tableIds.length + 1);
+  tableIds.forEach(function (tabCounter) {
+    const { disabledRowIds, enteredBudget, dateBool, dateArray, optionsArray } =
+      data[tabCounter];
+    const [startDate, endDate] = dateArray;
+    const [kpiValue, objValue, exhValue] = optionsArray;
+    var tabName = scenarioNameObj[tabCounter];
+    var kpiText = '';
+    var objText = '';
+    var exhText = '';
+    switch (kpiValue) {
+      case 'profit':
+        kpiText = 'Profit';
+        break;
+      case 'revenue':
+        kpiText = 'NNS';
+        break;
+      case 'roi':
+        kpiText = 'ROI';
+        break;
+      default:
+        kpiText = 'Select KPI'
+    }
+    switch (objValue) {
+      case 'blend':
+        objText = 'Blended';
+        break;
+      case 'st':
+        objText = 'ST';
+        break;
+      case 'lt':
+        objText = 'LT';
+        break;
+      default:
+        objText = 'Objective Function'
+      }
+      switch (exhValue) {
+        case 'yes':
+          exhText = 'Exhaust Budget';
+          break;
+        case 'no':
+          exhText = 'Do Not Exhaust budget';
+          break;     
+        default:
+          exhText = 'Budget Exhaustion';
+        }
+    const strDisabledRowIds = disabledRowIds.toString();
+      var tabContent = document.createElement("div");
+      tabContent.setAttribute("id", "new-tab" + tabCounter);
+      tabContent.innerHTML = `
+           <button type="button" id="col-btn${tabCounter}" class="collapsible">
+            <span id="button-text${tabCounter}">${tabName}</span>
+            <span>&nbsp;</span>
+            <span>&nbsp;</span>
+            <i id="edit-tab-button${tabCounter}" class="fa-solid fa-pen-to-square fa-lg"></i>
+            <i class="fa-solid fa-x fa-xl close-icon" id="close-button${tabCounter}"></i>
+         </button>
+           <div class="content" id="opt-tab${tabCounter}">
+            <div class="loading-overlay" id="loading-overlay${tabCounter}">
+               <div class="searchLoader">
+                  <svg id="loading-wheel" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
+                  <style>
+                  .st0{opacity:0.1;} .st1{opacity:0.33;} .st2{opacity:0.66;}
+                  </style>
+                  <path d="M30 0c1 0 1.8.8 1.8 1.8v7.8h-3.6V1.8C28.2.8 29 0 30 0zM1.8 28.2h7.8v3.6H1.8C.8 31.8 0 31 0 30s.8-1.8 1.8-1.8zM9.6 47.8l3.4-3.4 1.3-1.3 2.6 2.6-1.3 1.3-3.4 3.4-.9.9c-.4.4-.8.5-1.3.5s-.9-.2-1.3-.5c-.7-.7-.7-1.8 0-2.6l.9-.9z"/>
+                  <path class="st0" d="M48.7 8.8c.7-.7 1.8-.7 2.6 0 .7.7.7 1.8 0 2.6l-.9.9-3 3-.4.3-1.3 1.3-2.6-2.6 1.7-1.7 3.9-3.8z"/>
+                  <path d="M31.8 52.2v6.1c0 1-.8 1.8-1.8 1.8s-1.8-.8-1.8-1.8V50.4h3.6v1.8z"/>
+                  <path class="st1" d="M50.4 28.2h7.8c1 0 1.8.8 1.8 1.8s-.8 1.8-1.8 1.8h-7.8v-3.6z"/>
+                  <path d="M10.7 13.3l-1.9-1.9c-.7-.7-.7-1.8 0-2.6.7-.7 1.8-.7 2.6 0l4.3 4.3 1.3 1.3-2.6 2.6-3.7-3.7z"/>
+                  <path class="st2" d="M47 44.4l.4.4 3 3 .9.9c.7.7.7 1.8 0 2.6-.4.4-.8.5-1.3.5s-.9-.2-1.3-.5l-3.8-3.8-1.7-1.7 2.6-2.6 1.2 1.2z"/>
+                  </svg>
+            </div>
+         </div>
+      <div class="content-sub">
+         <div class="div-above-nav-bar" id="buttons-div${tabCounter}">
+               <div class="nav-model-left">
+                  <div class="split-nav">
+                     <div class="top-half-nav">
+                        <div class="obj-func">       
+                           <div class="dropdown" id="dd-obj${tabCounter}">
+                              <div class="select">
+                              <span>${kpiText}</span>
+                              <i class="fa fa-chevron-left"></i>
+                           </div>
+                           <input value="${kpiValue}" type="hidden" name="objective" id="obj-input${tabCounter}">
+                           <ul class="dropdown-menu">
+                              <li id="profit">Profit</li>
+                              <li id="revenue">NNS</li>
+                              <li id="roi">ROI</li>
+                           </ul>
+                        </div>
+                     </div>
+                     <div class="blend">       
+                     <div class="dropdown" id="dd-blend${tabCounter}">
+                        <div class="select">
+                           <span>${objText}</span>
+                           <i class="fa fa-chevron-left"></i>
+                        </div>
+                        <input value="${objValue}" type="hidden" name="blend" id="blend-input${tabCounter}">
+                        <ul class="dropdown-menu">
+                           <li id="blend">Blended</li>
+                           <li id="st">ST</li>
+                           <li id="lt">LT</li>
+                        </ul>
+                     </div>
+                  </div>
+                  <div class="exh-bud">       
+                     <div class="dropdown" id="dd-exh${tabCounter}">
+                        <div class="select">
+                           <span>${exhText}</span>
+                           <i class="fa fa-chevron-left"></i>
+                        </div>
+                        <input vaule="${exhValue}" type="hidden" name="exhaust-budget" id="exh-input${tabCounter}">
+                        <ul class="dropdown-menu">
+                           <li id="yes">Exhaust Budget</li>
+                           <li id="no">Do Not Exhaust Budget</li>
+                        </ul>
+                     </div>
+                  </div>
+               </div>
+               <div class="bottom-half-nav">
+                  <input value="${enteredBudget}" type="number" id="max-input${tabCounter}" step="5000" placeholder="Enter Max Budget">
+               </div>
+            </div>
+            <div class="date-cont" id="date-cont">
+               <div class="date-range-label">
+                  <label for="end-date">Date Range Filter:</label>
+                  <div class="toggle-button-cover">
+                     <div class="button-cover">
+                        <div class="button d">
+                           <input type="checkbox" class="checkbox" id="date-filter-button${tabCounter}" />
+                           <div class="knobs"></div>
+                           <div class="layer"></div>
+                           </div>
+                        </div>
+                     </div>
+                  </div>
+                  <div class="date-inputs${tabCounter} greyed-out">
+                     <input type="date" name="start-date" id="start-date${tabCounter}" class="start-date" placeholder="Start date" />
+                     <input type="date" name="end-date" class="end-date" id="end-date${tabCounter}" placeholder="End date" />
+                  </div>
+                  </div>
+                  <div class="opt-cont-parent" id="opt-button-cont">
+                     <button class="button-4" role="button" id="opt-button${tabCounter}">Optimise</button>
+                  </div>
+               </div>
+            </div>
+            <div class="bo-container" id="channel-container${tabCounter}">
+            <table id="channel${tabCounter}" class="hover">
+               <thead>
+                  <tr>
+                     <th><input type="checkbox" name="select_all" value="1" id="example-select-all${tabCounter}" ></th>
+                     <th>Region</th>
+                     <th>Brand</th>
+                     <th>Channel</th>
+                     <th>Current Budget</th>
+                     <th>Min Spend Cap</th>
+                     <th>Max Spend Cap</th>
+                     <th>Laydown</th>
+                     </tr>
+                  </thead>
+               </table>
+            </div>
+         </div>
+      </div>
+   </div>
+`;
 
-          if (isSaveTableInitialized) {
-            saveTable.destroy();
-            isSaveTableInitialized = false;
-            console.log("destroyed save table");
-          }
-          if (isLoadTableInitialized) {
-            loadTable.destroy();
-            isLoadTableInitialized = false;
-            console.log("destroyed load table");
-          }
+      var mainCont = document.getElementById("tab-container");
+      mainCont.appendChild(tabContent);
+      initializeCollapsibleButtons(tabCounter);
+      closeButtonTab(tabCounter);
+      editButtonTabs(tabCounter);
+           $("#date-filter-button" + tabCounter).on("click", function () {
+             var isChecked = $(this).prop("checked");
+             var dateContainers = $(".date-inputs" + tabCounter);
 
-          closeSavePopup();
-          var contentToSave = document.getElementById("all-content").innerHTML;
-          console.log("current tabNames are:");
-          console.log(tabNames);
-          $.ajax({
-            url: "/save_snapshot",
-            method: "POST",
-            contentType: "application/json",
-            data: JSON.stringify({
-              content: contentToSave,
-              name: snapshotName,
-              scenarioNames: Object.values(tabNames),
-            }),
-            success: function (response) {
-              console.log(response);
-              initializeInitialTable();
-              tableIds.forEach(function (id) {
-                initializeDataTable(id);
-              });
-              initializeSavesTable();
-              initializeLoadTable();
-              console.log("reinitialized all tables");
+             if (!isChecked) {
+               console.log("date button is unchecked");
+               dateContainers.addClass("greyed-out");
+             } else {
+               console.log("date button is checked");
+               dateContainers.removeClass("greyed-out");
+             }
+           }); dropdownButtons(tabCounter);
+
+      $.ajax({
+        type: "POST",
+        url: "/create_copy",
+        data: { tableID: tabCounter },
+        success: function (response) {
+          console.log("pinged create_copy");
+          console.log("/channel" + tabCounter);
+
+          var tabChannelTable = $("#channel" + tabCounter).DataTable({
+            destroy: true,
+            dom: "Blfrtip",
+            ajax: {
+              url: "/channel_main",
+              contentType: "application/json",
+              dataSrc: tabCounter.toString(),
             },
-            error: function (error) {
-              console.error("Error saving snapshot:", error);
+            drawCallback: function () {
+              $(".sparkline" + tabCounter)
+                .map(function () {
+                  return $("canvas", this).length ? null : this;
+                })
+                .sparkline("html", {
+                  type: "line",
+                  width: "250px",
+                });
+            },
+            columns: [
+              { data: null },
+              { data: "Region" },
+              { data: "Brand" },
+              { data: "Channel" },
+              {
+                data: "Current Budget",
+                render: function (data, type, row) {
+                  return (
+                    $.fn.DataTable.render.number(",", ".", 0).display(data) +
+                    " CHF"
+                  );
+                },
+              },
+              {
+                data: "Min Spend Cap",
+                render: function (data, type, row) {
+                  return (
+                    $.fn.DataTable.render.number(",", ".", 0).display(data) +
+                    " CHF"
+                  );
+                },
+              },
+              {
+                data: "Max Spend Cap",
+                render: function (data, type, row) {
+                  return (
+                    $.fn.DataTable.render.number(",", ".", 0).display(data) +
+                    " CHF"
+                  );
+                },
+              },
+              {
+                data: "Laydown",
+                render: function (data, type, row, meta) {
+                  return type === "display"
+                    ? '<span class="sparkline' +
+                        tabCounter +
+                        '">' +
+                        data.toString() +
+                        "</span>"
+                    : data;
+                },
+              },
+            ],
+            autoWidth: false,
+            columnDefs: [
+              { width: "50px", targets: 0 },
+              { width: "80px", targets: 1 },
+              { width: "80px", targets: 2 },
+              { width: "80px", targets: 3 },
+              { width: "80px", targets: 4 },
+              { width: "80px", targets: 5 },
+              { width: "80px", targets: 6 },
+              { width: "250px", targets: 7 },
+              {
+                targets: 0,
+                searchable: false,
+                orderable: false,
+                className: "dt-body-center",
+                render: function (data, type, full, meta) {
+                  const rowId = meta.row + 1;
+                  const isChecked = !disabledRowIds.includes(rowId);
+                  return `<input type="checkbox" id="checkbox${tabCounter}-${
+                    meta.row + 1
+                  }"${isChecked ? "checked" : ""}>`;
+                },
+              },
+              {
+                className: "dt-head-center",
+                targets: [0, 1, 2, 3, 4, 5, 6, 7],
+              },
+            ],
+            rowId: "row_id",
+            createdRow: function (row, data, dataIndex) {
+              const rowId = dataIndex + 1;
+              if (disabledRowIds.includes(rowId)) {
+                $(row).addClass("disabled");
+              }
             },
           });
-        }
-      },
-    });
-  }
-}
-function overwriteSave() {
-  if (isSaveTableInitialized) {
-    var selectedRow = saveTable.row({ selected: true }).data();
-    if (selectedRow) {
-      var selectedSaveId = selectedRow.DT_RowId;
-      // Send a POST request to the Flask backend with the selected row data
-      $.ajax({
-        url: "get_table_ids",
-        method: "GET",
-        contentType: "application/json",
-        success: function (response) {
-          if (response && response.tableIds) {
-            console.log(response.tableIds);
-            var tableIds = response.tableIds;
 
-            destroyTables(tableIds.length + 1);
-            $("#saves-table").DataTable().destroy();
-            $("#load-table").DataTable().destroy();
-            console.log("saves and load tables destroyed");
-            isSaveTableInitialized = false;
-            isLoadTableInitialized = false;
-            closeSavePopup();
-            var contentToSave =
-              document.getElementById("all-content").innerHTML;
-            $.ajax({
-              url: "/overwrite_save",
-              method: "POST",
-              contentType: "application/json",
-              data: JSON.stringify({
-                selectedSaveId: selectedSaveId,
-                content: contentToSave,
-                scenarioNames: Object.values(tabNames),
-              }),
-              success: function (response) {
-                console.log(response);
-                initializeInitialTable();
-                tableIds.forEach(function (id) {
-                  initializeDataTable(id);
-                });
-                initializeSavesTable();
-                initializeLoadTable();
-                console.log("reinitialized all tables");
-                console.log("Save overwritten successfully:", response);
-                // Handle any further actions based on the backend response
+          var channelEditorTab = new $.fn.dataTable.Editor({
+            ajax: {
+              type: "POST",
+              url: "/table_data_editor",
+              contentType: "application/json", // Set the content type to JSON
+              data: function (d) {
+                d.tableId = tabCounter;
+                return JSON.stringify(d); // Convert the data to JSON string
               },
-              error: function (error) {
-                console.error("Error overwriting save:", error);
+            },
+            table: "#channel" + tabCounter,
+            fields: [
+              {
+                label: "Min Spend Cap:",
+                name: "Min Spend Cap",
               },
+              {
+                label: "Max Spend Cap:",
+                name: "Max Spend Cap",
+              },
+            ],
+            idSrc: "row_id",
+          });
+          tabChannelTable.on(
+            "mouseenter",
+            "tbody td:nth-child(0), tbody td:nth-child(7), tbody td:nth-child(6)",
+            function (e) {
+              $(this).css({
+                cursor: "text",
+                userSelect: "none",
+              });
+            }
+          );
+
+          tabChannelTable.on(
+            "mouseleave",
+            "tbody td:nth-child(0), tbody td:nth-child(7), tbody td:nth-child(6)",
+            function (e) {
+              $(this).css({
+                cursor: "default",
+                userSelect: "auto",
+              });
+            }
+          );
+
+          tabChannelTable.on(
+            "click",
+            "tbody td:nth-child(7), tbody td:nth-child(6)",
+            function (e) {
+              channelEditorTab.inline(this);
+            }
+          );
+          $("#example-select-all" + tabCounter).on("click", function () {
+            // Get all rows with search applied
+            var rows = tabChannelTable.rows({ search: "applied" }).nodes();
+            // Check/uncheck checkboxes for all rows in the table
+            $('input[type="checkbox"]', rows).prop("checked", this.checked);
+            if (!this.checked) {
+              $(rows).addClass("disabled");
+            } else {
+              $(rows).removeClass("disabled");
+            }
+          });
+          $("#channel" + tabCounter + " tbody").on(
+            "change",
+            'input[type="checkbox"]',
+            function () {
+              // If checkbox is not checked
+              if (!this.checked) {
+                var el = $("#example-select-all" + tabCounter).get(0);
+                // If "Select all" control is checked and has 'indeterminate' property
+                if (el && el.checked && "indeterminate" in el) {
+                  // Set visual state of "Select all" control
+                  // as 'indeterminate'
+                  el.indeterminate = true;
+                }
+              }
+            }
+          );
+          $("#frm-example" + tabCounter).on("submit", function (e) {
+            var form = this;
+
+            // Iterate over all checkboxes in the table
+            tabChannelTable.$('input[type="checkbox"]').each(function () {
+              // If checkbox doesn't exist in DOM
+              if (!$.contains(document, this)) {
+                // If checkbox is checked
+                if (this.checked) {
+                  // Create a hidden element
+                  $(form).append(
+                    $("<input>")
+                      .attr("type", "hidden")
+                      .attr("name", this.name)
+                      .val(this.value)
+                  );
+                }
+              }
             });
-          }
+          });
+
+          $("#channel" + tabCounter + " tbody").on(
+            "change",
+            'input[type="checkbox"]',
+            function () {
+              var row = $(this).closest("tr");
+              var rowId = tabChannelTable.row(row).id();
+              var isChecked = $(this).prop("checked");
+              if (isChecked) {
+                tabChannelTable.row(row).nodes().to$().removeClass("disabled");
+                console.log("removing class");
+                console.log(rowId);
+              } else {
+                tabChannelTable.row(row).nodes().to$().addClass("disabled");
+                console.log("adding class");
+                console.log(rowId);
+              }
+            }
+          );
+          $.ajax({
+            url: "/date_range",
+            type: "GET",
+            dataType: "json",
+            success: function (data) {
+              console.log("fetching and applying dates");
+              // Set the fetched dates as default values for date inputs
+
+              var startDate = new Date(data.startDate)
+                .toISOString()
+                .split("T")[0];
+              var endDate = new Date(data.endDate)
+                .toISOString()
+                .split("T")[0];
+
+              $("#start-date" + tabCounter).val(startDate);
+              $("#start-date" + tabCounter).prop("min", startDate);
+              $("#start-date" + tabCounter).prop("max", endDate);
+              $("#end-date" + tabCounter).val(endDate);
+              $("#end-date" + tabCounter).prop("min", startDate);
+              $("#end-date" + tabCounter).prop("max", endDate);
+            },
+            error: function (error) {
+              console.error("Error fetching dates:", error);
+            },
+          });
+
+          var obj = document.getElementById("obj-input" + tabCounter);
+          var exh = document.getElementById("exh-input" + tabCounter);
+          var max = document.getElementById("max-input" + tabCounter);
+          var optButton = document.getElementById("opt-button" + tabCounter);
+          var blend = document.getElementById("blend-input" + tabCounter);
+
+          optButton.addEventListener("click", function () {
+            showLoadingOverlay(tabCounter);
+            var objValue = obj.value;
+            var exhValue = exh.value;
+            var maxValue = max.value;
+            var blendValue = blend.value;
+
+            var disabledRowIds = getDisabledRowIds(tabCounter);
+            var tabName = fetchTabName(tabCounter);
+
+            var dataToSend = {
+              objectiveValue: objValue,
+              exhaustValue: exhValue,
+              maxValue: maxValue,
+              blendValue: blendValue,
+              tableID: tabCounter,
+
+              disabledRows: disabledRowIds,
+              tabName: tabName,
+            };
+            var dateButtonIsChecked = $(
+              "#date-filter-button" + tabCounter
+            ).prop("checked");
+            var startDate = $("#start-date" + tabCounter).val();
+            var endDate = $("#end-date" + tabCounter).val();
+            var dateTuple = [startDate, endDate];
+            if (dateButtonIsChecked) {
+              dataToSend["dates"] = dateTuple;
+            }
+            console.log(dataToSend);
+
+            // Use jQuery AJAX to send the data to the Flask endpoint
+            if (disabledRowIds.length < 85) {
+              $("#warningPopup").show();
+              $("#continueWarning").click(function () {
+                // Hide modal
+                $("#warningPopup").hide();
+                // Emit socket event
+                socket.emit("optimise", { dataToSend: dataToSend });
+              });
+
+              // Event listener for close button
+              $("#cancelWarning").click(function () {
+                // Hide modal
+                $("#warningPopup").hide();
+                hideLoadingOverlay(tabCounter);
+              });
+            } else {
+              socket.emit("optimise", { dataToSend: dataToSend });
+            }
+          });
+        },
+        error: function (error) {
+          console.error("Error creating copy of data:", error);
         },
       });
-    }
-  }
+
+
+      $(".sparkline").each(function () {
+        var $sparkline = $(this);
+        var sparklineData = $sparkline.text();
+        $sparkline.empty().sparkline(sparklineData, {
+          type: "line",
+          width: "250px",
+        });
+      });
+      // redrawAllTables(tabCounter);
+      var buttonName = document.getElementById("button-text" + tabCounter);
+      tabNames[tabCounter] = buttonName.textContent;
+    
+  });
 }

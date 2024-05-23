@@ -365,11 +365,10 @@ function generateChartsA(data, metric) {
             if (metric == "Value") {
               if (value < 1000000) {
                 return (
-                  "£" + Math.round(value / 1000).toLocaleString("en-US") + "K"
+                  Math.round(value / 1000).toLocaleString("en-US") + "K"
                 );
               } else {
                 return (
-                  "£" +
                   Math.round(value / 1000000).toLocaleString("en-US") +
                   "M"
                 );
@@ -406,14 +405,13 @@ function generateChartsA(data, metric) {
           if (metric == "Value") {
             const formattedValue =
               value < 1000000
-                ? "£" +
+                ?
                   (Math.round((value / 1000) * 100) / 100).toLocaleString(
                     "en-US",
                     { minimumFractionDigits: 1, maximumFractionDigits: 1 }
                   ) +
                   "K"
-                : "£" +
-                  (Math.round((value / 1000000) * 100) / 100).toLocaleString(
+                : (Math.round((value / 1000000) * 100) / 100).toLocaleString(
                     "en-US",
                     { minimumFractionDigits: 1, maximumFractionDigits: 1 }
                   ) +
@@ -544,11 +542,11 @@ function generateChartsA(data, metric) {
           callback: function (value, index, values) {
             if (value < 1000000) {
               return (
-                "£" + Math.round(value / 1000).toLocaleString("en-US") + "K"
+                Math.round(value / 1000).toLocaleString("en-US") + "K"
               );
             } else {
               return (
-                "£" + Math.round(value / 1000000).toLocaleString("en-US") + "M"
+                Math.round(value / 1000000).toLocaleString("en-US") + "M"
               );
             }
           },
@@ -577,14 +575,12 @@ function generateChartsA(data, metric) {
           if (metric == "Value") {
             const formattedValue =
               value < 1000000
-                ? "£" +
-                  (Math.round((value / 1000) * 100) / 100).toLocaleString(
+                ? (Math.round((value / 1000) * 100) / 100).toLocaleString(
                     "en-US",
                     { minimumFractionDigits: 1, maximumFractionDigits: 1 }
                   ) +
                   "K"
-                : "£" +
-                  (Math.round((value / 1000000) * 100) / 100).toLocaleString(
+                : (Math.round((value / 1000000) * 100) / 100).toLocaleString(
                     "en-US",
                     { minimumFractionDigits: 1, maximumFractionDigits: 1 }
                   ) +
@@ -619,15 +615,15 @@ function generateChartsA(data, metric) {
               );
               const formattedTotalValue =
                 totalValue < 1000000
-                  ? "Total: £" +
-                    (
+                  ? "Total: " +
+(
                       Math.round((totalValue / 1000) * 100) / 100
                     ).toLocaleString("en-US", {
                       minimumFractionDigits: 1,
                       maximumFractionDigits: 1,
                     }) +
                     "K"
-                  : "Total: £" +
+                  : "Total: " +
                     (
                       Math.round((totalValue / 1000000) * 100) / 100
                     ).toLocaleString("en-US", {
@@ -771,7 +767,7 @@ function generateChartsA(data, metric) {
             weight: "bold",
           },
           callback: function (value, index, values) {
-            return "£" + Math.round(value).toLocaleString("en-US");
+            return Math.round(value).toLocaleString("en-US");
           },
         },
       },
@@ -792,7 +788,7 @@ function generateChartsA(data, metric) {
         formatter: (value, context) => {
           const formattedValue =
             value !== null && value !== undefined
-              ? "£" + Number(value).toFixed(2)
+              ? Number(value).toFixed(2)
               : "";
 
           return formattedValue;
@@ -805,7 +801,7 @@ function generateChartsA(data, metric) {
             const totalValue = roiData;
             const formattedValue =
               totalValue !== null && totalValue !== undefined
-                ? "£" + Number(totalValue).toFixed(2)
+                ? Number(totalValue).toFixed(2)
                 : "";
 
             return formattedValue;
@@ -1034,11 +1030,10 @@ function generateChartsB(data, metric) {
             if (metric == "Value") {
               if (value < 1000000) {
                 return (
-                  "£" + Math.round(value / 1000).toLocaleString("en-US") + "K"
+                  Math.round(value / 1000).toLocaleString("en-US") + "K"
                 );
               } else {
                 return (
-                  "£" +
                   Math.round(value / 1000000).toLocaleString("en-US") +
                   "M"
                 );
@@ -1156,11 +1151,10 @@ function generateChartsB(data, metric) {
             if (metric == "Value") {
               if (value < 1000000) {
                 return (
-                  "£" + Math.round(value / 1000).toLocaleString("en-US") + "K"
+                  Math.round(value / 1000).toLocaleString("en-US") + "K"
                 );
               } else {
                 return (
-                  "£" +
                   Math.round(value / 1000000).toLocaleString("en-US") +
                   "M"
                 );
@@ -1274,7 +1268,7 @@ function generateChartsB(data, metric) {
             weight: "bold",
           },
           callback: function (value, index, values) {
-            return "£" + Math.round(value).toLocaleString("en-US");
+            return Math.round(value).toLocaleString("en-US");
           },
         },
       },
@@ -1410,11 +1404,11 @@ function generateChartsC(data, metric) {
           callback: function (value, index, values) {
             if (value < 1000000) {
               return (
-                "£" + Math.round(value / 1000).toLocaleString("en-US") + "K"
+                Math.round(value / 1000).toLocaleString("en-US") + "K"
               );
             } else {
               return (
-                "£" + Math.round(value / 1000000).toLocaleString("en-US") + "M"
+                Math.round(value / 1000000).toLocaleString("en-US") + "M"
               );
             }
           },
@@ -1557,11 +1551,11 @@ function generateChartsD(data, metric) {
           callback: function (value, index, values) {
             if (value < 1000000) {
               return (
-                "£" + Math.round(value / 1000).toLocaleString("en-US") + "K"
+                Math.round(value / 1000).toLocaleString("en-US") + "K"
               );
             } else {
               return (
-                "£" + Math.round(value / 1000000).toLocaleString("en-US") + "M"
+                Math.round(value / 1000000).toLocaleString("en-US") + "M"
               );
             }
           },

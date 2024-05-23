@@ -14,7 +14,7 @@ from datetime import datetime, date, time
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from flask_bcrypt import Bcrypt
 import logging
-from optimiser import Optimise
+from optimiser import Optimise, Beta
 from io import BytesIO
 from copy import deepcopy
 import app_config
@@ -23,6 +23,7 @@ import msal
 from functools import wraps
 from queue import Queue
 from opt_threads import CustomThread
+import pickle
 
 #from azure import identity
 
@@ -74,14 +75,12 @@ def login_required(f):
         return f(*args, **kwargs)
     return decorated_function
 
-
 class Snapshot(db.Model):
     name = db.Column(db.String, nullable=False)
     id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.String, nullable=False)
-    table_ids = db.Column(db.String, nullable=False)
-    scenario_names = db.Column(db.String, nullable=False)
-    user_id = db.Column(db.UUID(as_uuid=True), nullable=False, default=uuid.uuid4)
+    content = db.Column(db.LargeBinary, nullable=False)
+    scenario_names = db.Column(db.LargeBinary, nullable=False)
+    user_id = db.Column(db.Text, nullable=False)
     table_data = db.Column(db.Text, nullable=False)
 
 active_sessions = {}
@@ -196,23 +195,22 @@ def save_snapshot():
     user_id = session['user']['oid']
     content = request.json.get('content')
     scenario_names = request.json.get('scenarioNames')
-    current_table_ids = list(session['table_data'].keys())
     table_data_json = json.dumps(session['table_data'])
-
-    table_ids_str = ','.join(map(str, current_table_ids))
 
     # Check if a snapshot with the same name already exists for the current user
     existing_snapshot = Snapshot.query.filter_by(name=snapshot_name, user_id=user_id).first()
 
+    print(content)
+    pickled_string = pickle.dumps(content)
+    pickled_scenario_names = pickle.dumps(scenario_names)
     if existing_snapshot:
         # Update the existing snapshot
-        existing_snapshot.content = content
-        existing_snapshot.table_ids = table_ids_str
-        existing_snapshot.scenario_names = scenario_names
+        existing_snapshot.content = pickled_string
+        existing_snapshot.scenario_names = pickled_scenario_names
         existing_snapshot.table_data = table_data_json
     else:
         # Create a new snapshot
-        new_snapshot = Snapshot(name=snapshot_name, content=content, table_ids=table_ids_str, scenario_names=scenario_names, user_id=user_id,
+        new_snapshot = Snapshot(name=snapshot_name, content=pickled_string, scenario_names=pickled_scenario_names, user_id=user_id,
                                 table_data=table_data_json)
         db.session.add(new_snapshot)
 
@@ -228,21 +226,18 @@ def save_snapshot():
 def overwrite_save():
     snapshot_id = request.json.get('selectedSaveId')
     user_id = session['user']['oid']
-    content = request.json.get('content')
+    content = pickle.dumps(request.json.get('content'))
     scenario_names = request.json.get('scenarioNames')
-    current_table_ids = list(session['table_data'].keys())
-    table_data_json = json.dumps(session['table_data'])
-
-    table_ids_str = ','.join(map(str, current_table_ids))
+    pickled_scenario_names = pickle.dumps(scenario_names)
+    table_data_json = json.dumps(table_data)
 
     app.logger.info(f"snapshot id = {snapshot_id}")
     app.logger.info(f"user id = {user_id}")
 
     existing_snapshot = Snapshot.query.filter_by(id=snapshot_id, user_id=user_id).first()
     existing_snapshot.content = content
-    existing_snapshot.table_ids = table_ids_str
     existing_snapshot.table_data = table_data_json
-    existing_snapshot.scenario_names = scenario_names
+    existing_snapshot.scenario_names = pickled_scenario_names
 
     try:
         db.session.commit()
@@ -252,17 +247,6 @@ def overwrite_save():
         return jsonify({'success': False, 'error': str(e)})
 
 
-@app.route('/load_snapshot')
-def load_snapshot():
- 
-    user_id = session['user']['oid']
-    snapshot = Snapshot.query.filter_by(user_id=user_id).first()
-    session['table_data'] = json.loads(snapshot.table_data)
-    content_list = snapshot.content
-    table_ids_list = snapshot.table_ids
- 
-    return jsonify({'content': content_list, 'table_ids': table_ids_list})
-
 
 @app.route('/get_saves', methods=['GET'])
 def get_saves():
@@ -271,11 +255,12 @@ def get_saves():
     saves_data = []
 
     for save in user_saves:
+        table_ids = list(dict(pickle.loads(save.content)).keys())
         save_info = {
             'DT_RowId': save.id,
             'name': save.name,
-            'table_ids': save.table_ids
-        }
+            'table_ids': table_ids        
+            }
         saves_data.append(save_info)
 
     return jsonify({'data': saves_data})
@@ -305,14 +290,11 @@ def notify_selected_row():
         if not save:
             return jsonify({'error': 'Unathorized access'}), 403
         else:
-            content_list = save.content
-            table_ids_list = save.table_ids
-            scenario_names = save.scenario_names
+            content_list = pickle.loads(save.content)
+            scenario_names = pickle.loads(save.scenario_names)
             session['table_data'] = json.loads(save.table_data)
             app.logger.info(f"current table ids: {session['table_data'].keys()}")
-            return jsonify({'content': content_list, 'table_ids': table_ids_list, 'scenario_names':scenario_names})
-
-
+            return jsonify({'content': content_list, 'scenario_names':scenario_names})
 
 
 seas_index_table_name = 'seas_index'
@@ -324,186 +306,19 @@ laydown_table_name = "laydown"
 num_weeks = 1000
 
 
-def prep_rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dict, beta_dict):
-    cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
-    # print("cpu:")
-    # print(cost_per_stream)
-    allocation = budget / cost_per_stream
-    # print('allocation:')
-    # print(allocation)
-    pct_laydown = []
-    for x in range(len(recorded_impressions[stream])):
-        try:
-            pct_laydown.append(recorded_impressions[stream][x] / sum(recorded_impressions[stream]))
-        except:
-            pct_laydown.append(0)
-    # print("pct_laydown:")
-    # print(pct_laydown)
-    pam = [pct_laydown[i] * allocation for i in range(len(pct_laydown))]
-    carryover_list = []
-    carryover_list.append(pam[0])
-    for x in range(1, len(pam)):
-        carryover_val = pam[x] + carryover_list[x - 1] * carryover_dict[stream]
-        carryover_list.append(carryover_val)
-    # print("carryover list:")
-    # print(carryover_list)
-    rev_list = []
-    for x in carryover_list:
-        rev_val = beta_dict[stream] * (1 - np.exp(-alpha_dict[stream] * x))
-        rev_list.append(rev_val)
-    # print("rev list")
-    # print(rev_list)
-    indexed_vals = [a * b for a, b in zip(rev_list, seas_dict[stream])]
-    total_rev = sum(indexed_vals)
-    infsum = 0
-    for n in range(1, num_weeks):
-        infsum += carryover_list[-1] * (1 - carryover_dict[stream]) ** n
-    total_rev = total_rev + infsum
-    return rev_list
-
-
-def prep_total_rev_per_stream(stream, budget):
-    ST_rev = prep_rev_per_stream(stream, budget, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict)
-    LT_rev = prep_rev_per_stream(stream, budget, LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict)
-    total_rev = ST_rev + LT_rev
-    return total_rev
-
-
-
-
-ST_header = pd.read_sql_table('All_Channel_Inputs', engine)
+header = pd.read_sql_table('All_Channel_Inputs', engine)
 # Show column headers without underscores!
-ST_header.columns = [x.replace("_", " ") for x in ST_header.columns.tolist()]
+header.columns = [x.replace("_", " ") for x in header.columns.tolist()]
 
 laydown = pd.read_sql_table('All_Laydown', engine)
-laydown.fillna(0)
-laydown.columns
+laydown_dates = laydown['Date']
 seas_index = pd.read_sql_table('All_Index', engine)
 
-for x in laydown.columns.tolist():
-    if x not in ST_header['Opt Channel'].tolist() and x != 'Date':
-        # print(x)
-        laydown.drop(columns=[x], inplace=True)
+header_processed = Beta.beta_calculation(header, laydown, seas_index)
 
-streams = []
-for stream in ST_header['Opt Channel']:
-    streams.append(str(stream))
+#LT_header_dict = header.to_dict("records")
 
-laydown_dates = laydown['Date']
-
-for stream in streams:
-    ST_header.loc[ST_header['Opt Channel'] == stream, 'Current Budget'] = sum(laydown[stream])
-
-ST_header['ST Revenue'] = ST_header['Current Budget'] * ST_header['ST Current ROI']
-
-ST_header_dict = ST_header.to_dict("records")
-
-ST_cost_per_list = [float(entry['CPU']) for entry in ST_header_dict]
-ST_cost_per_dict = dict(zip(streams, ST_cost_per_list))
-
-ST_carryover_list = [float(entry['ST Carryover']) for entry in ST_header_dict]
-ST_carryover_dict = dict(zip(streams, ST_carryover_list))
-
-ST_beta_dict = dict(zip(streams, [1] * len(streams)))
-
-ST_alpha_list = [float(entry['ST Alpha']) for entry in ST_header_dict]
-ST_alpha_dict = dict(zip(streams, ST_alpha_list))
-raw_input_data = ST_header.to_dict("records")
-current_budget_list = [entry['Current Budget'] for entry in raw_input_data]
-current_budget_dict = dict(zip(streams, current_budget_list))
-
-seas_dict = seas_index
-
-recorded_impressions = {}
-for x in laydown.columns:
-    recorded_impressions[x] = laydown.fillna(0)[x].to_list()
-
-beta_calc_rev_dict_ST = {'Date': list(laydown.Date)}
-for stream in list(streams):
-    beta_calc_rev_dict_ST[stream] = prep_rev_per_stream(stream, current_budget_dict[stream], ST_cost_per_dict,
-                                                        ST_carryover_dict, ST_alpha_dict, ST_beta_dict)
-    sum(beta_calc_rev_dict_ST[stream])
-beta_calc_df = pd.DataFrame(beta_calc_rev_dict_ST)[list(streams)].sum().reset_index()
-beta_calc_df.columns = ['Opt Channel', 'Calc_Rev']
-beta_calc_df = pd.merge(beta_calc_df, ST_header[['Opt Channel', 'ST Revenue']], on='Opt Channel')
-beta_calc_df['ST Beta'] = np.where(beta_calc_df['Calc_Rev'] == 0, 0,
-                                   beta_calc_df['ST Revenue'] / beta_calc_df['Calc_Rev'])
-ST_opt_betas_dict = dict(zip(streams, beta_calc_df['ST Beta'].tolist()))
-
-ST_header['ST Beta'] = list(ST_opt_betas_dict.values())
-
-ST_header_dict = ST_header.to_dict("records")
-
-max_spend_cap = sum(ST_header['Max Spend Cap'])
-
-print(max_spend_cap)
-
-LT_header = pd.read_sql_table('All_Channel_Inputs', engine)
-# Show column headers without underscores!
-LT_header.columns = [x.replace("_", " ") for x in LT_header.columns.tolist()]
-
-laydown = pd.read_sql_table('All_Laydown', engine)
-laydown.fillna(0)
-laydown.columns
-seas_index = pd.read_sql_table('All_Index', engine)
-
-for x in laydown.columns.tolist():
-    if x not in LT_header['Opt Channel'].tolist() and x != 'Date':
-        # print(x)
-        laydown.drop(columns=[x], inplace=True)
-
-streams = []
-for stream in LT_header['Opt Channel']:
-    streams.append(str(stream))
-
-laydown_dates = laydown['Date']
-
-for stream in streams:
-    LT_header.loc[LT_header['Opt Channel'] == stream, 'Current Budget'] = sum(laydown[stream])
-
-LT_header['LT Revenue'] = LT_header['Current Budget'] * LT_header['LT Current ROI']
-
-LT_header_dict = LT_header.to_dict("records")
-
-LT_cost_per_list = [float(entry['CPU']) for entry in LT_header_dict]
-LT_cost_per_dict = dict(zip(streams, LT_cost_per_list))
-
-LT_carryover_list = [float(entry['LT Carryover']) for entry in LT_header_dict]
-LT_carryover_dict = dict(zip(streams, LT_carryover_list))
-
-LT_beta_dict = dict(zip(streams, [1] * len(streams)))
-
-LT_alpha_list = [float(entry['LT Alpha']) for entry in LT_header_dict]
-LT_alpha_dict = dict(zip(streams, LT_alpha_list))
-raw_input_data = LT_header.to_dict("records")
-current_budget_list = [entry['Current Budget'] for entry in raw_input_data]
-current_budget_dict = dict(zip(streams, current_budget_list))
-
-seas_dict = seas_index
-
-recorded_impressions = {}
-for x in laydown.columns:
-    recorded_impressions[x] = laydown.fillna(0)[x].to_list()
-
-beta_calc_rev_dict_LT = {'Date': list(laydown.Date)}
-# stream = 'ATLTVSuper FoodsBSBakersDog'
-for stream in list(streams):
-    beta_calc_rev_dict_ST[stream] = prep_rev_per_stream(stream, current_budget_dict[stream], LT_cost_per_dict,
-                                                        LT_carryover_dict, LT_alpha_dict, LT_beta_dict)
-    sum(beta_calc_rev_dict_ST[stream])
-beta_calc_df = pd.DataFrame(beta_calc_rev_dict_ST)[list(streams)].sum().reset_index()
-beta_calc_df.columns = ['Opt Channel', 'Calc_Rev']
-beta_calc_df = pd.merge(beta_calc_df, LT_header[['Opt Channel', 'LT Revenue']], on='Opt Channel')
-beta_calc_df['LT Beta'] = np.where(beta_calc_df['Calc_Rev'] == 0, 0,
-                                   beta_calc_df['LT Revenue'] / beta_calc_df['Calc_Rev'])
-LT_opt_betas_dict = dict(zip(streams, beta_calc_df['LT Beta'].tolist()))
-
-LT_header['LT Beta'] = list(LT_opt_betas_dict.values())
-ST_header['LT Beta'] = list(LT_opt_betas_dict.values())
-
-LT_header_dict = LT_header.to_dict("records")
-
-table_df = ST_header.copy()
+table_df = header_processed.copy()
 
 dataTable_cols = ['Region', 'Brand', 'Channel', 'Current Budget', 'Min Spend Cap', 'Max Spend Cap',
                   # 'ST Carryover', 'ST Alpha', 'ST Beta', 'LT Carryover', 'LT Alpha', 'LT Beta',
@@ -518,7 +333,8 @@ table_dict = table_df.to_dict("records")
 for var in table_dict:
     var['Laydown'] = laydown[var['Channel'] + "_" + var['Region'] + "_" + var['Brand']].tolist()
 
-bud = sum(ST_header['Current Budget'].to_list())
+table_data = {"1": deepcopy(table_dict)}
+bud = sum(header['Current Budget'].to_list())
 
 # %% --------------------------------------------------------------------------
 #
@@ -532,11 +348,12 @@ def run_optimise(dataDict):
    
     table_id = str(data['tableID'])
     print(f"optimising current table with ID:{table_id}")
-    ST_header_copy = deepcopy(ST_header)
-    LT_header_copy = deepcopy(LT_header)
+    header_copy = deepcopy(header_processed)
     laydown_copy = deepcopy(laydown)
     seas_index_copy = deepcopy(seas_index)
-
+    streams = []
+    for stream in header_copy['Opt Channel']:
+        streams.append(str(stream))
     app.logger.info("REACHING OPT METHOD")
     
     try:
@@ -545,7 +362,6 @@ def run_optimise(dataDict):
         max_budget = int(data['maxValue'])
         scenario_name = data['tabName']
         print(f"printing scenario name received from front end:{scenario_name}")
-        num_weeks = 1000
         blend = data['blendValue']
         disabled_rows = list(data['disabledRows'])
         print(f"disabled row ids: {disabled_rows}")
@@ -564,17 +380,14 @@ def run_optimise(dataDict):
         disabled_opt_channels = list(removed_rows_df['Opt Channel'])
 
         for col in current_table_df.columns:
-            ST_header_copy[col] = current_table_df[col]
-            LT_header_copy[col] = current_table_df[col]
-
-        ST_header_copy = ST_header_copy[~(ST_header_copy['Opt Channel'].isin(disabled_opt_channels))]
-        LT_header_copy = LT_header_copy[~(LT_header_copy['Opt Channel'].isin(disabled_opt_channels))]
+            header_copy[col] = current_table_df[col]
+         
+        header_copy = header_copy[~(header_copy['Opt Channel'].isin(disabled_opt_channels))]
 
         laydown_copy = laydown_copy.drop(columns=disabled_opt_channels, errors='ignore')
         seas_index_copy = seas_index_copy.drop(columns=disabled_opt_channels, errors='ignore')
 
-        ST_input = ST_header_copy.to_dict('records')
-        LT_input = LT_header_copy.to_dict('records')
+        
         
         if "dates" in data:
           
@@ -596,24 +409,25 @@ def run_optimise(dataDict):
         app.logger.info(
             f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
 
-        #print(f"laydown = {laydown_copy}")
-        #print(f"CPU = {[entry['CPU'] for entry in ST_input]}")
+        header = Beta.beta_calculation(header_copy, laydown_copy, seas_index_copy)
 
-        inputs_dict = {'ST_input': ST_input, 'LT_input': LT_input, 'laydown': laydown_copy, 'seas_index': seas_index_copy}
+        input = header_copy.to_dict('records')
+
+        inputs_dict = {'ST_input': input, 'LT_input': input, 'laydown': laydown_copy, 'seas_index': seas_index_copy}
 
         session["inputs_per_result"][table_id] = deepcopy(inputs_dict)
-        
      
-        min_spend_cap_list = [float(entry['Min Spend Cap']) for entry in ST_input]
-        min_spend_cap_dict = dict(zip(streams, min_spend_cap_list))
+        min_spend_cap_list = [float(entry['Min Spend Cap']) for entry in input]
+
         laydown_copy.set_index('Date', inplace=True)
+
     except Exception as e:
         app.logger.info(f"error preparing optimisation inputs: {str(e)}")
     try:
         session_id = session['session_id']
         queue = session_queues.setdefault(session_id, Queue())
-        print(scenario_name)
-        queue.put((ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name))
+     
+        queue.put((input, input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name))
 
         if not queue.empty():
             result, output_df = start_optimise_thread(session_id)
@@ -621,6 +435,8 @@ def run_optimise(dataDict):
             session['results'][table_id] = result
             print(session['output_df_per_result'])
             session.modified = True
+            print("opt complete, hiding overlay")
+            
 
     except Exception as e:
         app.logger.info(f"error adding optimisation job to the queue: {str(e)}")
@@ -657,7 +473,7 @@ def run_optimise_task(session_id):
                 socketio.emit('opt_complete', {'data': table_id, 'exception':str(e)})
                 queue.task_done()
             
-            
+
 
 def start_optimise_thread(session_id):
     optimise_thread = CustomThread(target=run_optimise_task, args=(session_id,))
@@ -688,7 +504,7 @@ def results_output():
     mns_mc = pd.read_sql(mns_query, engine)
     merged_output = pd.merge(output, mns_mc, on=['Region','Brand','Year'], how='left')
     merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
-    merged_output.to_csv('merged_output.csv')
+    #merged_output.to_csv('merged_output.csv')
     try:
         merged_output.to_sql(f'Blueprint_results_{session["user"]["oid"]}', engine, if_exists='replace', index=False)
         app.logger.info("csv uploaded to db successfully")
@@ -1059,12 +875,19 @@ def apply_curve_filters(data, curve_filters, event_name):
 
 @app.route('/blueprint_results')
 def blueprint_results():
-    return render_template('blueprint_results.html')
+    if session['user']['oid']:
+        return render_template('blueprint_results.html')
+    else:
+        return redirect(url_for("login"))
+    
 
 
 @app.route('/blueprint_curve')
 def blueprint_curve():
-    return render_template('blueprint_curveresults.html')
+    if session['user']['oid']:
+        return render_template('blueprint_curveresults.html')
+    else:
+        return redirect(url_for("login"))
 
 
 @app.route('/date_range', methods=['GET', 'POST'])

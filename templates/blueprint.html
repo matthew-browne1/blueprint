@@ -79,127 +79,7 @@
    <div class="results-div" id="results-div">
       <!-- dynamic adding of show results button goes in this div -->
    </div>
-   <button type="button" id="col-btn1" class="collapsible active">
-      <span id="button-text1">Scenario 1</span>
-      <span>&nbsp;</span>
-      <span>&nbsp;</span>
-      <i class="fa-solid fa-pen-to-square fa-lg" onclick="editButton()"></i>
-   </button>
-   <script>
-
-   </script>
-   <div class="content" id="opt-tab1">
-      <div class="loading-overlay" id="loading-overlay1">
-         <div class="searchLoader">
-            <svg id="loading-wheel" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
-               <style>
-              .st0{opacity:0.1;} .st1{opacity:0.33;} .st2{opacity:0.66;}
-            </style>
-            <path d="M30 0c1 0 1.8.8 1.8 1.8v7.8h-3.6V1.8C28.2.8 29 0 30 0zM1.8 28.2h7.8v3.6H1.8C.8 31.8 0 31 0 30s.8-1.8 1.8-1.8zM9.6 47.8l3.4-3.4 1.3-1.3 2.6 2.6-1.3 1.3-3.4 3.4-.9.9c-.4.4-.8.5-1.3.5s-.9-.2-1.3-.5c-.7-.7-.7-1.8 0-2.6l.9-.9z"/>
-            <path class="st0" d="M48.7 8.8c.7-.7 1.8-.7 2.6 0 .7.7.7 1.8 0 2.6l-.9.9-3 3-.4.3-1.3 1.3-2.6-2.6 1.7-1.7 3.9-3.8z"/>
-            <path d="M31.8 52.2v6.1c0 1-.8 1.8-1.8 1.8s-1.8-.8-1.8-1.8V50.4h3.6v1.8z"/>
-            <path class="st1" d="M50.4 28.2h7.8c1 0 1.8.8 1.8 1.8s-.8 1.8-1.8 1.8h-7.8v-3.6z"/>
-            <path d="M10.7 13.3l-1.9-1.9c-.7-.7-.7-1.8 0-2.6.7-.7 1.8-.7 2.6 0l4.3 4.3 1.3 1.3-2.6 2.6-3.7-3.7z"/>
-            <path class="st2" d="M47 44.4l.4.4 3 3 .9.9c.7.7.7 1.8 0 2.6-.4.4-.8.5-1.3.5s-.9-.2-1.3-.5l-3.8-3.8-1.7-1.7 2.6-2.6 1.2 1.2z"/>
-            </svg>
-          </div>
-      </div>
-      <div class="content-sub">
-         <div class="div-above-nav-bar" id="buttons-div1">
-           
-            <div class="nav-model-left" id="nav-bar">
-               <div class="split-nav">
-                  <div class="top-half-nav">
-                     <div class="obj-func">
-                        <div class="dropdown" id="dd-obj1">
-                           <div class="select">
-                              <span>Select KPI</span>
-                              <i class="fa fa-chevron-left"></i>
-                           </div>
-                           <input type="hidden" name="objective" id="obj-input1">
-                           <ul class="dropdown-menu">
-                              <li id="profit">Profit</li>
-                              <li id="revenue">Revenue</li>
-                              <li id="roi">ROI</li>
-                           </ul>
-                        </div>
-                  </div>
-                  <div class="blend">       
-                     <div class="dropdown" id="dd-blend1">
-                        <div class="select">
-                           <span>Objective Function</span>
-                           <i class="fa fa-chevron-left"></i>
-                        </div>
-                        <input type="hidden" name="blend" id="blend-input1">
-                        <ul class="dropdown-menu">
-                           <li id="blend">Blended</li>
-                           <li id="st">ST</li>
-                           <li id="lt">LT</li>
-                        </ul>
-                     </div>
-                     </div>
-                     <div class="exh-bud">       
-                        <div class="dropdown" id="dd-exh1">
-                           <div class="select">
-                              <span>Budget Exhaustion</span>
-                              <i class="fa fa-chevron-left"></i>
-                           </div>
-                           <input type="hidden" name="exhaust-budget" id="exh-input1">
-                           <ul class="dropdown-menu">
-                              <li id="yes">Exhaust Budget</li>
-                              <li id="no">Do Not Exhaust Budget</li>
-                           </ul>
-                        </div>
-                     </div>
-               </div>
-               <div class="bottom-half-nav">
-
-                  <input type="number" id="max-input1" step="5000" placeholder="Enter Max Budget">
-
-                  
-               </div>
-            </div>
-               <div class="date-cont" id="date-cont">
-                  <div class="date-range-label">
-                  <label for="end-date">Date Range Filter:</label>
-                  <div class="toggle-button-cover">
-                     <div class="button-cover">
-                        <div class="button d">
-                           <input type="checkbox" class="checkbox" id="date-filter-button1" />
-                           <div class="knobs"></div>
-                           <div class="layer"></div>
-                        </div>
-                     </div>
-                  </div>
-               </div>
-                  <div class="date-inputs greyed-out">
-                     <input type="date" name="start-date" id="start-date1" class="start-date" placeholder="Start date" />
-                     <input type="date" name="end-date" class="end-date" id="end-date1" placeholder="End date" />
-                  </div>
-               </div>
-               <div class="opt-cont-parent" id="opt-button-cont">
-                  <button class="button-4" role="button" id="opt-button1">Optimise</button>
-               </div>
-            </div>
-         </div>
-         <div class="bo-container" id="channel-container1">
-         <table id="channel1" class="hover">
-            <thead>
-               <tr>
-               <th><input type="checkbox" name="select_all" value="1" id="example-select-all"></th>
-               <th>Region</th>
-               <th>Brand</th>
-               <th>Channel</th>
-               <th>Current Budget</th>
-               <th>Min Spend Cap</th>
-               <th>Max Spend Cap</th>
-               <th>Laydown</th>
-               </tr>
-            </thead>
-         </table>
-      </div>
-   </div>
-   </div>
+   <div class="tab-container" id="tab-container"></div>
 </div>
 
 <div class="bottom-cont" id="button-cont">
@@ -264,7 +144,7 @@
 <div class="button-footer">
    <div class="snapshot-control-cont">
       <button id="save-list" class="button-4">Save Current Snapshot</button>
-      <button id="load-list" class="button-4">Load from Saved Snapshots</button> 
+      <button id="load-list" class="button-4">Load from Saved Snapshots</button>
    </div>
    <div class="right-buttons">
       <button id="optimise-all" class="button-4">Optimise All</button>
