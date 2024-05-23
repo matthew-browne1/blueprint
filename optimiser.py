@@ -168,6 +168,7 @@ class Optimise:
     def blended_profit_max_scipy(ST_input, LT_input, laydown, seas_index, return_type, objective_type, max_budget,
                              exh_budget, method, scenario_name, step=0.1, tolerance=0.1,
                              num_weeks=1000):
+        print(type(ST_input))
         streams = [entry['Opt Channel'] for entry in ST_input]
 
         current_budget_list = [entry['Current Budget'] for entry in ST_input]
@@ -330,3 +331,151 @@ class Optimise:
             print(f"Solution failed using budget input of: {max_budget} with max total spend cap of: {sum(max_spend_cap_list)}")
 
         return opt_budgets_dict, elapsed_time_seconds, output_df
+
+class Beta:
+
+    def prep_rev_per_stream(stream, budget, cost_per_dict, carryover_dict, recorded_impressions, seas_dict, alpha_dict, beta_dict, num_weeks=1000):
+        cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
+        # print("cpu:")
+        # print(cost_per_stream)
+        allocation = budget / cost_per_stream
+        # print('allocation:')
+        # print(allocation)
+        pct_laydown = []
+        for x in range(len(recorded_impressions[stream])):
+            try:
+                pct_laydown.append(recorded_impressions[stream][x] / sum(recorded_impressions[stream]))
+            except:
+                pct_laydown.append(0)
+        # print("pct_laydown:")
+        # print(pct_laydown)
+        pam = [pct_laydown[i] * allocation for i in range(len(pct_laydown))]
+        carryover_list = []
+        carryover_list.append(pam[0])
+        for x in range(1, len(pam)):
+            carryover_val = pam[x] + carryover_list[x - 1] * carryover_dict[stream]
+            carryover_list.append(carryover_val)
+        # print("carryover list:")
+        # print(carryover_list)
+        rev_list = []
+        for x in carryover_list:
+            rev_val = beta_dict[stream] * (1 - np.exp(-alpha_dict[stream] * x))
+            rev_list.append(rev_val)
+        # print("rev list")
+        # print(rev_list)
+        indexed_vals = [a * b for a, b in zip(rev_list, seas_dict[stream])]
+        total_rev = sum(indexed_vals)
+        infsum = 0
+        for n in range(1, num_weeks):
+            infsum += carryover_list[-1] * (1 - carryover_dict[stream]) ** n
+        total_rev = total_rev + infsum
+        return rev_list
+
+
+    def prep_total_rev_per_stream(stream, budget, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict, LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict):
+
+        ST_rev = Beta.prep_rev_per_stream(stream, budget, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict)
+        LT_rev = Beta.prep_rev_per_stream(stream, budget, LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict)
+        total_rev = ST_rev + LT_rev
+        return total_rev
+
+
+    def beta_calculation(header, laydown, seas_dict):
+
+        # Show column headers without underscores!
+
+        header.columns = [x.replace("_", " ") for x in header.columns.tolist()]
+        
+        laydown.fillna(0)
+        
+        for x in laydown.columns.tolist():
+            if x not in header['Opt Channel'].tolist() and x != 'Date':
+                # print(x)
+                laydown.drop(columns=[x], inplace=True)
+
+        streams = []
+        for stream in header['Opt Channel']:
+            streams.append(str(stream))
+
+        for stream in streams:
+            header.loc[header['Opt Channel'] == stream, 'Current Budget'] = sum(laydown[stream])
+
+        header['ST Revenue'] = header['Current Budget'] * header['ST Current ROI']
+
+        ST_header_dict = header.to_dict("records")
+
+        ST_cost_per_list = [float(entry['CPU']) for entry in ST_header_dict]
+        ST_cost_per_dict = dict(zip(streams, ST_cost_per_list))
+
+        ST_carryover_list = [float(entry['ST Carryover']) for entry in ST_header_dict]
+        ST_carryover_dict = dict(zip(streams, ST_carryover_list))
+
+        ST_beta_dict = dict(zip(streams, [1] * len(streams)))
+
+        ST_alpha_list = [float(entry['ST Alpha']) for entry in ST_header_dict]
+        ST_alpha_dict = dict(zip(streams, ST_alpha_list))
+        raw_input_data = header.to_dict("records")
+        current_budget_list = [entry['Current Budget'] for entry in raw_input_data]
+        current_budget_dict = dict(zip(streams, current_budget_list))
+
+        recorded_impressions = {}
+        for x in laydown.columns:
+            recorded_impressions[x] = laydown.fillna(0)[x].to_list()
+
+        beta_calc_rev_dict_ST = {'Date': list(laydown.Date)}
+        for stream in list(streams):
+            beta_calc_rev_dict_ST[stream] = Beta.prep_rev_per_stream(stream, current_budget_dict[stream], ST_cost_per_dict,
+                                                                ST_carryover_dict, recorded_impressions, seas_dict, ST_alpha_dict, ST_beta_dict)
+            sum(beta_calc_rev_dict_ST[stream])
+        beta_calc_df = pd.DataFrame(beta_calc_rev_dict_ST)[list(streams)].sum().reset_index()
+        beta_calc_df.columns = ['Opt Channel', 'Calc_Rev']
+        beta_calc_df = pd.merge(beta_calc_df, header[['Opt Channel', 'ST Revenue']], on='Opt Channel')
+        beta_calc_df['ST Beta'] = np.where(beta_calc_df['Calc_Rev'] == 0, 0,
+                                        beta_calc_df['ST Revenue'] / beta_calc_df['Calc_Rev'])
+        ST_opt_betas_dict = dict(zip(streams, beta_calc_df['ST Beta'].tolist()))
+
+        header['ST Beta'] = list(ST_opt_betas_dict.values())
+
+        header['LT Revenue'] = header['Current Budget'] * header['LT Current ROI']
+
+        LT_header_dict = header.to_dict("records")
+
+        LT_cost_per_list = [float(entry['CPU']) for entry in LT_header_dict]
+        LT_cost_per_dict = dict(zip(streams, LT_cost_per_list))
+
+        LT_carryover_list = [float(entry['LT Carryover']) for entry in LT_header_dict]
+        LT_carryover_dict = dict(zip(streams, LT_carryover_list))
+
+        LT_beta_dict = dict(zip(streams, [1] * len(streams)))
+
+        LT_alpha_list = [float(entry['LT Alpha']) for entry in LT_header_dict]
+        LT_alpha_dict = dict(zip(streams, LT_alpha_list))
+        raw_input_data = header.to_dict("records")
+        current_budget_list = [entry['Current Budget'] for entry in raw_input_data]
+        current_budget_dict = dict(zip(streams, current_budget_list))
+
+        recorded_impressions = {}
+        for x in laydown.columns:
+            recorded_impressions[x] = laydown.fillna(0)[x].to_list()
+
+        beta_calc_rev_dict_LT = {'Date': list(laydown.Date)}
+        for stream in list(streams):
+            beta_calc_rev_dict_LT[stream] = Beta.prep_rev_per_stream(stream, current_budget_dict[stream], LT_cost_per_dict, LT_carryover_dict, recorded_impressions, seas_dict, LT_alpha_dict, LT_beta_dict)
+            sum(beta_calc_rev_dict_ST[stream])
+        beta_calc_df = pd.DataFrame(beta_calc_rev_dict_ST)[list(streams)].sum().reset_index()
+        beta_calc_df.columns = ['Opt Channel', 'Calc_Rev']
+        beta_calc_df = pd.merge(beta_calc_df, header[['Opt Channel', 'LT Revenue']], on='Opt Channel')
+        beta_calc_df['LT Beta'] = np.where(beta_calc_df['Calc_Rev'] == 0, 0,
+                                        beta_calc_df['LT Revenue'] / beta_calc_df['Calc_Rev'])
+        LT_opt_betas_dict = dict(zip(streams, beta_calc_df['LT Beta'].tolist()))
+
+        header['LT Beta'] = list(LT_opt_betas_dict.values())
+
+        header_copy = header.copy()
+
+        return header_copy
+
+        
+
+        
+
