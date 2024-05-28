@@ -233,10 +233,8 @@ def overwrite_save():
     user_id = current_user.id
     content = pickle.dumps(request.json.get('content'))
     scenario_names = request.json.get('scenarioNames')
-    current_table_ids = list(table_data.keys())
+    pickled_scenario_names = pickle.dumps(scenario_names)
     table_data_json = json.dumps(table_data)
-
-    table_ids_str = ','.join(map(str, current_table_ids))
 
     app.logger.info(f"snapshot id = {snapshot_id}")
     app.logger.info(f"user id = {user_id}")
@@ -244,7 +242,7 @@ def overwrite_save():
     existing_snapshot = Snapshot.query.filter_by(id=snapshot_id, user_id=user_id).first()
     existing_snapshot.content = content
     existing_snapshot.table_data = table_data_json
-    existing_snapshot.scenario_names = scenario_names
+    existing_snapshot.scenario_names = pickled_scenario_names
 
     try:
         db.session.commit()
@@ -500,12 +498,24 @@ seas_index = pd.read_sql_table('All_Index', engine)
 
 header_processed = Beta.beta_calculation(header, laydown, seas_index)
 
-#LT_header_dict = header.to_dict("records")
+country_to_region = {
+    'Mexico': 'NA',
+    'Brazil': 'LATAM',
+    'Chile': 'LATAM',
+    'UK': 'EUR',
+    'France': 'EUR',
+    'Germany': 'EUR',
+    'Poland': 'EUR',
+    'Australia': 'AOA'
+}
+
+header_processed.rename(columns={'Region':'Country'}, inplace=True)
+
+header_processed['Region'] = header_processed['Country'].map(country_to_region).fillna('Other')
 
 table_df = header_processed.copy()
 
-dataTable_cols = ['Region', 'Brand', 'Channel', 'Current Budget', 'Min Spend Cap', 'Max Spend Cap',
-                  # 'ST Carryover', 'ST Alpha', 'ST Beta', 'LT Carryover', 'LT Alpha', 'LT Beta',
+dataTable_cols = ['Region', 'Country', 'Brand', 'Channel', 'Current Budget', 'Min Spend Cap', 'Max Spend Cap',
                   'Laydown']
 
 for col in table_df.columns:
@@ -515,7 +525,7 @@ for col in table_df.columns:
 table_df.insert(0, 'row_id', range(1, len(table_df) + 1))
 table_dict = table_df.to_dict("records")
 for var in table_dict:
-    var['Laydown'] = laydown[var['Channel'] + "_" + var['Region'] + "_" + var['Brand']].tolist()
+    var['Laydown'] = laydown[var['Channel'] + "_" + var['Country'] + "_" + var['Brand']].tolist()
 
 table_data = {"1": deepcopy(table_dict)}
 bud = sum(header['Current Budget'].to_list())
@@ -573,7 +583,7 @@ def run_optimise(dataDict):
         current_table_df = pd.DataFrame.from_records(deepcopy(table_data[table_id]))
         removed_rows_df = current_table_df[current_table_df.row_id.isin(disabled_rows)].copy()
         removed_rows_df['Opt Channel'] = removed_rows_df.apply(
-            lambda row: '_'.join([str(row['Channel']), str(row['Region']), str(row['Brand'])]), axis=1)
+            lambda row: '_'.join([str(row['Channel']), str(row['Country']), str(row['Brand'])]), axis=1)
 
         disabled_opt_channels = list(removed_rows_df['Opt Channel'])
 
@@ -654,7 +664,7 @@ def results_output():
     output.to_csv('output.csv')
     output['Year'] = output['Date'].dt.year
     mns_mc = pd.read_excel('ROIs and factors all regions.xlsx', sheet_name='factors')
-    merged_output = pd.merge(output, mns_mc, on=['Region','Brand','Year'], how='left')
+    merged_output = pd.merge(output, mns_mc, on=['Country','Brand','Year'], how='left')
     merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
     merged_output.to_csv('merged_output.csv')
     try:
@@ -690,7 +700,7 @@ def chart_data(data):
         result_df['Date'] = pd.to_datetime(result_df['Date'])
         result_df['MonthYear'] = result_df['Date'].dt.strftime('%b %Y')
         result_df = result_df.groupby(
-            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Region', 'Brand', 'Channel Group', 'Channel',
+            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Region', 'Country', 'Brand', 'Channel Group', 'Channel',
              'MonthYear']).sum(numeric_only=True)
         result_df.reset_index(inplace=True)
         result_df = result_df.sort_values(by='MonthYear')
@@ -796,12 +806,12 @@ def chart_response():
             for x in db_result.fetchall():
                 a = dict(zip(col_names, x))
                 a["Optimisation Type"] = table.split("_")[3].upper()
-                a["region_brand"] = f"{a['Region']}_{a['Brand']}"
+                a["region_brand"] = f"{a['Country']}_{a['Brand']}"
                 a["region_brand_opt"] = f"{a['region_brand']}_{a['Optimisation Type']}"
                 chart_response.append(a)
 
         dropdown_options1 = {}
-        for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type", "region_brand",
+        for column in ["Country", "Brand", "Channel Group", "Channel", "Optimisation Type", "region_brand",
                        "region_brand_opt"]:
             dropdown_options1[column] = list(set(row[column] for row in chart_response))
 
@@ -837,7 +847,7 @@ def chart_budget():
         col_names = db_result.keys()
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
-            a["region_brand"] = f"{a['Region']}_{a['Brand']}"
+            a["region_brand"] = f"{a['Country']}_{a['Brand']}"
             chart_budget.append(a)
 
         default_option = dropdown_options1["region_brand"][0]
@@ -868,7 +878,7 @@ def chart_roi():
         col_names = db_result.keys()
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
-            a["region_brand"] = f"{a['Region']}_{a['Brand']}"
+            a["region_brand"] = f"{a['Country']}_{a['Brand']}"
             chart_roi.append(a)
 
         default_option = dropdown_options1["region_brand"][0]
@@ -897,7 +907,7 @@ def chart_budget_response():
         col_names = db_result.keys()
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
-            a["region_brand"] = f"{a['Region']}_{a['Brand']}"
+            a["region_brand"] = f"{a['Country']}_{a['Brand']}"
             chart_budget_response.append(a)
 
         default_option = dropdown_options1["region_brand"][0]
@@ -924,12 +934,12 @@ def tv_data_process():
         col_names = db_result.keys()
         result_df = pd.DataFrame(rows, columns=col_names)
         def region_brand_combine(row):
-            return row['Region'] + '_' + row['Brand']
+            return row['Country'] + '_' + row['Brand']
         result_df['region_brand'] = result_df.apply(region_brand_combine, axis=1)
         result_df['Date'] = pd.to_datetime(result_df['Date'])
         result_df['MonthYear'] = result_df['Date'].dt.strftime('%b %Y')
         result_df = result_df.groupby(
-            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Region', 'Brand', 'Channel Group', 'Channel', 'Optimised', 'MonthYear', 'region_brand']).sum(numeric_only=True)
+            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Region', 'Country', 'Brand', 'Channel Group', 'Channel', 'Optimised', 'MonthYear', 'region_brand']).sum(numeric_only=True)
         result_df.reset_index(inplace=True)
         result_df = result_df.sort_values(by='MonthYear')
         chart_data = []
@@ -951,10 +961,10 @@ def tv_data_process():
 def handle_curve_filter(curve_filter_data):
     try:
         curve_filters = curve_filter_data
-        if 'Region' in curve_filters and 'Brand' in curve_filters and 'Optimisation Type' in curve_filters:
+        if 'Country' in curve_filters and 'Brand' in curve_filters and 'Optimisation Type' in curve_filters:
             curve_filters['region_brand_opt'] = f"{curve_filters['Region']}_{curve_filters['Brand']}_{curve_filters['Optimisation Type']}"
-        if 'Region' in curve_filters and 'Brand' in curve_filters:
-            curve_filters['region_brand'] = f"{curve_filters['Region']}_{curve_filters['Brand']}"
+        if 'Country' in curve_filters and 'Brand' in curve_filters:
+            curve_filters['region_brand'] = f"{curve_filters['Country']}_{curve_filters['Brand']}"
 
         print('Received filter data:', curve_filters)
         unique_region_brand_opt = set(row["region_brand"] for row in chart_budget)

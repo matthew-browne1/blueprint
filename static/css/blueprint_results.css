@@ -184,6 +184,8 @@ input {
     float: right;
     margin-top: 10px;
     margin-right: 25px;
+    height: 60%;
+    white-space: nowrap;
 }
 
 .nav-container .volval-radio-buttons {

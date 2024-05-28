@@ -534,6 +534,7 @@ function spawnNewTab(tabCounter) {
                   <tr>
                      <th><input type="checkbox" name="select_all" value="1" id="example-select-all${tabCounter}" ></th>
                      <th>Region</th>
+                     <th>Country</th>
                      <th>Brand</th>
                      <th>Channel</th>
                      <th>Current Budget</th>
@@ -600,6 +601,7 @@ function initializeDataTable(tableID) {
         columns: [
           { data: null },
           { data: "Region" },
+          { data: "Country" },
           { data: "Brand" },
           { data: "Channel" },
           {
@@ -648,7 +650,8 @@ function initializeDataTable(tableID) {
           { width: "80px", targets: 4 },
           { width: "80px", targets: 5 },
           { width: "80px", targets: 6 },
-          { width: "250px", targets: 7 },
+          { width: "80px", targets: 7 },
+          { width: "250px", targets: 8 },
           {
             targets: 0,
             searchable: false,
@@ -1179,10 +1182,11 @@ function saveFunc() {
 }
 
 function overwriteSave() {
-  if (isSaveTableInitialized) {
+
     var selectedRow = saveTable.row({ selected: true }).data();
     if (selectedRow) {
       var selectedSaveId = selectedRow.DT_RowId;
+      var objToSend = {};
       // Send a POST request to the Flask backend with the selected row data
       $.ajax({
         url: "get_table_ids",
@@ -1193,46 +1197,44 @@ function overwriteSave() {
             console.log(response.tableIds);
             var tableIds = response.tableIds;
 
-            destroyTables(tableIds.length + 1);
-            $("#saves-table").DataTable().destroy();
-            $("#load-table").DataTable().destroy();
-            console.log("saves and load tables destroyed");
-            isSaveTableInitialized = false;
-            isLoadTableInitialized = false;
             closeSavePopup();
-            var contentToSave =
-              document.getElementById("all-content").innerHTML;
+            tableIds.forEach(function (tableID) {
+              var disabledRowIds = getDisabledRowIds(tableID);
+              var budget = enteredBudget(tableID);
+              var [dateBool, dateArray] = dateOptions(tableID);
+              var options = selectedDropDownOptions(tableID);
+              var savedDataFromTable = {
+                disabledRowIds: disabledRowIds,
+                enteredBudget: budget,
+                dateBool: dateBool,
+                dateArray: dateArray,
+                optionsArray: options,
+              };
+              objToSend[tableID] = savedDataFromTable;
+            });
+          }
             $.ajax({
               url: "/overwrite_save",
               method: "POST",
               contentType: "application/json",
               data: JSON.stringify({
-                selectedSaveId: selectedSaveId,
-                content: contentToSave,
-                scenarioNames: Object.values(tabNames),
+                content: objToSend,
+                scenarioNames: tabNames,
+                selectedSaveId:selectedSaveId
               }),
               success: function (response) {
                 console.log(response);
-                initializeInitialTable();
-                tableIds.forEach(function (id) {
-                  initializeDataTable(id);
-                });
-                initializeSavesTable();
-                initializeLoadTable();
-                console.log("reinitialized all tables");
-                console.log("Save overwritten successfully:", response);
-                // Handle any further actions based on the backend response
+
               },
               error: function (error) {
                 console.error("Error overwriting save:", error);
               },
             });
           }
-        },
-      });
+        });
+      }
     }
-  }
-}
+     
 
 function loadFunc() {
   var selectedRow = $("#load-table")
@@ -1285,11 +1287,12 @@ function loadFunc() {
 }
 
 function initializeDataTableFromSave(data, scenarioNameObj) {
+  var isTableInitialized = false;
 
   const tableIds = Object.keys(data);
 
   tableIds.forEach(function (tabCounter) {
-    const { disabledRowIds, enteredBudget, dateBool, dateArray, optionsArray } =
+    var { disabledRowIds, enteredBudget, dateBool, dateArray, optionsArray } =
       data[tabCounter];
     const [startDate, endDate] = dateArray;
     const [kpiValue, objValue, exhValue] = optionsArray;
@@ -1440,6 +1443,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
                   <tr>
                      <th><input type="checkbox" name="select_all" value="1" id="example-select-all${tabCounter}" ></th>
                      <th>Region</th>
+                     <th>Country</th>
                      <th>Brand</th>
                      <th>Channel</th>
                      <th>Current Budget</th>
@@ -1502,6 +1506,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
             columns: [
               { data: null },
               { data: "Region" },
+              { data: "Country" },
               { data: "Brand" },
               { data: "Channel" },
               {
@@ -1553,18 +1558,21 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
               { width: "80px", targets: 4 },
               { width: "80px", targets: 5 },
               { width: "80px", targets: 6 },
-              { width: "250px", targets: 7 },
+              { width: "80px", targets: 7 },
+              { width: "250px", targets: 8 },
               {
                 targets: 0,
                 searchable: false,
                 orderable: false,
                 className: "dt-body-center",
                 render: function (data, type, full, meta) {
+                  if (!isTableInitialized) {
                   const rowId = meta.row + 1;
                   const isChecked = !disabledRowIds.includes(rowId);
                   return `<input type="checkbox" id="checkbox${tabCounter}-${
                     meta.row + 1
                   }"${isChecked ? "checked" : ""}>`;
+                }
                 },
               },
               {
@@ -1690,12 +1698,18 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
               var isChecked = $(this).prop("checked");
               if (isChecked) {
                 tabChannelTable.row(row).nodes().to$().removeClass("disabled");
-                console.log("removing class");
                 console.log(rowId);
+                disabledRowIds.pop(rowId);
+                console.log("removed rowId from disabled row array");
+                console.log("removing class");
+               
               } else {
                 tabChannelTable.row(row).nodes().to$().addClass("disabled");
-                console.log("adding class");
                 console.log(rowId);
+                disabledRowIds.push(rowId);
+                console.log("added rowId to disabled row array");
+                console.log("adding class");
+               
               }
             }
           );
