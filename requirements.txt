@@ -42,3 +42,4 @@ azure-identity
 azure-keyvault-secrets
 git+https://github.com/eventlet/eventlet
 redis
+XlsxWriter==3.2.0

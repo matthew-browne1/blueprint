@@ -536,9 +536,9 @@ function spawnNewTab(tabCounter) {
                      <th>Region</th>
                      <th>Brand</th>
                      <th>Channel</th>
-                     <th>Current Budget</th>
-                     <th>Min Spend Cap</th>
-                     <th>Max Spend Cap</th>
+                     <th>Current Budget (CHF)</th>
+                     <th>Min Spend Cap (CHF)</th>
+                     <th>Max Spend Cap (CHF)</th>
                      <th>Laydown</th>
                      </tr>
                   </thead>
@@ -1438,9 +1438,9 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
                      <th>Region</th>
                      <th>Brand</th>
                      <th>Channel</th>
-                     <th>Current Budget</th>
-                     <th>Min Spend Cap</th>
-                     <th>Max Spend Cap</th>
+                     <th>Current Budget (CHF)</th>
+                     <th>Min Spend Cap (CHF)</th>
+                     <th>Max Spend Cap (CHF)</th>
                      <th>Laydown</th>
                      </tr>
                   </thead>

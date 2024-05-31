@@ -28,7 +28,7 @@ import pickle
 #from azure import identity
 
 app = Flask(__name__)
-socketio = SocketIO(app=app, manage_session=False, async_mode='eventlet')
+socketio = SocketIO(app=app, manage_session=False)
 
 #, async_mode='eventlet'
 
@@ -426,7 +426,7 @@ def run_optimise(dataDict):
     try:
         session_id = session['session_id']
         queue = session_queues.setdefault(session_id, Queue())
-     
+    
         queue.put((input, input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name))
 
         if not queue.empty():
@@ -436,8 +436,9 @@ def run_optimise(dataDict):
             print(session['output_df_per_result'])
             session.modified = True
             print("opt complete, hiding overlay")
+            print(session['output_df_per_result'].keys())
+            print(session['results'].keys())
             
-
     except Exception as e:
         app.logger.info(f"error adding optimisation job to the queue: {str(e)}")
         socketio.emit('opt_complete', {'data': table_id, 'exception': str(e)})
@@ -489,29 +490,30 @@ def start_optimise_thread(session_id):
 @app.route('/results_output', methods=['POST'])
 def results_output():
     
-    tab_names = dict(request.json)
-    print(tab_names)
-    print(f"results_output endpoint printing output df keys: {session['output_df_per_result'].keys()}")
     with app.app_context():
-        print(session["output_df_per_result"])
-    #print(inputs_per_result)
-    output = create_output(output_df_per_result=session["output_df_per_result"])
-    print(output)
-    
-    output['Date'] = pd.to_datetime(output['Date'])
-    output['Year'] = output['Date'].dt.year
-    mns_query = 'SELECT * FROM "MNS_MC";'
-    mns_mc = pd.read_sql(mns_query, engine)
-    merged_output = pd.merge(output, mns_mc, on=['Region','Brand','Year'], how='left')
-    merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
-    #merged_output.to_csv('merged_output.csv')
-    try:
-        merged_output.to_sql(f'Blueprint_results_{session["user"]["oid"]}', engine, if_exists='replace', index=False)
-        app.logger.info("csv uploaded to db successfully")
-    except:
-        app.logger.info("csv db upload failed")
-
-    return jsonify({"message": "csv exported successfully"})
+        tab_names = dict(request.json)
+        print(tab_names)
+        app.logger.info(f"results_output endpoint printing output df keys: {session['output_df_per_result'].keys()}")
+        
+        #print(inputs_per_result)
+        output = create_output(output_df_per_result=session["output_df_per_result"])
+        #print(output)
+        
+        output['Date'] = pd.to_datetime(output['Date'])
+        output['Year'] = output['Date'].dt.year
+        mns_query = 'SELECT * FROM "MNS_MC";'
+        mns_mc = pd.read_sql(mns_query, engine)
+        merged_output = pd.merge(output, mns_mc, on=['Region','Brand','Year'], how='left')
+        merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
+        #merged_output.to_csv('merged_output.csv')
+        try:
+            merged_output.to_sql(f'Blueprint_results_{session["user"]["oid"]}', engine, if_exists='replace', index=False)
+            app.logger.info("results uploaded to db successfully")
+            return jsonify({"message": "results uploaded to db successfully"})
+        except:
+            app.logger.info("csv db upload failed")
+            return jsonify({"message": "results export failed"})
+        
 
 def create_output(output_df_per_result):
     concat_df = pd.DataFrame()
@@ -940,6 +942,8 @@ def table_ids_sync():
         for table_id in list(session['table_data'].keys()):
             if table_id not in received_table_ids:
                 del session['table_data'][table_id]
+                del session['output_df_per_result'][table_id]
+                del session['results'][table_id]
                 app.logger.info(f"deleted tab: {table_id}")
         session.modified = True
         print(f"table_ids_sync endpoint: {session['table_data'].keys()}")
@@ -1022,8 +1026,6 @@ def export_data():
         all_input = pd.read_sql_table('All_Channel_Inputs', engine)
         laydown = pd.read_sql_table('All_Laydown', engine)
         all_index = pd.read_sql_table('All_Index', engine)
-        # ST_incr_rev= pd.read_sql_table('All_Incremental_Revenue_ST', engine)
-        # LT_incr_rev = pd.read_sql_table('All_Incremental_Revenue_LT', engine)
 
         all_input.to_excel(writer, sheet_name='All Inputs', index=False)
         laydown.to_excel(writer, sheet_name='Laydown', index=False)

@@ -380,7 +380,7 @@ class Beta:
         return total_rev
 
 
-    def beta_calculation(header, laydown, seas_dict):
+    def beta_calculation(header, laydown, seas_dict, inc_rev):
 
         # Show column headers without underscores!
 
@@ -399,6 +399,7 @@ class Beta:
 
         for stream in streams:
             header.loc[header['Opt Channel'] == stream, 'Current Budget'] = sum(laydown[stream])
+
 
         header['ST Revenue'] = header['Current Budget'] * header['ST Current ROI']
 
