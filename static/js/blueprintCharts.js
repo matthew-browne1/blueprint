@@ -92,7 +92,7 @@ $(document).ready(function() {
         populateDropdown('#brandFilter', data.options.Brand);
         populateDropdown('#scenarioFilter', data.options.Scenario);
         populateDropdown('#revenueFilter', data.options['Budget/Revenue']);
-
+        
         // Enable custom dropdown with search box for date filter
         enableCustomDropdown('#dateFilter');
     }).on('error', function(xhr, status, error) {

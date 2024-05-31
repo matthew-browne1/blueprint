@@ -26,7 +26,7 @@ import pyotp
 import pickle
 # from azure.identity import DefaultAzureCredential
 # from azure.keyvault.secrets import SecretClient
-
+import traceback
 #from azure import identity
 
 app = Flask(__name__)
@@ -123,8 +123,7 @@ def login():
             return 'User is already logged in', 403
 
         if user and bcrypt.check_password_hash(user.password, password):
-          
-         
+        
             login_user(user, remember=True)
             flash('You have been logged in successfully!', 'success')
             active_sessions[user.id] = True
@@ -319,185 +318,6 @@ laydown_table_name = "laydown"
 
 num_weeks = 1000
 
-# def prep_rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dict, beta_dict):
-#     cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
-#     # print("cpu:")
-#     # print(cost_per_stream)
-#     allocation = budget / cost_per_stream
-#     # print('allocation:')
-#     # print(allocation)
-#     pct_laydown = []
-#     for x in range(len(recorded_impressions[stream])):
-#         try:
-#             pct_laydown.append(recorded_impressions[stream][x] / sum(recorded_impressions[stream]))
-#         except:
-#             pct_laydown.append(0)
-#     # print("pct_laydown:")
-#     # print(pct_laydown)
-#     pam = [pct_laydown[i] * allocation for i in range(len(pct_laydown))]
-#     carryover_list = []
-#     carryover_list.append(pam[0])
-#     for x in range(1, len(pam)):
-#         carryover_val = pam[x] + carryover_list[x - 1] * carryover_dict[stream]
-#         carryover_list.append(carryover_val)
-#     # print("carryover list:")
-#     # print(carryover_list)
-#     rev_list = []
-#     for x in carryover_list:
-#         rev_val = beta_dict[stream] * (1 - np.exp(-alpha_dict[stream] * x))
-#         rev_list.append(rev_val)
-#     # print("rev list")
-#     # print(rev_list)
-#     indexed_vals = [a * b for a, b in zip(rev_list, seas_dict[stream])]
-#     total_rev = sum(indexed_vals)
-#     infsum = 0
-#     for n in range(1, num_weeks):
-#         infsum += carryover_list[-1] * (1 - carryover_dict[stream]) ** n
-#     total_rev = total_rev + infsum
-#     return rev_list
-
-
-# def prep_total_rev_per_stream(stream, budget):
-#     ST_rev = prep_rev_per_stream(stream, budget, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict)
-#     LT_rev = prep_rev_per_stream(stream, budget, LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict)
-#     total_rev = ST_rev + LT_rev
-#     return total_rev
-
-# results = {}
-
-
-
-# for x in laydown.columns.tolist():
-#     if x not in ST_header['Opt Channel'].tolist() and x != 'Date':
-#         # print(x)
-#         laydown.drop(columns=[x], inplace=True)
-
-# streams = []
-# for stream in ST_header['Opt Channel']:
-#     streams.append(str(stream))
-
-# laydown_dates = laydown['Date']
-
-# for stream in streams:
-#     ST_header.loc[ST_header['Opt Channel'] == stream, 'Current Budget'] = sum(laydown[stream])
-
-# ST_header['ST Revenue'] = ST_header['Current Budget'] * ST_header['ST Current ROI']
-
-# ST_header_dict = ST_header.to_dict("records")
-
-# ST_cost_per_list = [float(entry['CPU']) for entry in ST_header_dict]
-# ST_cost_per_dict = dict(zip(streams, ST_cost_per_list))
-
-# ST_carryover_list = [float(entry['ST Carryover']) for entry in ST_header_dict]
-# ST_carryover_dict = dict(zip(streams, ST_carryover_list))
-
-# ST_beta_dict = dict(zip(streams, [1] * len(streams)))
-
-# ST_alpha_list = [float(entry['ST Alpha']) for entry in ST_header_dict]
-# ST_alpha_dict = dict(zip(streams, ST_alpha_list))
-# raw_input_data = ST_header.to_dict("records")
-# current_budget_list = [entry['Current Budget'] for entry in raw_input_data]
-# current_budget_dict = dict(zip(streams, current_budget_list))
-
-# seas_dict = seas_index
-
-# recorded_impressions = {}
-# for x in laydown.columns:
-#     recorded_impressions[x] = laydown.fillna(0)[x].to_list()
-
-# beta_calc_rev_dict_ST = {'Date': list(laydown.Date)}
-# for stream in list(streams):
-#     beta_calc_rev_dict_ST[stream] = prep_rev_per_stream(stream, current_budget_dict[stream], ST_cost_per_dict,
-#                                                         ST_carryover_dict, ST_alpha_dict, ST_beta_dict)
-                                                        
-#     #sum(beta_calc_rev_dict_ST[stream])
-# beta_calc_df = pd.DataFrame(beta_calc_rev_dict_ST)[list(streams)].sum().reset_index()
-# beta_calc_df.columns = ['Opt Channel', 'Calc_Rev']
-# beta_calc_df = pd.merge(beta_calc_df, ST_header[['Opt Channel', 'ST Revenue']], on='Opt Channel')
-# beta_calc_df['ST Beta'] = np.where(beta_calc_df['Calc_Rev'] == 0, 0,
-#                                    beta_calc_df['ST Revenue'] / beta_calc_df['Calc_Rev'])
-# ST_opt_betas_dict = dict(zip(streams, beta_calc_df['ST Beta'].tolist()))
-
-# ST_header['ST Beta'] = list(ST_opt_betas_dict.values())
-
-# ST_header_dict = ST_header.to_dict("records")
-
-# max_spend_cap = sum(ST_header['Max Spend Cap'])
-
-# print(max_spend_cap)
-
-# LT_header = pd.read_sql_table('All_Channel_Inputs', engine)
-# # Show column headers without underscores!
-# LT_header.columns = [x.replace("_", " ") for x in LT_header.columns.tolist()]
-
-# laydown = pd.read_sql_table('All_Laydown', engine)
-# laydown.fillna(0)
-# laydown.columns
-# seas_index = pd.read_sql_table('All_Index', engine)
-
-# for x in laydown.columns.tolist():
-#     if x not in LT_header['Opt Channel'].tolist() and x != 'Date':
-#         # print(x)
-#         laydown.drop(columns=[x], inplace=True)
-
-# streams = []
-# for stream in LT_header['Opt Channel']:
-#     streams.append(str(stream))
-
-# laydown_dates = laydown['Date']
-
-# for stream in streams:
-#     LT_header.loc[LT_header['Opt Channel'] == stream, 'Current Budget'] = sum(laydown[stream])
-
-# LT_header['LT Revenue'] = LT_header['Current Budget'] * LT_header['LT Current ROI']
-
-# LT_header_dict = LT_header.to_dict("records")
-
-# LT_cost_per_list = [float(entry['CPU']) for entry in LT_header_dict]
-# LT_cost_per_dict = dict(zip(streams, LT_cost_per_list))
-
-# LT_carryover_list = [float(entry['LT Carryover']) for entry in LT_header_dict]
-# LT_carryover_dict = dict(zip(streams, LT_carryover_list))
-
-# LT_beta_dict = dict(zip(streams, [1] * len(streams)))
-
-# LT_alpha_list = [float(entry['LT Alpha']) for entry in LT_header_dict]
-# LT_alpha_dict = dict(zip(streams, LT_alpha_list))
-# raw_input_data = LT_header.to_dict("records")
-# current_budget_list = [entry['Current Budget'] for entry in raw_input_data]
-# current_budget_dict = dict(zip(streams, current_budget_list))
-
-# seas_dict = seas_index
-
-# recorded_impressions = {}
-# for x in laydown.columns:
-#     recorded_impressions[x] = laydown.fillna(0)[x].to_list()
-
-# beta_calc_rev_dict_LT = {'Date': list(laydown.Date)}
-# # stream = 'ATLTVSuper FoodsBSBakersDog'
-# for stream in list(streams):
-#     beta_calc_rev_dict_ST[stream] = prep_rev_per_stream(stream, current_budget_dict[stream], LT_cost_per_dict,
-#                                                         LT_carryover_dict, LT_alpha_dict, LT_beta_dict)
-#     sum(beta_calc_rev_dict_ST[stream])
-# beta_calc_df = pd.DataFrame(beta_calc_rev_dict_ST)[list(streams)].sum().reset_index()
-# beta_calc_df.columns = ['Opt Channel', 'Calc_Rev']
-# beta_calc_df = pd.merge(beta_calc_df, LT_header[['Opt Channel', 'LT Revenue']], on='Opt Channel')
-# beta_calc_df['LT Beta'] = np.where(beta_calc_df['Calc_Rev'] == 0, 0,
-#                                    beta_calc_df['LT Revenue'] / beta_calc_df['Calc_Rev'])
-# LT_opt_betas_dict = dict(zip(streams, beta_calc_df['LT Beta'].tolist()))
-
-# LT_header['LT Beta'] = list(LT_opt_betas_dict.values())
-# ST_header['LT Beta'] = list(LT_opt_betas_dict.values())
-header = pd.read_sql_table('All_Channel_Inputs', engine)
-# Show column headers without underscores!
-header.columns = [x.replace("_", " ") for x in header.columns.tolist()]
-
-laydown = pd.read_sql_table('All_Laydown', engine)
-laydown_dates = laydown['Date']
-seas_index = pd.read_sql_table('All_Index', engine)
-
-header_processed = Beta.beta_calculation(header, laydown, seas_index)
-
 country_to_region = {
     'Mexico': 'NA',
     'Brazil': 'LATAM',
@@ -508,12 +328,22 @@ country_to_region = {
     'Poland': 'EUR',
     'Australia': 'AOA'
 }
+header = pd.read_sql_table('All_Channel_Inputs', engine)
+# Show column headers without underscores!
+header.columns = [x.replace("_", " ") for x in header.columns.tolist()]
+header.rename(columns={'Region':'Country'}, inplace=True)
 
-header_processed.rename(columns={'Region':'Country'}, inplace=True)
+header['Region'] = header['Country'].map(country_to_region).fillna('Other')
+laydown = pd.read_sql_table('All_Laydown', engine)
+laydown_dates = laydown['Date']
+seas_index = pd.read_sql_table('All_Index', engine)
 
-header_processed['Region'] = header_processed['Country'].map(country_to_region).fillna('Other')
+ST_inc_rev = pd.read_sql_table('All_Incremental_Revenue_ST', engine)
+LT_inc_rev = pd.read_sql_table('All_Incremental_Revenue_LT', engine)
 
-table_df = header_processed.copy()
+nns_mc = pd.read_excel('ROIs and factors all regions.xlsx', sheet_name='factors')
+
+table_df = header.copy()
 
 dataTable_cols = ['Region', 'Country', 'Brand', 'Channel', 'Current Budget', 'Min Spend Cap', 'Max Spend Cap',
                   'Laydown']
@@ -537,14 +367,14 @@ bud = sum(header['Current Budget'].to_list())
 inputs_per_result = {}
 output_df_per_result = {}
 
-def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budget, exh_budget, table_id, scenario_name):
+def optimise(ST_input, LT_input, laydown, seas_index, nns_mc, blend, obj_func, max_budget, exh_budget, table_id, scenario_name):
 
     global results
     global output_df_per_result
 
     try:
         with app.app_context():
-            result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown, seas_index=seas_index, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name)
+            result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown, seas_index=seas_index, nns_mc=nns_mc, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name)
             print(f"Task completed: {result} in {time_elapsed} time")
             results[table_id] = result
             output_df_per_result[table_id] = output_df
@@ -552,6 +382,7 @@ def optimise(ST_input, LT_input, laydown, seas_index, blend, obj_func, max_budge
             socketio.emit('opt_complete', {'data': table_id})
     except Exception as e:
         with app.app_context():
+            traceback.print_exc()
             print(f"Error in task callback: {str(e)}")
             socketio.emit('opt_complete', {'data': table_id})
 
@@ -562,9 +393,12 @@ def run_optimise(dataDict):
     data = dict(dataDict.get('dataToSend'))
     global inputs_per_result
     table_id = str(data['tableID'])
-    header_copy = deepcopy(header_processed)
+    header_copy = deepcopy(header)
     laydown_copy = deepcopy(laydown)
     seas_index_copy = deepcopy(seas_index)
+    ST_inc_rev_copy = deepcopy(ST_inc_rev)
+    LT_inc_rev_copy = deepcopy(LT_inc_rev)
+    nns_copy = pd.read_excel('ROIs and factors all regions.xlsx', sheet_name='factors')
     streams = []
     for stream in header_copy['Opt Channel']:
         streams.append(str(stream))
@@ -591,45 +425,41 @@ def run_optimise(dataDict):
             header_copy[col] = current_table_df[col]
 
         header_copy = header_copy[~(header_copy['Opt Channel'].isin(disabled_opt_channels))]
-        #LT_header_copy = LT_header_copy[~(LT_header_copy['Opt Channel'].isin(disabled_opt_channels))]
 
         laydown_copy = laydown_copy.drop(columns=disabled_opt_channels, errors='ignore')
         seas_index_copy = seas_index_copy.drop(columns=disabled_opt_channels, errors='ignore')
-
-        input = header_copy.to_dict('records')
-        #LT_input = LT_header_copy.to_dict('records')
         
-        if "dates" in data:
-        
-            app.logger.info('dates found in data')
-            print("dates in the datatosend")
-            #print(data['dates'][0][:10])
-            #print(data['dates'][1][:10])
+        if "dates" not in data:
+            start_date = list(laydown_dates)[0]
+            end_date = list(laydown_dates)[-1]
+        else:
             start_date = datetime.strptime(data['dates'][0][:10], "%Y-%m-%d")
             end_date = datetime.strptime(data['dates'][1][:10], "%Y-%m-%d")
-            #print(f"start data: {start_date}, end_date: {end_date}, laydown_copy dates: {laydown_copy['Date']}")
-            laydown_copy = laydown_copy[(laydown_copy["Date"] >= start_date) & (laydown_copy["Date"] <= end_date)]
-            seas_index_copy = seas_index_copy[(laydown_copy["Date"] >= start_date) & (seas_index_copy["Date"] <= end_date)]
-            #print(laydown_copy)
-            #print(seas_index_copy)
-            app.logger.info(start_date)
-            app.logger.info(end_date)
+            app.logger.info(f'{current_user.id}, dates found in data')
+        
+        laydown_copy = laydown_copy[(laydown_copy["Date"] >= start_date) & (laydown_copy["Date"] <= end_date)]
+        seas_index_copy = seas_index_copy[(laydown_copy["Date"] >= start_date) & (seas_index_copy["Date"] <= end_date)]
+        ST_inc_rev_copy = ST_inc_rev_copy[(ST_inc_rev_copy["Date"] >= start_date) & (ST_inc_rev_copy['Date'] <= end_date)]
+        LT_inc_rev_copy = LT_inc_rev_copy[(LT_inc_rev_copy["Date"] >= start_date) & (LT_inc_rev_copy['Date'] <= end_date)]
 
         print(
             f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
 
-        header = Beta.beta_calculation(header_copy, laydown_copy, seas_index_copy)
-        inputs_dict = {'ST_input': header, 'LT_input': header, 'laydown': laydown_copy, 'seas_index': seas_index_copy}
-        print(header['ST Beta'])
-        print(header['LT Beta'])
+        ST_header = Beta.beta_calculation(header_copy, laydown_copy, seas_index_copy, ST_inc_rev_copy, 'st')
+
+        LT_header = Beta.beta_calculation(header_copy, laydown_copy, seas_index_copy, LT_inc_rev_copy, 'lt')
+        print("applied betas")
+        inputs_dict = {'ST_input': ST_header, 'LT_input': LT_header, 'laydown': laydown_copy, 'seas_index': seas_index_copy}
+
         inputs_per_result[table_id] = deepcopy(inputs_dict)
 
         laydown_copy.set_index('Date', inplace=True)
 
-        task_queue.put((header.to_dict("records"), header.to_dict("records"), laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name))
+        task_queue.put((ST_header.to_dict("records"), LT_header.to_dict("records"), laydown_copy, seas_index_copy, nns_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name))
 
     except Exception as e:
-        print('Error in user inputs')
+        print('Error in user inputs', str(e))
+        traceback.print_exc()
         socketio.emit('opt_complete', {'data': table_id})
 
     return jsonify({'status': 'Task started in the background'})
@@ -642,10 +472,10 @@ def run_optimise_task():
             break
         
         # Unpack the task arguments
-        ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name = task
+        ST_input, LT_input, laydown_copy, seas_index_copy, nns_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name = task
         
         # Run the optimise task with provided arguments
-        optimise(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, table_id=table_id, scenario_name=scenario_name)
+        optimise(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, nns_mc=nns_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, table_id=table_id, scenario_name=scenario_name)
         
         # Mark the task as done
         task_queue.task_done()
@@ -663,8 +493,8 @@ def results_output():
     output = create_output(output_df_per_result=output_df_per_result)
     output.to_csv('output.csv')
     output['Year'] = output['Date'].dt.year
-    mns_mc = pd.read_excel('ROIs and factors all regions.xlsx', sheet_name='factors')
-    merged_output = pd.merge(output, mns_mc, on=['Country','Brand','Year'], how='left')
+    nns_mc = pd.read_excel('ROIs and factors all regions.xlsx', sheet_name='factors')
+    merged_output = pd.merge(output, nns_mc, on=['Country','Brand','Year'], how='left')
     merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
     merged_output.to_csv('merged_output.csv')
     try:
@@ -700,7 +530,7 @@ def chart_data(data):
         result_df['Date'] = pd.to_datetime(result_df['Date'])
         result_df['MonthYear'] = result_df['Date'].dt.strftime('%b %Y')
         result_df = result_df.groupby(
-            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Region', 'Country', 'Brand', 'Channel Group', 'Channel',
+            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Country', 'Brand', 'Channel Group', 'Channel',
              'MonthYear']).sum(numeric_only=True)
         result_df.reset_index(inplace=True)
         result_df = result_df.sort_values(by='MonthYear')
@@ -939,7 +769,7 @@ def tv_data_process():
         result_df['Date'] = pd.to_datetime(result_df['Date'])
         result_df['MonthYear'] = result_df['Date'].dt.strftime('%b %Y')
         result_df = result_df.groupby(
-            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Region', 'Country', 'Brand', 'Channel Group', 'Channel', 'Optimised', 'MonthYear', 'region_brand']).sum(numeric_only=True)
+            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Country', 'Brand', 'Channel Group', 'Channel', 'Optimised', 'MonthYear', 'region_brand']).sum(numeric_only=True)
         result_df.reset_index(inplace=True)
         result_df = result_df.sort_values(by='MonthYear')
         chart_data = []
@@ -962,7 +792,7 @@ def handle_curve_filter(curve_filter_data):
     try:
         curve_filters = curve_filter_data
         if 'Country' in curve_filters and 'Brand' in curve_filters and 'Optimisation Type' in curve_filters:
-            curve_filters['region_brand_opt'] = f"{curve_filters['Region']}_{curve_filters['Brand']}_{curve_filters['Optimisation Type']}"
+            curve_filters['region_brand_opt'] = f"{curve_filters['Country']}_{curve_filters['Brand']}_{curve_filters['Optimisation Type']}"
         if 'Country' in curve_filters and 'Brand' in curve_filters:
             curve_filters['region_brand'] = f"{curve_filters['Country']}_{curve_filters['Brand']}"
 
@@ -1027,7 +857,7 @@ def blueprint_curve():
 
 @app.route('/date_range', methods=['GET', 'POST'])
 def date_range():
-    start_date = list(laydown_dates)[1]
+    start_date = list(laydown_dates)[0]
     app.logger.info(start_date)
     end_date = list(laydown_dates)[-1]
     app.logger.info(end_date)

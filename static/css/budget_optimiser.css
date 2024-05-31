@@ -14,12 +14,35 @@
   body {
     margin: 0;
 }
+
+h1 {
+  margin: 0;
+  font-size: 3em;
+  letter-spacing: 1px;
+  color: #656573; 
+  font-weight: 200;
+
+.special-letter {
+  letter-spacing: 1px;
+  font-size: 1em;
+  color: #C58890;
+  font-weight: 200;
+  }
+}
+
+.title-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
   span.msg,
   span.choose {
     color: #555;
     padding: 5px 0 10px;
     display: inherit
   }
+
   .container {
     width: 500px;
     margin: 50px auto 0;
@@ -84,7 +107,6 @@
       border-radius: 0 1px 2px 2px;
       overflow: visible;
       display: none;
-      max-height: 144px;
       z-index: 100;
   }
   .dropdown .dropdown-menu li {

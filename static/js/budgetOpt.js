@@ -6,7 +6,6 @@ var tabCounter = 1;
 // tabNames[tabCounter] = initialButtonName.textContent;
 // console.log(tabNames);
 
-
 $(document).ready(function () {
   spawnNewTab(tabCounter);
   //initializeInitialButton();
@@ -15,8 +14,8 @@ $(document).ready(function () {
   syncTabCounter();
   var optAllBtn = document.getElementById("optimise-all");
   optAllBtn.addEventListener("click", optAll);
-
 });
+
 var socket = io.connect(window.location.origin);
 socket.on("connect", function () {
   console.log("connected to server");
@@ -467,8 +466,9 @@ function spawnNewTab(tabCounter) {
                            <input type="hidden" name="objective" id="obj-input${tabCounter}">
                            <ul class="dropdown-menu">
                               <li id="profit">Profit</li>
-                              <li id="revenue">Revenue</li>
+                              <li id="revenue">NNS</li>
                               <li id="roi">ROI</li>
+                              <li id="volume">Volume</li>
                            </ul>
                         </div>
                      </div>
@@ -537,9 +537,9 @@ function spawnNewTab(tabCounter) {
                      <th>Country</th>
                      <th>Brand</th>
                      <th>Channel</th>
-                     <th>Current Budget</th>
-                     <th>Min Spend Cap</th>
-                     <th>Max Spend Cap</th>
+                     <th>Current Budget (CHF)</th>
+                     <th>Min Spend Cap (CHF)</th>
+                     <th>Max Spend Cap (CHF)</th>
                      <th>Laydown</th>
                      </tr>
                   </thead>
@@ -608,7 +608,7 @@ function initializeDataTable(tableID) {
             data: "Current Budget",
             render: function (data, type, row) {
               return (
-                $.fn.DataTable.render.number(",", ".", 0).display(data) + " CHF"
+                $.fn.DataTable.render.number(",", ".", 0).display(data)              
               );
             },
           },
@@ -616,7 +616,7 @@ function initializeDataTable(tableID) {
             data: "Min Spend Cap",
             render: function (data, type, row) {
               return (
-                $.fn.DataTable.render.number(",", ".", 0).display(data) + " CHF"
+                $.fn.DataTable.render.number(",", ".", 0).display(data) 
               );
             },
           },
@@ -624,7 +624,7 @@ function initializeDataTable(tableID) {
             data: "Max Spend Cap",
             render: function (data, type, row) {
               return (
-                $.fn.DataTable.render.number(",", ".", 0).display(data) + " CHF"
+                $.fn.DataTable.render.number(",", ".", 0).display(data)
               );
             },
           },
@@ -1305,10 +1305,13 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
         kpiText = 'Profit';
         break;
       case 'revenue':
-        kpiText = 'Revenue';
+        kpiText = 'NNS';
         break;
       case 'roi':
         kpiText = 'ROI';
+        break;
+      case 'volume':
+        kpiText = 'Volume';
         break;
       default:
         kpiText = 'Select KPI'
@@ -1377,8 +1380,9 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
                            <input value="${kpiValue}" type="hidden" name="objective" id="obj-input${tabCounter}">
                            <ul class="dropdown-menu">
                               <li id="profit">Profit</li>
-                              <li id="revenue">Revenue</li>
+                              <li id="revenue">NNS</li>
                               <li id="roi">ROI</li>
+                              <li id="volume">Volume</li>
                            </ul>
                         </div>
                      </div>
@@ -1446,9 +1450,9 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
                      <th>Country</th>
                      <th>Brand</th>
                      <th>Channel</th>
-                     <th>Current Budget</th>
-                     <th>Min Spend Cap</th>
-                     <th>Max Spend Cap</th>
+                     <th>Current Budget (CHF)</th>
+                     <th>Min Spend Cap (CHF)</th>
+                     <th>Max Spend Cap (CHF)</th>
                      <th>Laydown</th>
                      </tr>
                   </thead>
@@ -1513,8 +1517,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
                 data: "Current Budget",
                 render: function (data, type, row) {
                   return (
-                    $.fn.DataTable.render.number(",", ".", 0).display(data) +
-                    " CHF"
+                    $.fn.DataTable.render.number(",", ".", 0).display(data)
                   );
                 },
               },
@@ -1522,8 +1525,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
                 data: "Min Spend Cap",
                 render: function (data, type, row) {
                   return (
-                    $.fn.DataTable.render.number(",", ".", 0).display(data) +
-                    " CHF"
+                    $.fn.DataTable.render.number(",", ".", 0).display(data)
                   );
                 },
               },
@@ -1531,8 +1533,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
                 data: "Max Spend Cap",
                 render: function (data, type, row) {
                   return (
-                    $.fn.DataTable.render.number(",", ".", 0).display(data) +
-                    " CHF"
+                    $.fn.DataTable.render.number(",", ".", 0).display(data)
                   );
                 },
               },
