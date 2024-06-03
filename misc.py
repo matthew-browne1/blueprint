@@ -71,9 +71,9 @@ connection_string = f"postgresql://{db_username_secret}:{db_password_secret}@{ho
 engine = create_engine(connection_string)
 
 # vm filepath
-filepath = r"C:\Users\matthewbrowne\Desktop\Blueprint Production\blueprint\\"
+filepath = r"C:\Users\blueprintadmin\Desktop\Blueprint repo\blueprint\\"
 
-csv_files = [r'Curves_Horizon.csv',r'Curves_Optimal_ROI.csv',r'Curves_Budget_Response.csv',r'Optimal_TV_Laydown.csv']
+# csv_files = [r'Curves_Horizon.csv',r'Curves_Optimal_ROI.csv',r'Curves_Budget_Response.csv',r'Optimal_TV_Laydown.csv']
 
 # for csv_file in csv_files:
 #     # Read CSV file into a pandas DataFrame
@@ -90,8 +90,8 @@ csv_files = [r'Curves_Horizon.csv',r'Curves_Optimal_ROI.csv',r'Curves_Budget_Res
 # mns_query = 'SELECT * FROM "Optimal_TV_Laydown";'
 # mns_mc = pd.read_sql(mns_query, engine)
 
-df = pd.read_excel(filepath+'ROIs and factors all regions.xlsx', sheet_name='factors')
+df = pd.read_excel(filepath+'ROIs and factors all regions inc. Poland.xlsx', sheet_name='factors')
 df.rename(columns={'Country':'Region'}, inplace=True)
 
-df.to_sql(name='MNS_MC', con=engine, index=False, if_exists='replace')
+df.to_sql(name='NNS_MC', con=engine, index=False, if_exists='replace')
 

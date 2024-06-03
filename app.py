@@ -328,7 +328,7 @@ seas_index = pd.read_sql_table('All_Index', engine)
 ST_inc_rev = pd.read_sql_table('All_Incremental_Revenue_ST', engine)
 LT_inc_rev = pd.read_sql_table('All_Incremental_Revenue_LT', engine)
 
-nns_mc = pd.read_sql_table("MNS_MC", engine)
+nns_mc = pd.read_sql_table("NNS_MC", engine)
 
 table_df = header.copy()
 
@@ -506,9 +506,9 @@ def results_output():
         
         output['Date'] = pd.to_datetime(output['Date'])
         output['Year'] = output['Date'].dt.year
-        mns_query = 'SELECT * FROM "MNS_MC";'
-        mns_mc = pd.read_sql(mns_query, engine)
-        merged_output = pd.merge(output, mns_mc, on=['Country','Brand','Year'], how='left')
+        nns_query = 'SELECT * FROM "NNS_MC";'
+        nns_mc = pd.read_sql(nns_query, engine)
+        merged_output = pd.merge(output, nns_mc, on=['Country','Brand','Year'], how='left').fillna(1, inplace=True)
         merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
     
         try:
