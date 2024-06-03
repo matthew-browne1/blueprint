@@ -507,7 +507,8 @@ def results_output():
         output['Date'] = pd.to_datetime(output['Date'])
         output['Year'] = output['Date'].dt.year
         nns_mc_copy = deepcopy(nns_mc)
-        merged_output = pd.merge(output, nns_mc_copy, on=['Country','Brand','Year'], how='left').fillna(1, inplace=True)
+        merged_output = pd.merge(output, nns_mc_copy, on=['Country','Brand','Year'], how='left')
+        merged_output.fillna(1, inplace=True)
         merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
     
         try:
