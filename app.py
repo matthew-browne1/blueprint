@@ -506,9 +506,8 @@ def results_output():
         
         output['Date'] = pd.to_datetime(output['Date'])
         output['Year'] = output['Date'].dt.year
-        nns_query = 'SELECT * FROM "NNS_MC";'
-        nns_mc = pd.read_sql(nns_query, engine)
-        merged_output = pd.merge(output, nns_mc, on=['Country','Brand','Year'], how='left').fillna(1, inplace=True)
+        nns_mc_copy = deepcopy(nns_mc)
+        merged_output = pd.merge(output, nns_mc_copy, on=['Country','Brand','Year'], how='left').fillna(1, inplace=True)
         merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
     
         try:
