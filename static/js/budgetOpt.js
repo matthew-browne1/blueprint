@@ -696,7 +696,7 @@ function initializeDataTable(tableID) {
       });
       tabChannelTable.on(
         "mouseenter",
-        "tbody td:nth-child(0), tbody td:nth-child(7), tbody td:nth-child(6)",
+        "tbody td:nth-child(0), tbody td:nth-child(7), tbody td:nth-child(8)",
         function (e) {
           $(this).css({
             cursor: "text",
@@ -707,7 +707,7 @@ function initializeDataTable(tableID) {
 
       tabChannelTable.on(
         "mouseleave",
-        "tbody td:nth-child(0), tbody td:nth-child(7), tbody td:nth-child(6)",
+        "tbody td:nth-child(0), tbody td:nth-child(7), tbody td:nth-child(8)",
         function (e) {
           $(this).css({
             cursor: "default",
@@ -718,7 +718,7 @@ function initializeDataTable(tableID) {
 
       tabChannelTable.on(
         "click",
-        "tbody td:nth-child(7), tbody td:nth-child(6)",
+        "tbody td:nth-child(7), tbody td:nth-child(8)",
         function (e) {
           channelEditorTab.inline(this);
         }
