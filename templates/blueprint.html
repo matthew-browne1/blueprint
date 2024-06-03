@@ -17,8 +17,10 @@
 <body>
 
 <nav>
-    <div class="nav-left">
-        <img src="/static/images/RA Logo 1.png" class="logo">
+   <div class="nav-left">
+      <div class="title-container">
+         <h1>blueprint<span class="special-letter">.</span></h1>
+     </div>
     </div>
     <div class="nav-right">
         <a href= "{{ url_for('export_data') }}" download="{{ user_id }}_Input_File.xlsx"class="button-4" id="export-data">Export Data  <i class="fa-solid fa-file-export"></i></a>

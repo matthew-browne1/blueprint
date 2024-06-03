@@ -6,7 +6,6 @@ var tabCounter = 1;
 // tabNames[tabCounter] = initialButtonName.textContent;
 // console.log(tabNames);
 
-
 $(document).ready(function () {
   spawnNewTab(tabCounter);
   //initializeInitialButton();
@@ -15,8 +14,8 @@ $(document).ready(function () {
   syncTabCounter();
   var optAllBtn = document.getElementById("optimise-all");
   optAllBtn.addEventListener("click", optAll);
-
 });
+
 var socket = io.connect(window.location.origin);
 socket.on("connect", function () {
   console.log("connected to server");
@@ -350,7 +349,7 @@ function optAll() {
             hideLoadingOverlay(tableId);
           });
         });
-                } else {
+        } else {
         optAllArray.forEach(function(data) {
           socket.emit("optimise", data);
         });
@@ -469,6 +468,7 @@ function spawnNewTab(tabCounter) {
                               <li id="profit">Profit</li>
                               <li id="revenue">NNS</li>
                               <li id="roi">ROI</li>
+                              <li id="volume">Volume</li>
                            </ul>
                         </div>
                      </div>
@@ -534,6 +534,7 @@ function spawnNewTab(tabCounter) {
                   <tr>
                      <th><input type="checkbox" name="select_all" value="1" id="example-select-all${tabCounter}" ></th>
                      <th>Region</th>
+                     <th>Country</th>
                      <th>Brand</th>
                      <th>Channel</th>
                      <th>Current Budget (CHF)</th>
@@ -600,13 +601,14 @@ function initializeDataTable(tableID) {
         columns: [
           { data: null },
           { data: "Region" },
+          { data: "Country" },
           { data: "Brand" },
           { data: "Channel" },
           {
             data: "Current Budget",
             render: function (data, type, row) {
               return (
-                $.fn.DataTable.render.number(",", ".", 0).display(data) + " CHF"
+                $.fn.DataTable.render.number(",", ".", 0).display(data)              
               );
             },
           },
@@ -614,7 +616,7 @@ function initializeDataTable(tableID) {
             data: "Min Spend Cap",
             render: function (data, type, row) {
               return (
-                $.fn.DataTable.render.number(",", ".", 0).display(data) + " CHF"
+                $.fn.DataTable.render.number(",", ".", 0).display(data) 
               );
             },
           },
@@ -622,7 +624,7 @@ function initializeDataTable(tableID) {
             data: "Max Spend Cap",
             render: function (data, type, row) {
               return (
-                $.fn.DataTable.render.number(",", ".", 0).display(data) + " CHF"
+                $.fn.DataTable.render.number(",", ".", 0).display(data)
               );
             },
           },
@@ -648,7 +650,8 @@ function initializeDataTable(tableID) {
           { width: "80px", targets: 4 },
           { width: "80px", targets: 5 },
           { width: "80px", targets: 6 },
-          { width: "250px", targets: 7 },
+          { width: "80px", targets: 7 },
+          { width: "250px", targets: 8 },
           {
             targets: 0,
             searchable: false,
@@ -942,10 +945,13 @@ function showResultsButton() {
   }
 }
 
+var tabSocket = io.connect(window.location.origin);
 
+tabSocket.on("connect", function () {
+  console.log("connected to server");
+});
 
-
-socket.on("opt_complete", function (data) {
+tabSocket.on("opt_complete", function (data) {
   var tableID = data.data;
   console.log("hiding the loading overlay for channel table " + tableID);
   hideLoadingOverlay(tableID);
@@ -1281,11 +1287,12 @@ function loadFunc() {
 }
 
 function initializeDataTableFromSave(data, scenarioNameObj) {
+  var isTableInitialized = false;
 
   const tableIds = Object.keys(data);
 
   tableIds.forEach(function (tabCounter) {
-    const { disabledRowIds, enteredBudget, dateBool, dateArray, optionsArray } =
+    var { disabledRowIds, enteredBudget, dateBool, dateArray, optionsArray } =
       data[tabCounter];
     const [startDate, endDate] = dateArray;
     const [kpiValue, objValue, exhValue] = optionsArray;
@@ -1302,6 +1309,9 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
         break;
       case 'roi':
         kpiText = 'ROI';
+        break;
+      case 'volume':
+        kpiText = 'Volume';
         break;
       default:
         kpiText = 'Select KPI'
@@ -1372,6 +1382,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
                               <li id="profit">Profit</li>
                               <li id="revenue">NNS</li>
                               <li id="roi">ROI</li>
+                              <li id="volume">Volume</li>
                            </ul>
                         </div>
                      </div>
@@ -1436,6 +1447,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
                   <tr>
                      <th><input type="checkbox" name="select_all" value="1" id="example-select-all${tabCounter}" ></th>
                      <th>Region</th>
+                     <th>Country</th>
                      <th>Brand</th>
                      <th>Channel</th>
                      <th>Current Budget (CHF)</th>
@@ -1498,14 +1510,14 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
             columns: [
               { data: null },
               { data: "Region" },
+              { data: "Country" },
               { data: "Brand" },
               { data: "Channel" },
               {
                 data: "Current Budget",
                 render: function (data, type, row) {
                   return (
-                    $.fn.DataTable.render.number(",", ".", 0).display(data) +
-                    " CHF"
+                    $.fn.DataTable.render.number(",", ".", 0).display(data)
                   );
                 },
               },
@@ -1513,8 +1525,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
                 data: "Min Spend Cap",
                 render: function (data, type, row) {
                   return (
-                    $.fn.DataTable.render.number(",", ".", 0).display(data) +
-                    " CHF"
+                    $.fn.DataTable.render.number(",", ".", 0).display(data)
                   );
                 },
               },
@@ -1522,8 +1533,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
                 data: "Max Spend Cap",
                 render: function (data, type, row) {
                   return (
-                    $.fn.DataTable.render.number(",", ".", 0).display(data) +
-                    " CHF"
+                    $.fn.DataTable.render.number(",", ".", 0).display(data)
                   );
                 },
               },
@@ -1549,18 +1559,21 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
               { width: "80px", targets: 4 },
               { width: "80px", targets: 5 },
               { width: "80px", targets: 6 },
-              { width: "250px", targets: 7 },
+              { width: "80px", targets: 7 },
+              { width: "250px", targets: 8 },
               {
                 targets: 0,
                 searchable: false,
                 orderable: false,
                 className: "dt-body-center",
                 render: function (data, type, full, meta) {
+                  if (!isTableInitialized) {
                   const rowId = meta.row + 1;
                   const isChecked = !disabledRowIds.includes(rowId);
                   return `<input type="checkbox" id="checkbox${tabCounter}-${
                     meta.row + 1
                   }"${isChecked ? "checked" : ""}>`;
+                }
                 },
               },
               {
@@ -1686,12 +1699,18 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
               var isChecked = $(this).prop("checked");
               if (isChecked) {
                 tabChannelTable.row(row).nodes().to$().removeClass("disabled");
-                console.log("removing class");
                 console.log(rowId);
+                disabledRowIds.pop(rowId);
+                console.log("removed rowId from disabled row array");
+                console.log("removing class");
+               
               } else {
                 tabChannelTable.row(row).nodes().to$().addClass("disabled");
-                console.log("adding class");
                 console.log(rowId);
+                disabledRowIds.push(rowId);
+                console.log("added rowId to disabled row array");
+                console.log("adding class");
+               
               }
             }
           );

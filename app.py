@@ -24,6 +24,7 @@ from functools import wraps
 from queue import Queue
 from opt_threads import CustomThread
 import pickle
+import traceback
 
 #from azure import identity
 
@@ -91,14 +92,14 @@ def index():
     #    return redirect(url_for("login"))
 
     if not session.get("user"):
-        print("rendering index.html, user does not exist in session")
+        app.logger.info("rendering index.html, user does not exist in session")
         
         session["flow"] = _build_auth_code_flow(scopes=app_config.SCOPE)
         return render_template('index.html', auth_url=session["flow"]["auth_uri"], version=msal.__version__)
     else:
         user_name = session['user']['name']
-        print("rendering index.html, user exists in session")
-        print(session["user"]['oid'])
+        app.logger.info("rendering index.html, user exists in session")
+        app.logger.info(session["user"]['oid'])
         return render_template('index.html', user=session["user"], user_name = user_name, version=msal.__version__)
     
 @app.route("/login")
@@ -129,7 +130,7 @@ def authorized():
             session['session_id'] = str(uuid.uuid4())
         session.modified = True
         _save_cache(cache)
-        print("all session variables added to session object")
+        app.logger.info("all session variables added to session object")
     except ValueError:  # Usually caused by CSRFF
         pass  # Simply ignore them
     return redirect(url_for("blueprint"))
@@ -200,7 +201,7 @@ def save_snapshot():
     # Check if a snapshot with the same name already exists for the current user
     existing_snapshot = Snapshot.query.filter_by(name=snapshot_name, user_id=user_id).first()
 
-    print(content)
+    
     pickled_string = pickle.dumps(content)
     pickled_scenario_names = pickle.dumps(scenario_names)
     if existing_snapshot:
@@ -302,26 +303,36 @@ ST_db_table_name = 'ST_header'
 LT_db_table_name = "LT_header"
 laydown_table_name = "laydown"
 
-
 num_weeks = 1000
 
-
+country_to_region = {
+    'Mexico': 'NA',
+    'Brazil': 'LATAM',
+    'Chile': 'LATAM',
+    'UK': 'EUR',
+    'France': 'EUR',
+    'Germany': 'EUR',
+    'Poland': 'EUR',
+    'Australia': 'AOA'
+}
 header = pd.read_sql_table('All_Channel_Inputs', engine)
 # Show column headers without underscores!
 header.columns = [x.replace("_", " ") for x in header.columns.tolist()]
+header.rename(columns={'Region':'Country'}, inplace=True)
 
+header['Region'] = header['Country'].map(country_to_region).fillna('Other')
 laydown = pd.read_sql_table('All_Laydown', engine)
 laydown_dates = laydown['Date']
 seas_index = pd.read_sql_table('All_Index', engine)
 
-header_processed = Beta.beta_calculation(header, laydown, seas_index)
+ST_inc_rev = pd.read_sql_table('All_Incremental_Revenue_ST', engine)
+LT_inc_rev = pd.read_sql_table('All_Incremental_Revenue_LT', engine)
 
-#LT_header_dict = header.to_dict("records")
+nns_mc = pd.read_sql_table("MNS_MC", engine)
 
-table_df = header_processed.copy()
+table_df = header.copy()
 
-dataTable_cols = ['Region', 'Brand', 'Channel', 'Current Budget', 'Min Spend Cap', 'Max Spend Cap',
-                  # 'ST Carryover', 'ST Alpha', 'ST Beta', 'LT Carryover', 'LT Alpha', 'LT Beta',
+dataTable_cols = ['Region', 'Country', 'Brand', 'Channel', 'Current Budget', 'Min Spend Cap', 'Max Spend Cap',
                   'Laydown']
 
 for col in table_df.columns:
@@ -331,10 +342,11 @@ for col in table_df.columns:
 table_df.insert(0, 'row_id', range(1, len(table_df) + 1))
 table_dict = table_df.to_dict("records")
 for var in table_dict:
-    var['Laydown'] = laydown[var['Channel'] + "_" + var['Region'] + "_" + var['Brand']].tolist()
+    var['Laydown'] = laydown[var['Channel'] + "_" + var['Country'] + "_" + var['Brand']].tolist()
 
 table_data = {"1": deepcopy(table_dict)}
 bud = sum(header['Current Budget'].to_list())
+
 
 # %% --------------------------------------------------------------------------
 #
@@ -345,12 +357,15 @@ def run_optimise(dataDict):
     session_id = session.get('session_id')
     join_room(session_id)
     data = dict(dataDict.get('dataToSend'))
-   
+    
     table_id = str(data['tableID'])
-    print(f"optimising current table with ID:{table_id}")
-    header_copy = deepcopy(header_processed)
+    app.logger.info(f"optimising current table with ID:{table_id}")
+    header_copy = deepcopy(header)
     laydown_copy = deepcopy(laydown)
     seas_index_copy = deepcopy(seas_index)
+    ST_inc_rev_copy = deepcopy(ST_inc_rev)
+    LT_inc_rev_copy = deepcopy(LT_inc_rev)
+    nns_copy = deepcopy(nns_mc)
     streams = []
     for stream in header_copy['Opt Channel']:
         streams.append(str(stream))
@@ -361,63 +376,53 @@ def run_optimise(dataDict):
         exh_budget = data['exhaustValue']
         max_budget = int(data['maxValue'])
         scenario_name = data['tabName']
-        print(f"printing scenario name received from front end:{scenario_name}")
+        app.logger.info(f"printing scenario name received from front end:{scenario_name}")
         blend = data['blendValue']
         disabled_rows = list(data['disabledRows'])
-        print(f"disabled row ids: {disabled_rows}")
-        print(f"current keys of table data in session:{session['table_data'].keys()}")
+        app.logger.info(f"disabled row ids: {disabled_rows}")
+        app.logger.info(f"current keys of table data in session:{session['table_data'].keys()}")
         # if table_id not in list(session['table_data'].keys()):
         #     session['table_data'][table_id] = deepcopy(table_dict)
         #     app.logger.info(f"table_data in {session['user']['name']}'s session added to table id: {table_id}")
         
-        current_table_df = pd.DataFrame.from_records(deepcopy(session['table_data'][table_id]))
-        print("created copy of current table")
-        
+        current_table_df = pd.DataFrame.from_records(deepcopy(table_data[table_id]))
         removed_rows_df = current_table_df[current_table_df.row_id.isin(disabled_rows)].copy()
         removed_rows_df['Opt Channel'] = removed_rows_df.apply(
-            lambda row: '_'.join([str(row['Channel']), str(row['Region']), str(row['Brand'])]), axis=1)
+            lambda row: '_'.join([str(row['Channel']), str(row['Country']), str(row['Brand'])]), axis=1)
 
         disabled_opt_channels = list(removed_rows_df['Opt Channel'])
 
         for col in current_table_df.columns:
             header_copy[col] = current_table_df[col]
-         
+
         header_copy = header_copy[~(header_copy['Opt Channel'].isin(disabled_opt_channels))]
 
         laydown_copy = laydown_copy.drop(columns=disabled_opt_channels, errors='ignore')
         seas_index_copy = seas_index_copy.drop(columns=disabled_opt_channels, errors='ignore')
-
         
-        
-        if "dates" in data:
-          
-            app.logger.info('dates found in data')
-            print("dates in the datatosend")
-            #print(data['dates'][0][:10])
-            #print(data['dates'][1][:10])
+        if "dates" not in data:
+            start_date = list(laydown_dates)[0]
+            end_date = list(laydown_dates)[-1]
+        else:
             start_date = datetime.strptime(data['dates'][0][:10], "%Y-%m-%d")
             end_date = datetime.strptime(data['dates'][1][:10], "%Y-%m-%d")
-            app.logger.info(f"adding optimisation between start date: {start_date} and end date: {end_date} to queue")
-            #print(f"start data: {start_date}, end_date: {end_date}, laydown_copy dates: {laydown_copy['Date']}")
-            laydown_copy = laydown_copy[(laydown_copy["Date"] >= start_date) & (laydown_copy["Date"] <= end_date)]
-            seas_index_copy = seas_index_copy[(laydown_copy["Date"] >= start_date) & (seas_index_copy["Date"] <= end_date)]
-            #print(laydown_copy)
-            #print(seas_index_copy)
-            app.logger.info(start_date)
-            app.logger.info(end_date)
+            app.logger.info(f"{session['user']['oid']}, dates found in data")
+        
+        laydown_copy = laydown_copy[(laydown_copy["Date"] >= start_date) & (laydown_copy["Date"] <= end_date)]
+        seas_index_copy = seas_index_copy[(laydown_copy["Date"] >= start_date) & (seas_index_copy["Date"] <= end_date)]
+        ST_inc_rev_copy = ST_inc_rev_copy[(ST_inc_rev_copy["Date"] >= start_date) & (ST_inc_rev_copy['Date'] <= end_date)]
+        LT_inc_rev_copy = LT_inc_rev_copy[(LT_inc_rev_copy["Date"] >= start_date) & (LT_inc_rev_copy['Date'] <= end_date)]
 
         app.logger.info(
             f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
 
-        header = Beta.beta_calculation(header_copy, laydown_copy, seas_index_copy)
+        ST_header = Beta.beta_calculation(header_copy, laydown_copy, seas_index_copy, ST_inc_rev_copy, 'st')
 
-        input = header_copy.to_dict('records')
-
-        inputs_dict = {'ST_input': input, 'LT_input': input, 'laydown': laydown_copy, 'seas_index': seas_index_copy}
+        LT_header = Beta.beta_calculation(header_copy, laydown_copy, seas_index_copy, LT_inc_rev_copy, 'lt')
+      
+        inputs_dict = {'ST_input': ST_header, 'LT_input': LT_header, 'laydown': laydown_copy, 'seas_index': seas_index_copy}
 
         session["inputs_per_result"][table_id] = deepcopy(inputs_dict)
-     
-        min_spend_cap_list = [float(entry['Min Spend Cap']) for entry in input]
 
         laydown_copy.set_index('Date', inplace=True)
 
@@ -427,17 +432,17 @@ def run_optimise(dataDict):
         session_id = session['session_id']
         queue = session_queues.setdefault(session_id, Queue())
     
-        queue.put((input, input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name))
+        queue.put((ST_header.to_dict("records"), LT_header.to_dict("records"), laydown_copy, seas_index_copy, nns_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name))
 
         if not queue.empty():
             result, output_df = start_optimise_thread(session_id)
             session['output_df_per_result'][table_id] = output_df
             session['results'][table_id] = result
-            print(session['output_df_per_result'])
+            app.logger.info(f"keys currently present in {session['user']['oid']}'s output_df_per_result session object: {session['output_df_per_result'].keys()}")
             session.modified = True
-            print("opt complete, hiding overlay")
-            print(session['output_df_per_result'].keys())
-            print(session['results'].keys())
+            app.logger.info("opt complete, hiding overlay")
+            app.logger.info(session['output_df_per_result'].keys())
+            app.logger.info(session['results'].keys())
             
     except Exception as e:
         app.logger.info(f"error adding optimisation job to the queue: {str(e)}")
@@ -453,15 +458,15 @@ def run_optimise_task(session_id):
             return  # No queue found for this session
         while True:
             
-            print(f"job picked up from queue with session id: {session_id}")
+            app.logger.info(f"job picked up from queue with session id: {session_id}")
 
             task = queue.get()
             
-            ST_input, LT_input, laydown_copy, seas_index_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name = task
-            print(scenario_name)
+            ST_input, LT_input, laydown_copy, seas_index_copy, nns_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name = task
+            
             try:
                 with app.app_context():
-                    result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name)
+                    result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, nns_mc=nns_copy, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name)
                     app.logger.info(f"Task completed: {result} in {time_elapsed} time")
                     
                     socketio.emit('opt_complete', {'data': table_id})
@@ -471,10 +476,10 @@ def run_optimise_task(session_id):
             except Exception as e:
         
                 app.logger.info(f"Error in task callback causing optimisation not to run: {str(e)}")
+                
                 socketio.emit('opt_complete', {'data': table_id, 'exception':str(e)})
                 queue.task_done()
             
-
 
 def start_optimise_thread(session_id):
     optimise_thread = CustomThread(target=run_optimise_task, args=(session_id,))
@@ -482,8 +487,8 @@ def start_optimise_thread(session_id):
     optimise_thread.start()
     result, output_df = optimise_thread.join()
 
-    print("printing result added to session object from customthread class")
-    print(result)
+    app.logger.info("printing result added to session object from customthread class")
+   
     return result, output_df
 
 
@@ -503,15 +508,15 @@ def results_output():
         output['Year'] = output['Date'].dt.year
         mns_query = 'SELECT * FROM "MNS_MC";'
         mns_mc = pd.read_sql(mns_query, engine)
-        merged_output = pd.merge(output, mns_mc, on=['Region','Brand','Year'], how='left')
+        merged_output = pd.merge(output, mns_mc, on=['Country','Brand','Year'], how='left')
         merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
-        #merged_output.to_csv('merged_output.csv')
+    
         try:
             merged_output.to_sql(f'Blueprint_results_{session["user"]["oid"]}', engine, if_exists='replace', index=False)
             app.logger.info("results uploaded to db successfully")
             return jsonify({"message": "results uploaded to db successfully"})
-        except:
-            app.logger.info("csv db upload failed")
+        except Exception as e:
+            app.logger.info("results failed to upload to the db", str(e))
             return jsonify({"message": "results export failed"})
         
 
@@ -529,7 +534,7 @@ def chart_data(data):
     join_room(session_id)
     session['chart_data'] = []
     metric = data['metric']
-    print(f"metric within chart_data method is {metric}")
+
     try:
         conn = engine.connect()
         query = text(f'SELECT * FROM "Blueprint_results_{session["user"]["oid"]}";')
@@ -541,7 +546,7 @@ def chart_data(data):
         result_df['Date'] = pd.to_datetime(result_df['Date'])
         result_df['MonthYear'] = result_df['Date'].dt.strftime('%b %Y')
         result_df = result_df.groupby(
-            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Region', 'Brand', 'Channel Group', 'Channel',
+            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Country', 'Brand', 'Channel Group', 'Channel',
              'MonthYear']).sum(numeric_only=True)
         result_df.reset_index(inplace=True)
         result_df = result_df.sort_values(by='MonthYear')
@@ -559,13 +564,13 @@ def chart_data(data):
                     dropdown_options[column] = result_df[column].unique().tolist()
         
         socketio.emit('dropdown_options', {'options': dropdown_options})
-        print("Dropdown options sent")
+        app.logger.info("Dropdown options sent")
 
         socketio.emit('chart_data', {'chartData': session['chart_data'], 'metric':metric, 'sessionID':session_id})
-        print("chart_data sent")
+        app.logger.info("chart_data sent")
 
     except SQLAlchemyError as e:
-        print('Error executing query:', str(e))
+        app.logger.info('Error executing query:', str(e))
 
     finally:
         if 'conn' in locals():
@@ -578,26 +583,26 @@ def handle_apply_filter(data):
     try:
         filters = data['filters']
         metric = data['metric']
-        print(filters)
-        print(metric)
+        app.logger.info(filters)
+        app.logger.info(metric)
         if "Budget/Revenue" in filters and filters["Budget/Revenue"]:
             if "Budget" not in filters["Budget/Revenue"]:
                 filters["Budget/Revenue"].append("Budget")
         else:
             filters["Budget/Revenue"] = []
 
-        print('Received filter data:', filters)
+        app.logger.info('Received filter data:', filters)
         apply_filters(filters, metric)
     except KeyError:
-        print("KeyError: 'Budget/Revenue' not found in filter_data")
-        print(data)
+        app.logger.info("KeyError: 'Budget/Revenue' not found in filter_data")
+    
 
 def apply_filters(filters, metric):
     session_id = session.get('session_id')
     try:
         session['filtered_data'] = []
-        print(filters)
-        #print(session['chart_data'])
+        app.logger.info(filters)
+ 
         for data_point in session['chart_data']:
             include_data_point = True
 
@@ -610,11 +615,11 @@ def apply_filters(filters, metric):
                 session['filtered_data'].append(data_point)
         session.modified = True
         socketio.emit('filtered_data', {'filtered_data': session['filtered_data'], 'metric':metric, 'sessionID':session_id})
-        print("Filtered chart data sent")
-        print("Filtered data length:", len(session['filtered_data']))
+        app.logger.info("Filtered chart data sent")
+        app.logger.info("Filtered data length:", len(session['filtered_data']))
 
     except Exception as e:
-        print('Error applying filter:', str(e))
+        app.logger.info('Error applying filter:', str(e))
 
 @socketio.on("volval")
 def volval_swap(data):
@@ -624,10 +629,10 @@ def volval_swap(data):
 
     try:
         socketio.emit('filtered_data', {'filtered_data': session['filtered_data'], 'metric':metric})
-        print(metric)
+        app.logger.info(metric)
     except Exception as e:
-        print(e)
-        print(metric)
+        app.logger.info(e)
+        app.logger.info(metric)
         socketio.emit('chart_data', {'chartData': session['chart_data'], 'metric':metric})
 
             
@@ -650,29 +655,29 @@ def chart_response():
             for x in db_result.fetchall():
                 a = dict(zip(col_names, x))
                 a["Optimisation Type"] = table.split("_")[3].upper()
-                a["region_brand"] = f"{a['Region']}_{a['Brand']}"
-                a["region_brand_opt"] = f"{a['region_brand']}_{a['Optimisation Type']}"
+                a["country_brand"] = f"{a['Country']}_{a['Brand']}"
+                a["country_brand_opt"] = f"{a['country_brand']}_{a['Optimisation Type']}"
                 session['chart_response'].append(a)
 
         session['dropdown_options1'] = {}
-        for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type", "region_brand",
-                       "region_brand_opt"]:
+        for column in ["Country", "Brand", "Channel Group", "Channel", "Optimisation Type", "country_brand",
+                       "country_brand_opt"]:
             session['dropdown_options1'][column] = list(set(row[column] for row in session['chart_response']))
 
-        default_option = session['dropdown_options1']["region_brand"][0]
+        default_option = session['dropdown_options1']["country_brand"][0]
         default_option = default_option + "_" + session['chart_response'][0]["Optimisation Type"]
-        chart_response_default = [row for row in session['chart_response'] if row["region_brand_opt"] == default_option]
+        chart_response_default = [row for row in session['chart_response'] if row["country_brand_opt"] == default_option]
 
-        print(default_option)
+ 
         session.modified = True
         socketio.emit('dropdown_options1', {'options': session['dropdown_options1']})
-        print("Curve Dropdown options sent")
+        app.logger.info("Curve Dropdown options sent")
 
         socketio.emit('chart_response', {'chartResponse': chart_response_default})
-        print("chart_response sent")
+        app.logger.info("chart_response sent")
 
     except SQLAlchemyError as e:
-        print('Error executing query:', str(e))
+        app.logger.info('Error executing query:', str(e))
 
     finally:
         if 'conn' in locals():
@@ -692,24 +697,24 @@ def chart_budget():
         col_names = db_result.keys()
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
-            a["region_brand"] = f"{a['Region']}_{a['Brand']}"
+            a["country_brand"] = f"{a['Country']}_{a['Brand']}"
             session['chart_budget'].append(a)
 
         dropdown_options1 = {}
-        for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type", "region_brand",
-                       "region_brand_opt"]:
+        for column in ["Country", "Brand", "Channel Group", "Channel", "Optimisation Type", "country_brand",
+                       "country_brand_opt"]:
             dropdown_options1[column] = list(set(row[column] for row in session['chart_response']))
 
-        default_option = dropdown_options1["region_brand"][0]
-        chart_budget_default = [row for row in session['chart_budget'] if row["region_brand"] == default_option]
+        default_option = dropdown_options1["country_brand"][0]
+        chart_budget_default = [row for row in session['chart_budget'] if row["country_brand"] == default_option]
 
-        print(default_option)
+ 
         session.modified = True
         socketio.emit('chart_budget', {'chartBudget': chart_budget_default})
-        print("chart_budget sent")
+        app.logger.info("chart_budget sent")
 
     except SQLAlchemyError as e:
-        print('Error executing query:', str(e))
+        app.logger.info('Error executing query:', str(e))
 
     finally:
         if 'conn' in locals():
@@ -729,22 +734,22 @@ def chart_roi():
         col_names = db_result.keys()
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
-            a["region_brand"] = f"{a['Region']}_{a['Brand']}"
+            a["country_brand"] = f"{a['Country']}_{a['Brand']}"
             session['chart_roi'].append(a)
 
         dropdown_options1 = {}
-        for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type", "region_brand",
-                       "region_brand_opt"]:
+        for column in ["Country", "Brand", "Channel Group", "Channel", "Optimisation Type", "country_brand",
+                       "country_brand_opt"]:
             dropdown_options1[column] = list(set(row[column] for row in session['chart_response']))
 
-        default_option = dropdown_options1["region_brand"][0]
-        chart_roi_default = [row for row in session['chart_roi'] if row["region_brand"] == default_option]
+        default_option = dropdown_options1["country_brand"][0]
+        chart_roi_default = [row for row in session['chart_roi'] if row["country_brand"] == default_option]
         session.modified = True
         socketio.emit('chart_roi', {'chartROI': chart_roi_default})
-        print("chart_roi sent")
+        app.logger.info("chart_roi sent")
 
     except SQLAlchemyError as e:
-        print('Error executing query:', str(e))
+        app.logger.info('Error executing query:', str(e))
 
     finally:
         if 'conn' in locals():
@@ -767,18 +772,18 @@ def chart_budget_response():
             session['chart_budget_response'].append(a)
         
         dropdown_options1 = {}
-        for column in ["Region", "Brand", "Channel Group", "Channel", "Optimisation Type", "region_brand",
-                       "region_brand_opt"]:
+        for column in ["Country", "Brand", "Channel Group", "Channel", "Optimisation Type", "country_brand",
+                       "country_brand_opt"]:
             dropdown_options1[column] = list(set(row[column] for row in session['chart_response']))
 
-        default_option = dropdown_options1["region_brand"][0]
-        chart_budget_response_default = [row for row in session['chart_budget_response'] if row["region_brand"] == default_option]
+        default_option = dropdown_options1["country_brand"][0]
+        chart_budget_response_default = [row for row in session['chart_budget_response'] if row["country_brand"] == default_option]
         session.modified = True
         socketio.emit('chart_budget_response', {'chartBudget_response': chart_budget_response_default})
-        print("chart_budget_response sent")
+        app.logger.info("chart_budget_response sent")
 
     except SQLAlchemyError as e:
-        print('Error executing query:', str(e))
+        app.logger.info('Error executing query:', str(e))
 
     finally:
         if 'conn' in locals():
@@ -793,24 +798,24 @@ def tv_data_process():
         rows = db_result.fetchall()
         col_names = db_result.keys()
         result_df = pd.DataFrame(rows, columns=col_names)
-        def region_brand_combine(row):
-            return row['Region'] + '_' + row['Brand']
-        result_df['region_brand'] = result_df.apply(region_brand_combine, axis=1)
+        def country_brand_combine(row):
+            return row['Country'] + '_' + row['Brand']
+        result_df['country_brand'] = result_df.apply(country_brand_combine, axis=1)
         result_df['Date'] = pd.to_datetime(result_df['Date'])
         result_df['MonthYear'] = result_df['Date'].dt.strftime('%b %Y')
         result_df = result_df.groupby(
-            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Region', 'Brand', 'Channel Group', 'Channel', 'Optimised', 'MonthYear', 'region_brand']).sum(numeric_only=True)
+            ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Country', 'Brand', 'Channel Group', 'Channel', 'Optimised', 'MonthYear', 'country_brand']).sum(numeric_only=True)
         result_df.reset_index(inplace=True)
         result_df = result_df.sort_values(by='MonthYear')
         chart_data = []
         for index, row in result_df.iterrows():
             a = dict(row)
             chart_data.append(a)
-        print("printing chart data for tv data")
+        app.logger.info("printing chart data for tv data")
         session['tv_data'] = chart_data
         socketio.emit('tv_chart_data', {'tv_chartData':session['tv_data']})
     except SQLAlchemyError as e:
-        print('Error executing query:', str(e))
+        app.logger.info('Error executing query:', str(e))
 
     finally:
         if 'conn' in locals():
@@ -822,14 +827,14 @@ def handle_curve_filter(curve_filter_data):
     join_room(session_id)
     try:
         curve_filters = curve_filter_data
-        if 'Region' in curve_filters and 'Brand' in curve_filters and 'Optimisation Type' in curve_filters:
-            curve_filters['region_brand_opt'] = f"{curve_filters['Region']}_{curve_filters['Brand']}_{curve_filters['Optimisation Type']}"
-        if 'Region' in curve_filters and 'Brand' in curve_filters:
-            curve_filters['region_brand'] = f"{curve_filters['Region']}_{curve_filters['Brand']}"
+        if 'Country' in curve_filters and 'Brand' in curve_filters and 'Optimisation Type' in curve_filters:
+            curve_filters['country_brand_opt'] = f"{curve_filters['Country']}_{curve_filters['Brand']}_{curve_filters['Optimisation Type']}"
+        if 'Country' in curve_filters and 'Brand' in curve_filters:
+            curve_filters['country_brand'] = f"{curve_filters['Country']}_{curve_filters['Brand']}"
 
-        print('Received filter data:', curve_filters)
-        unique_region_brand_opt = set(row["region_brand"] for row in chart_budget)
-        print("Unique values in chart_budget:", unique_region_brand_opt)
+        app.logger.info('Received filter data:', curve_filters)
+        unique_country_brand_opt = set(row["country_brand"] for row in chart_budget)
+        app.logger.info("Unique values in chart_budget:", unique_country_brand_opt)
 
         apply_curve_filters(session['chart_response'], curve_filters, 'filtered_data_response')
         apply_curve_filters(session['chart_budget'], curve_filters, 'filtered_data_budget')
@@ -839,24 +844,24 @@ def handle_curve_filter(curve_filter_data):
         session.modified = True
 
     except Exception as e:
-        print('Error applying filters:', str(e))
+        app.logger.info('Error applying filters:', str(e))
 
 def apply_curve_filters(data, curve_filters, event_name):
     session['filtered_curve_data'] = []
     try:
         
         if data == session['chart_response']:
-            filter_key = 'region_brand_opt'
+            filter_key = 'country_brand_opt'
         else:
-            filter_key = 'region_brand'
+            filter_key = 'country_brand'
 
         for data_point in data:
             include_data_point = True
 
-            if filter_key == 'region_brand_opt':
-                data_point_filter = f"{data_point['region_brand_opt']}"
+            if filter_key == 'country_brand_opt':
+                data_point_filter = f"{data_point['country_brand_opt']}"
             else:
-                data_point_filter = f"{data_point['region_brand']}"
+                data_point_filter = f"{data_point['country_brand']}"
 
             relevant_filters = {key: values for key, values in curve_filters.items() if key in data_point}
 
@@ -869,11 +874,11 @@ def apply_curve_filters(data, curve_filters, event_name):
                 session['filtered_curve_data'].append(data_point)
         session.modified = True
         socketio.emit(event_name, {'filtered_data': session['filtered_curve_data']})
-        print("Filtered chart data sent for", event_name)
-        print("Filtered chart data length:", len(session['filtered_curve_data']))
+        app.logger.info("Filtered chart data sent for", event_name)
+        app.logger.info("Filtered chart data length:", len(session['filtered_curve_data']))
 
     except Exception as e:
-        print('Error applying filter:', str(e))
+        app.logger.info('Error applying filter:', str(e))
 
 @app.route('/blueprint_results')
 def blueprint_results():

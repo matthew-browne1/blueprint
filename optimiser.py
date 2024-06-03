@@ -1,3 +1,4 @@
+
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
@@ -22,7 +23,7 @@ class Optimise:
     def infsum(rev, a, wks):
         return np.sum(rev[-1] * a ** np.arange(1, wks))
 
-    def rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dict, beta_dict, recorded_impressions, seas_dict, num_weeks):
+    def rev_per_stream(stream, budget, cost_per_dict, carryover_dict, alpha_dict, beta_dict, recorded_impressions, date_list, seas_dict, nns_mc, vol, num_weeks):
         cost_per_stream = cost_per_dict.get(stream, 1e-6)  # Set a small non-zero default cost
         allocation = budget / cost_per_stream
 
@@ -31,42 +32,44 @@ class Optimise:
 
         pam = pct_laydown * allocation
        
-        # print(sum(pam))
-        # carryover_list = np.zeros_like(pam)
-        # carryover_list[0] = pam[0]
-        # print(stream)
         carryover_list = Optimise.adstock(pam, carryover_dict[stream])
-        # print(sum(carryover_list))
-        # for i in range(1, len(pam)):
-        #     carryover_val = pam[i] + carryover_list[i - 1] * carryover_dict[stream]
-        #     carryover_list[i] = carryover_val
-        # print(sum(carryover_list))
-        # print("carryover_list:", carryover_list)
 
         rev_list = Optimise.dim_returns(alpha_dict[stream], beta_dict[stream], carryover_list)
-        # rev_list = beta_dict[stream] * ((1 - np.exp(-alpha_dict[stream] * carryover_list)))
-
-        # print(stream)
-        # print(sum(rev_list))
-        # print("beta dict:", beta_dict[stream])
 
         indexed_vals = rev_list * seas_dict[stream]
-        total_rev = np.sum(indexed_vals)
-        # print(total_rev)
 
-        # infsum = np.sum(carryover_list[-1] * carryover_dict[stream] ** np.arange(1, num_weeks))
-        #
-        # total_rev += infsum
-        return total_rev
+        # print(f"length of indexed_vals list is: {len(indexed_vals)}")
+        # print(f"length of date list is: {len(date_list)}")
+        
+        if vol:
+            #print("vol detected")
+            indexed_revs_with_date = dict(zip(date_list, indexed_vals))
+            output_vol_list = []
+
+            for index, row in nns_mc.iterrows():
+                if str(row['Country']) in str(stream) and str(row['Brand']) in str(stream):
+                    for key, value in indexed_revs_with_date.items():
+                        if int(row['Year']) == int(pd.to_datetime(key).year):
+                            output_vol_list.append(value/(row['NNS']*row['MC']))
+                            
+            total_rev = np.sum(output_vol_list)
+
+            return total_rev
+
+        else:
+
+            total_rev = np.sum(indexed_vals)
+
+            return total_rev
 
 
     def total_rev_per_stream(stream, budget, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,
-                            LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict, recorded_impressions,
-                            seas_dict, num_weeks, return_type):
+                            LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict, recorded_impressions, date_list,
+                            seas_dict, nns_mc, vol, num_weeks, return_type):
         ST_rev = Optimise.rev_per_stream(stream, budget, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,
-                                recorded_impressions, seas_dict, num_weeks)
+                                recorded_impressions, date_list, seas_dict, nns_mc, vol, num_weeks)
         LT_rev = Optimise.rev_per_stream(stream, budget, LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict,
-                                recorded_impressions, seas_dict, num_weeks)
+                                recorded_impressions, date_list, seas_dict, nns_mc, vol, num_weeks)
 
         if return_type == 'st':
             return ST_rev
@@ -79,11 +82,17 @@ class Optimise:
 
 
     def profit_objective(budgets, *args):
-        streams, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict, recorded_impressions, seas_dict, num_weeks, max_budget, exh_budget, return_type, objective_type = args
+        streams, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict, recorded_impressions, date_list, seas_dict, nns_mc, num_weeks, max_budget, exh_budget, return_type, objective_type = args
+
+        if objective_type == 'volume':
+            vol = True
+        else:
+            vol = False
+
         total_rev = sum(
             Optimise.total_rev_per_stream(stream, budgets[i], ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,
                                 LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict,
-                                recorded_impressions, seas_dict, num_weeks, return_type) for i, stream in enumerate(streams))
+                                recorded_impressions, date_list, seas_dict, nns_mc, vol, num_weeks, return_type) for i, stream in enumerate(streams))
         total_budget = sum(budgets)
 
         if objective_type == 'profit':
@@ -91,6 +100,8 @@ class Optimise:
         elif objective_type == 'roi':
             return -(total_rev / total_budget)
         elif objective_type == 'revenue':
+            return -total_rev
+        elif objective_type == 'volume':
             return -total_rev
         else:
             return 0
@@ -163,9 +174,10 @@ class Optimise:
 
         # infsum = np.sum(carryover_list[-1] * carryover_dict[stream] ** np.arange(1, num_weeks))
         #
-        # total_rev += infsum
+        # total_rev += infsumb
         return indexed_vals
-    def blended_profit_max_scipy(ST_input, LT_input, laydown, seas_index, return_type, objective_type, max_budget,
+
+    def blended_profit_max_scipy(ST_input, LT_input, laydown, seas_index, nns_mc, return_type, objective_type, max_budget,
                              exh_budget, method, scenario_name, step=0.1, tolerance=0.1,
                              num_weeks=1000):
         print(type(ST_input))
@@ -206,6 +218,8 @@ class Optimise:
         recorded_impressions = {}
         for x in laydown.columns:
             recorded_impressions[x] = laydown[x].to_list()
+        
+        date_list = laydown.index.tolist()
 
         seas_dict = {}
         for x in seas_index.columns:
@@ -213,7 +227,7 @@ class Optimise:
 
         args = (streams, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,
                 LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict,
-                recorded_impressions, seas_dict, num_weeks, max_budget, exh_budget, return_type, objective_type)
+                recorded_impressions, date_list, seas_dict, nns_mc, num_weeks, max_budget, exh_budget, return_type, objective_type)
 
         #initial_budgets = [min(max_spend_cap_dict[stream], max_budget / len(streams)) for stream in streams]
         initial_budgets = [current_budget_dict[stream] for stream in streams]
@@ -251,8 +265,7 @@ class Optimise:
         curr_revenue_LT = {'Date': list(laydown.index)}
         curr_laydown = {'Date': list(laydown.index)}
         for stream in streams:
-            opt_revenues_ST[stream] = Optimise.output_rev_per_stream(stream, opt_budgets_dict[stream],
-                                                                                ST_cost_per_dict,
+            opt_revenues_ST[stream] = Optimise.output_rev_per_stream(stream, opt_budgets_dict[stream],                                                       ST_cost_per_dict,
                                                                                 ST_carryover_dict, ST_alpha_dict,
                                                                                 ST_beta_dict,
                                                                                 recorded_impressions, seas_dict,
@@ -318,7 +331,7 @@ class Optimise:
         output_df = pd.concat(
             [curr_laydown, curr_revenue_ST_df, curr_revenue_LT_df, opt_laydown, opt_revenues_ST_df, opt_revenues_LT_df])
         output_df = pd.merge(output_df,
-                            pd.DataFrame.from_dict(ST_input)[['Opt Channel', 'Region', 'Brand', 'Channel Group', 'Channel']].drop_duplicates(),
+                            pd.DataFrame.from_dict(ST_input)[['Opt Channel', 'Country', 'Brand', 'Channel Group', 'Channel']].drop_duplicates(),
                             on='Opt Channel')
 
         if result.success:
@@ -380,7 +393,7 @@ class Beta:
         return total_rev
 
 
-    def beta_calculation(header, laydown, seas_dict, inc_rev):
+    def beta_calculation(header, laydown, seas_dict, inc_rev, stlt):
 
         # Show column headers without underscores!
 
@@ -400,21 +413,22 @@ class Beta:
         for stream in streams:
             header.loc[header['Opt Channel'] == stream, 'Current Budget'] = sum(laydown[stream])
 
+            header.loc[header['Opt Channel'] == stream, f'{stlt.upper()} Revenue'] = sum(inc_rev[stream])
 
-        header['ST Revenue'] = header['Current Budget'] * header['ST Current ROI']
+        header[f'{stlt.upper()} Current ROI'] = header[f'{stlt.upper()} Revenue'] / header['Current Budget']
 
-        ST_header_dict = header.to_dict("records")
+        header_dict = header.to_dict("records")
 
-        ST_cost_per_list = [float(entry['CPU']) for entry in ST_header_dict]
-        ST_cost_per_dict = dict(zip(streams, ST_cost_per_list))
+        cost_per_list = [float(entry['CPU']) for entry in header_dict]
+        cost_per_dict = dict(zip(streams, cost_per_list))
 
-        ST_carryover_list = [float(entry['ST Carryover']) for entry in ST_header_dict]
-        ST_carryover_dict = dict(zip(streams, ST_carryover_list))
+        carryover_list = [float(entry[f'{stlt.upper()} Carryover']) for entry in header_dict]
+        carryover_dict = dict(zip(streams, carryover_list))
 
-        ST_beta_dict = dict(zip(streams, [1] * len(streams)))
+        beta_dict = dict(zip(streams, [1] * len(streams)))
 
-        ST_alpha_list = [float(entry['ST Alpha']) for entry in ST_header_dict]
-        ST_alpha_dict = dict(zip(streams, ST_alpha_list))
+        alpha_list = [float(entry[f'{stlt.upper()} Alpha']) for entry in header_dict]
+        alpha_dict = dict(zip(streams, alpha_list))
         raw_input_data = header.to_dict("records")
         current_budget_list = [entry['Current Budget'] for entry in raw_input_data]
         current_budget_dict = dict(zip(streams, current_budget_list))
@@ -423,54 +437,54 @@ class Beta:
         for x in laydown.columns:
             recorded_impressions[x] = laydown.fillna(0)[x].to_list()
 
-        beta_calc_rev_dict_ST = {'Date': list(laydown.Date)}
+        beta_calc_rev_dict = {'Date': list(laydown.Date)}
         for stream in list(streams):
-            beta_calc_rev_dict_ST[stream] = Beta.prep_rev_per_stream(stream, current_budget_dict[stream], ST_cost_per_dict,
-                                                                ST_carryover_dict, recorded_impressions, seas_dict, ST_alpha_dict, ST_beta_dict)
-            sum(beta_calc_rev_dict_ST[stream])
-        beta_calc_df = pd.DataFrame(beta_calc_rev_dict_ST)[list(streams)].sum().reset_index()
+            beta_calc_rev_dict[stream] = Beta.prep_rev_per_stream(stream, current_budget_dict[stream], cost_per_dict,
+                                                                carryover_dict, recorded_impressions, seas_dict, alpha_dict, beta_dict)
+            sum(beta_calc_rev_dict[stream])
+        beta_calc_df = pd.DataFrame(beta_calc_rev_dict)[list(streams)].sum().reset_index()
         beta_calc_df.columns = ['Opt Channel', 'Calc_Rev']
-        beta_calc_df = pd.merge(beta_calc_df, header[['Opt Channel', 'ST Revenue']], on='Opt Channel')
-        beta_calc_df['ST Beta'] = np.where(beta_calc_df['Calc_Rev'] == 0, 0,
-                                        beta_calc_df['ST Revenue'] / beta_calc_df['Calc_Rev'])
-        ST_opt_betas_dict = dict(zip(streams, beta_calc_df['ST Beta'].tolist()))
+        beta_calc_df = pd.merge(beta_calc_df, header[['Opt Channel', f'{stlt.upper()} Revenue']], on='Opt Channel')
+        beta_calc_df[f'{stlt.upper()} Beta'] = np.where(beta_calc_df['Calc_Rev'] == 0, 0,
+                                        beta_calc_df[f'{stlt.upper()} Revenue'] / beta_calc_df['Calc_Rev'])
+        opt_betas_dict = dict(zip(streams, beta_calc_df[f'{stlt.upper()} Beta'].tolist()))
 
-        header['ST Beta'] = list(ST_opt_betas_dict.values())
+        header[f'{stlt.upper()} Beta'] = list(opt_betas_dict.values())
 
-        header['LT Revenue'] = header['Current Budget'] * header['LT Current ROI']
+        # header['LT Revenue'] = header['Current Budget'] * header['LT Current ROI']
 
-        LT_header_dict = header.to_dict("records")
+        # LT_header_dict = header.to_dict("records")
 
-        LT_cost_per_list = [float(entry['CPU']) for entry in LT_header_dict]
-        LT_cost_per_dict = dict(zip(streams, LT_cost_per_list))
+        # LT_cost_per_list = [float(entry['CPU']) for entry in LT_header_dict]
+        # LT_cost_per_dict = dict(zip(streams, LT_cost_per_list))
 
-        LT_carryover_list = [float(entry['LT Carryover']) for entry in LT_header_dict]
-        LT_carryover_dict = dict(zip(streams, LT_carryover_list))
+        # LT_carryover_list = [float(entry['LT Carryover']) for entry in LT_header_dict]
+        # LT_carryover_dict = dict(zip(streams, LT_carryover_list))
 
-        LT_beta_dict = dict(zip(streams, [1] * len(streams)))
+        # LT_beta_dict = dict(zip(streams, [1] * len(streams)))
 
-        LT_alpha_list = [float(entry['LT Alpha']) for entry in LT_header_dict]
-        LT_alpha_dict = dict(zip(streams, LT_alpha_list))
-        raw_input_data = header.to_dict("records")
-        current_budget_list = [entry['Current Budget'] for entry in raw_input_data]
-        current_budget_dict = dict(zip(streams, current_budget_list))
+        # LT_alpha_list = [float(entry['LT Alpha']) for entry in LT_header_dict]
+        # LT_alpha_dict = dict(zip(streams, LT_alpha_list))
+        # raw_input_data = header.to_dict("records")
+        # current_budget_list = [entry['Current Budget'] for entry in raw_input_data]
+        # current_budget_dict = dict(zip(streams, current_budget_list))
 
-        recorded_impressions = {}
-        for x in laydown.columns:
-            recorded_impressions[x] = laydown.fillna(0)[x].to_list()
+        # recorded_impressions = {}
+        # for x in laydown.columns:
+        #     recorded_impressions[x] = laydown.fillna(0)[x].to_list()
 
-        beta_calc_rev_dict_LT = {'Date': list(laydown.Date)}
-        for stream in list(streams):
-            beta_calc_rev_dict_LT[stream] = Beta.prep_rev_per_stream(stream, current_budget_dict[stream], LT_cost_per_dict, LT_carryover_dict, recorded_impressions, seas_dict, LT_alpha_dict, LT_beta_dict)
-            sum(beta_calc_rev_dict_ST[stream])
-        beta_calc_df = pd.DataFrame(beta_calc_rev_dict_ST)[list(streams)].sum().reset_index()
-        beta_calc_df.columns = ['Opt Channel', 'Calc_Rev']
-        beta_calc_df = pd.merge(beta_calc_df, header[['Opt Channel', 'LT Revenue']], on='Opt Channel')
-        beta_calc_df['LT Beta'] = np.where(beta_calc_df['Calc_Rev'] == 0, 0,
-                                        beta_calc_df['LT Revenue'] / beta_calc_df['Calc_Rev'])
-        LT_opt_betas_dict = dict(zip(streams, beta_calc_df['LT Beta'].tolist()))
+        # beta_calc_rev_dict_LT = {'Date': list(laydown.Date)}
+        # for stream in list(streams):
+        #     beta_calc_rev_dict_LT[stream] = Beta.prep_rev_per_stream(stream, current_budget_dict[stream], LT_cost_per_dict, LT_carryover_dict, recorded_impressions, seas_dict, LT_alpha_dict, LT_beta_dict)
+        #     sum(beta_calc_rev_dict_ST[stream])
+        # beta_calc_df = pd.DataFrame(beta_calc_rev_dict_ST)[list(streams)].sum().reset_index()
+        # beta_calc_df.columns = ['Opt Channel', 'Calc_Rev']
+        # beta_calc_df = pd.merge(beta_calc_df, header[['Opt Channel', 'LT Revenue']], on='Opt Channel')
+        # beta_calc_df['LT Beta'] = np.where(beta_calc_df['Calc_Rev'] == 0, 0,
+        #                                 beta_calc_df['LT Revenue'] / beta_calc_df['Calc_Rev'])
+        # LT_opt_betas_dict = dict(zip(streams, beta_calc_df['LT Beta'].tolist()))
 
-        header['LT Beta'] = list(LT_opt_betas_dict.values())
+        # header['LT Beta'] = list(LT_opt_betas_dict.values())
 
         header_copy = header.copy()
 
