@@ -385,7 +385,7 @@ def run_optimise(dataDict):
         #     session['table_data'][table_id] = deepcopy(table_dict)
         #     app.logger.info(f"table_data in {session['user']['name']}'s session added to table id: {table_id}")
         
-        current_table_df = deepcopy(session['table_data'][table_id])
+        current_table_df = pd.DataFrame.from_records(deepcopy(session['table_data'][table_id]))
         removed_rows_df = current_table_df[current_table_df.row_id.isin(disabled_rows)].copy()
         removed_rows_df['Opt Channel'] = removed_rows_df.apply(
             lambda row: '_'.join([str(row['Channel']), str(row['Country']), str(row['Brand'])]), axis=1)
