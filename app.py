@@ -426,9 +426,6 @@ def run_optimise(dataDict):
 
         laydown_copy.set_index('Date', inplace=True)
 
-    except Exception as e:
-        app.logger.info(f"error preparing optimisation inputs: {str(e)}")
-    try:
         session_id = session['session_id']
         queue = session_queues.setdefault(session_id, Queue())
     
@@ -981,14 +978,17 @@ def create_copy():
 
 @app.route('/channel_delete', methods=['POST'])
 def channel_delete():
-    deleted_tab = str(request.json.get("tabID"))
-    app.logger.info(f"deleted tab: {deleted_tab}")
-    session['table_data'].pop(deleted_tab)
-    session['output_df_per_result'].pop(deleted_tab)
-    session['results'].pop(deleted_tab)
-    session.modified = True
-    print(f"channel_delete endpoint: {session['table_data'].keys()}")
-    return jsonify({"success": "tab removed succesfully"})
+    try:
+        deleted_tab = str(request.json.get("tabID"))
+        app.logger.info(f"deleted tab: {deleted_tab}")
+        session['table_data'].pop(deleted_tab)
+        session['output_df_per_result'].pop(deleted_tab)
+        session['results'].pop(deleted_tab)
+        session.modified = True
+        print(f"channel_delete endpoint: {session['table_data'].keys()}")
+        return jsonify({"success": "tab removed succesfully"})
+    except Exception as e:
+        return jsonify({"exception": "error removing tab"})
 
 
 @app.route('/channel_main', methods=['GET'])
