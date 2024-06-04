@@ -769,7 +769,7 @@ def chart_budget_response():
         col_names = db_result.keys()
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
-            a["region_brand"] = f"{a['Region']}_{a['Brand']}"
+            a["country_brand"] = f"{a['Country']}_{a['Brand']}"
             session['chart_budget_response'].append(a)
         
         dropdown_options1 = {}
