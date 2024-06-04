@@ -326,7 +326,7 @@ function optAll() {
           }
 
           optAllArray.push({ dataToSend: dataToSend });
-          if (disabledRowIds.length < 85) {
+          if (disabledRowIds.length < 115) {
             warningBool = true;
           }
         });
@@ -852,7 +852,7 @@ function initializeDataTable(tableID) {
         console.log(dataToSend);
 
         // Use jQuery AJAX to send the data to the Flask endpoint
-        if (disabledRowIds.length < 85) {
+        if (disabledRowIds.length < 115) {
           $("#warningPopup").show();
           $("#continueWarning").click(function () {
             // Hide modal
@@ -1779,7 +1779,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
             console.log(dataToSend);
 
             // Use jQuery AJAX to send the data to the Flask endpoint
-            if (disabledRowIds.length < 85) {
+            if (disabledRowIds.length < 115) {
               $("#warningPopup").show();
               $("#continueWarning").click(function () {
                 // Hide modal
