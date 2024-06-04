@@ -442,7 +442,9 @@ def run_optimise(dataDict):
             app.logger.info(session['results'].keys())
             
     except Exception as e:
+        error_str = traceback.format_exc()
         app.logger.info(f"error adding optimisation job to the queue: {str(e)}")
+        app.logger.info(str(error_str))
         socketio.emit('opt_complete', {'data': table_id, 'exception': str(e)})
 
     return jsonify({'status': 'Task started in the background'})
@@ -471,9 +473,10 @@ def run_optimise_task(session_id):
                     return result, output_df
 
             except Exception as e:
-        
-                app.logger.info(f"Error in task callback causing optimisation not to run: {str(e)}")
                 
+                app.logger.info(f"Error in task callback causing optimisation not to run: {str(e)}")
+                error_str = traceback.format_exc()
+                app.logger.info(str(error_str))
                 socketio.emit('opt_complete', {'data': table_id, 'exception':str(e)})
                 queue.task_done()
             
@@ -513,6 +516,7 @@ def results_output():
             app.logger.info("results uploaded to db successfully")
             return jsonify({"message": "results uploaded to db successfully"})
         except Exception as e:
+            
             app.logger.info("results failed to upload to the db", str(e))
             return jsonify({"message": "results export failed"})
         
