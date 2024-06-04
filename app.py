@@ -230,7 +230,7 @@ def overwrite_save():
     content = pickle.dumps(request.json.get('content'))
     scenario_names = request.json.get('scenarioNames')
     pickled_scenario_names = pickle.dumps(scenario_names)
-    table_data_json = json.dumps(table_data)
+    table_data_json = json.dumps(session['table_data'])
 
     app.logger.info(f"snapshot id = {snapshot_id}")
     app.logger.info(f"user id = {user_id}")
@@ -344,8 +344,7 @@ table_dict = table_df.to_dict("records")
 for var in table_dict:
     var['Laydown'] = laydown[var['Channel'] + "_" + var['Country'] + "_" + var['Brand']].tolist()
 
-table_data = {"1": deepcopy(table_dict)}
-bud = sum(header['Current Budget'].to_list())
+
 
 
 # %% --------------------------------------------------------------------------
@@ -381,11 +380,12 @@ def run_optimise(dataDict):
         disabled_rows = list(data['disabledRows'])
         app.logger.info(f"disabled row ids: {disabled_rows}")
         app.logger.info(f"current keys of table data in session:{session['table_data'].keys()}")
+
         # if table_id not in list(session['table_data'].keys()):
         #     session['table_data'][table_id] = deepcopy(table_dict)
         #     app.logger.info(f"table_data in {session['user']['name']}'s session added to table id: {table_id}")
         
-        current_table_df = pd.DataFrame.from_records(deepcopy(table_data[table_id]))
+        current_table_df = deepcopy(session['table_data'][table_id])
         removed_rows_df = current_table_df[current_table_df.row_id.isin(disabled_rows)].copy()
         removed_rows_df['Opt Channel'] = removed_rows_df.apply(
             lambda row: '_'.join([str(row['Channel']), str(row['Country']), str(row['Brand'])]), axis=1)
