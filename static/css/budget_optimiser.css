@@ -661,11 +661,13 @@ h1 {
   border-radius: 5px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
   text-align: left;
-  width: 60%; /* Adjust the width as needed */
-  height: 60%; /* Adjust the height as needed */
-  overflow-y: auto; /* Enable vertical scrolling if needed */
+  width: 60%;
+  height: 60%;
+  overflow-y: auto; 
 }
+
 .warning-popup-content {
+  font-weight: bold;
   position: absolute;
   top: 50%;
   left: 50%;

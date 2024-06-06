@@ -196,3 +196,9 @@ body.showLoginForm .modal-content{
   height: auto; /* Adjust height as needed */
   margin-right: 10px; /* Adjust spacing between images */
 }
+
+#login-btn {
+  width: 30%;
+  height: 10%;
+  font-size: 1.3rem;
+}

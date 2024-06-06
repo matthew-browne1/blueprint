@@ -19,19 +19,18 @@
 
     {% if current_user.is_authenticated %}
         <p class="current-user-welcome-text">Currently logged-in user: {{ current_user.user_info[0].full_name }}</p>
-        <button class="continue-btn" onclick="redirectToBp()">Continue to Blueprint</button>
+        <button class="continue-btn" id="continue-btn">Continue to Blueprint</button>
     {% else %}
 
-    <button onclick="openLoginForm()"
-            style="width:30%; height: 10%; font-size: 1.3rem;">Login
+    <button id="login-btn">Login
     </button>
     {% endif %}
 </div>
 
 <div id="id01" class="bg-modal"></div>
 <div class="modal-content">
-    <div class="modal-close"
-         onclick="closeLoginForm()">&times;
+    <div class="modal-close" id="close-login"
+        >&times;
     </div>
     <div class="modal-form">
         <div class="modal-icon">
@@ -59,6 +58,7 @@
         </form>
     </div>
 </div>
+<script src="https://code.jquery.com/jquery-3.7.0.js"></script>
 <script src="/static/js/main.js"></script>
 </body>
 </html>

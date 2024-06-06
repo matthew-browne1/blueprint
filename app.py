@@ -2,6 +2,7 @@
 #
 # -----------------------------------------------------------------------------
 from flask import Flask, render_template, send_file, jsonify, request, url_for, redirect, flash, session, current_app
+from flask_talisman import Talisman
 from flask_socketio import SocketIO, emit
 import numpy as np
 import pandas as pd
@@ -31,6 +32,61 @@ import traceback
 
 app = Flask(__name__)
 socketio = SocketIO(app=app)
+
+csp = {
+    'default-src': [
+        '\'self\'',
+        'https://code.jquery.com',
+        'https://cdn.jsdelivr.net',
+        'https://cdnjs.cloudflare.com',
+        'https://cdn.socket.io',
+        'https://fonts.googleapis.com',
+        'https://unpkg.com',
+        'https://cdn.datatables.net',
+        'https://kit.fontawesome.com',
+        'https://ka-f.fontawesome.com',
+        'https://fonts.gstatic.com',
+        'http://code.jquery.com',
+        'http://cdn.datatables.net'
+    ],
+    'script-src': ["'self'", "'unsafe-inline'", 'https://code.jquery.com', 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com', 'https://cdn.socket.io', 'https://unpkg.com', 'https://cdn.datatables.net', 'https://kit.fontawesome.com', 'http://cdn.datatables.net'],
+    'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.datatables.net', 'https://kit.fontawesome.com', 'https://unpkg.com', 'http://code.jquery.com']
+}
+
+permissions_policy = {
+    'accelerometer': '()',
+    'autoplay': '()',
+    'camera': '()',
+    'encrypted-media': '()',
+    'fullscreen': '()',
+    'geolocation': '()',
+    'gyroscope': '()',
+    'magnetometer': '()',
+    'microphone': '()',
+    'midi': '()',
+    'payment': '()',
+    'picture-in-picture': '()',
+    'usb': '()',
+}
+
+talisman = Talisman(app)
+
+hsts = {
+    'max-age': 31536000,
+    'includeSubDomains': True
+}
+# Enforce HTTPS and other headers
+talisman.force_https = True
+talisman.force_file_save = True
+talisman.x_xss_protection = True
+talisman.session_cookie_secure = True
+talisman.session_cookie_samesite = 'Lax'
+talisman.frame_options_allow_from = 'https://www.google.com'
+ 
+# Add the headers to Talisman
+talisman.content_security_policy = csp
+talisman.strict_transport_security = hsts
+talisman.permissions_policy = permissions_policy
 
 task_queue = queue.Queue()
 
