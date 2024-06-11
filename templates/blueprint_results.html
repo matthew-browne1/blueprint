@@ -63,12 +63,13 @@
         <a href="#channel">Channel Charts</a>
         <a href="#laydown">Laydown Charts</a>
         <a href="/blueprint_curve">Curve Charts</a>
+        <a href= "{{ url_for('export_results') }}" download="{{ user_id }}_Input_File.xlsx">Export Data</a>
         <div class="volval-container">
             <div class="volval-radio-buttons">
                 <input type="radio" name="volval" id="volval1" value="Value" checked >
                 <label for="volval1">Value (CHF)</label>
                 <input type="radio" name="volval" id="volval2" value="Volume" >
-                <label for="volval2">Volume</label>
+                <label for="volval2">Volume (kg)</label>
             </div>
         </div>
     </div>

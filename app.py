@@ -375,7 +375,7 @@ laydown_table_name = "laydown"
 num_weeks = 1000
 
 country_to_region = {
-    'Mexico': 'NA',
+    'Mexico': 'LATAM',
     'Brazil': 'LATAM',
     'Chile': 'LATAM',
     'UK': 'EUR',
@@ -902,7 +902,7 @@ def apply_curve_filters(data, curve_filters, event_name):
 @app.route('/blueprint_results')
 @login_required
 def blueprint_results():
-    return render_template('blueprint_results.html')
+    return render_template('blueprint_results.html', current_user=current_user)
 
 
 @app.route('/blueprint_curve')
@@ -1067,6 +1067,15 @@ def export_data():
     excel_buffer.seek(0)
 
     return send_file(excel_buffer, download_name=f'{current_user.id}_Input_File.xlsx', as_attachment=True)
+
+@app.route('/export_results')
+def export_results():
+    excel_buffer = BytesIO()
+    with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
+        results = pd.read_sql_table("Optimised CSV", engine)
+        results.to_excel(writer, sheet_name="Results")
+    excel_buffer.seek(0)
+    return send_file(excel_buffer, download_name=f"{current_user.id}_Results.xlsx")
 
 def main():
     task_queue = queue.Queue()
