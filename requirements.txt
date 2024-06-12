@@ -38,6 +38,7 @@ thread
 flask-session
 flask-bcrypt
 flask-socketio
+flask-talisman
 cryptography
 azure-identity
 azure-keyvault-secrets
