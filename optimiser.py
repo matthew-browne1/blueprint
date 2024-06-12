@@ -42,17 +42,29 @@ class Optimise:
         # print(f"length of date list is: {len(date_list)}")
         
         if vol:
-            #print("vol detected")
-            indexed_revs_with_date = dict(zip(date_list, indexed_vals))
-            output_vol_list = []
+            # Convert date_list and indexed_vals to a DataFrame
+            indexed_revs_with_date_df = pd.DataFrame({
+                'Date': date_list,
+                'Indexed_Revenue': indexed_vals
+            })
+            
+            # Add a 'Year' column to the DataFrame
+            indexed_revs_with_date_df['Year'] = pd.to_datetime(indexed_revs_with_date_df['Date']).dt.year
 
-            for index, row in nns_mc.iterrows():
-                if str(row['Country']) in str(stream) and str(row['Brand']) in str(stream):
-                    for key, value in indexed_revs_with_date.items():
-                        if int(row['Year']) == int(pd.to_datetime(key).year):
-                            output_vol_list.append(value/(row['NNS']*row['MC']))
-                            
-            total_rev = np.sum(output_vol_list)
+            # Filter the nns_mc DataFrame for the specified stream
+            filtered_nns_mc = nns_mc[
+                nns_mc['Country'].astype(str).str.contains(stream) &
+                nns_mc['Brand'].astype(str).str.contains(stream)
+            ]
+
+            # Merge the DataFrames on 'Year'
+            merged_df = pd.merge(indexed_revs_with_date_df, filtered_nns_mc, on='Year')
+
+            # Calculate the volume using vectorized operations
+            merged_df['Volume'] = merged_df['Indexed_Revenue'] / (merged_df['NNS'] * merged_df['MC'])
+
+            # Sum the volumes to get the total revenue
+            total_rev = merged_df['Volume'].sum()
 
             return total_rev
 
