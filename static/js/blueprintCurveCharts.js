@@ -37,7 +37,7 @@ function populateDropdown(selector, options) {
       // Function to collect and send filter selections to backend
     function applyFilters() {
         var filters = {
-            Region: $('#regionFilter').val(),
+            Country: $('#countryFilter').val(),
             Brand: $('#brandFilter').val(),
             "Optimisation Type": $('#optimisationFilter').val()
         };
@@ -47,7 +47,7 @@ function populateDropdown(selector, options) {
 
         // Listen for 'dropdown_options' event and populate dropdowns
     chartsSocket.on('dropdown_options1', function(data) {
-        populateDropdown('#regionFilter', data.options.Region);
+        populateDropdown('#countryFilter', data.options.Country);
         populateDropdown('#brandFilter', data.options.Brand);
         populateDropdown('#optimisationFilter', data.options['Optimisation Type']);
     }).on('error', function(xhr, status, error) {
@@ -73,13 +73,13 @@ chartsSocket.on('chart_response', function(data) {
 function setDefaultSelections(chartResponse) {
         if (chartResponse.length > 0) {
             var defaultSelections = {
-                Region: chartResponse[0].Region,
+                Country: chartResponse[0].Country,
                 Brand: chartResponse[0].Brand,
                 "Optimisation Type": chartResponse[0]['Optimisation Type']
             };
 
             // Set default selections in dropdowns
-            $('#regionFilter').val(defaultSelections.Region);
+            $('#countryFilter').val(defaultSelections.Country);
             $('#brandFilter').val(defaultSelections.Brand);
             $('#optimisationFilter').val(defaultSelections['Optimisation Type']);
         }
@@ -103,7 +103,7 @@ function generateCurveChartsA() {
     }
 
     if (dataToUse.length > 0) {
-        title += "Country - " + dataToUse[0].Region + ", Brand - " + dataToUse[0].Brand + ", Optimisation Type - " + dataToUse[0]['Optimisation Type'];
+        title += "Country - " + dataToUse[0].Country + ", Brand - " + dataToUse[0].Brand + ", Optimisation Type - " + dataToUse[0]['Optimisation Type'];
     } else {
         title += "No Data Available";
     }

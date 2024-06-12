@@ -311,9 +311,9 @@ function splitLabel(maxWords) {
     
           if ( metric == "Value" ) {
               if (value < 1000000) {
-                return '£' + (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
+                return (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
               } else {
-                return '£' + (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
+                return (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
               }
             } else {
               if (value < 1000000) {
@@ -345,8 +345,8 @@ function splitLabel(maxWords) {
         if (metric == "Value") {
         
         const formattedValue = value < 1000000
-          ? '£' + (Math.round(value / 1000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'K'
-          : '£' + (Math.round(value / 1000000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M';
+          ? (Math.round(value / 1000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'K'
+          : (Math.round(value / 1000000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M';
 
         return formattedValue;
         } else {
@@ -462,9 +462,9 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
         },
      callback: function(value, index, values) {
           if (value < 1000000) {
-            return '£' + (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
+            return (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
           } else {
-            return '£' + (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
+            return (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
           }
         }
       },
@@ -492,8 +492,8 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
         if (metric == 'Value') {
         
         const formattedValue = value < 1000000
-          ? '£' + (Math.round(value / 1000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'K'
-          : '£' + (Math.round(value / 1000000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M';
+          ? (Math.round(value / 1000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'K'
+          : (Math.round(value / 1000000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M';
 
         return formattedValue;
         } else {
@@ -514,8 +514,8 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
 
         const totalValue = st_revData.reduce((acc, val, index) => acc + val + lt_revData[index], 0);
         const formattedTotalValue = totalValue < 1000000
-          ? 'Total: £' + (Math.round(totalValue / 1000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'K'
-          : 'Total: £' + (Math.round(totalValue / 1000000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M';
+          ? 'Total:' + (Math.round(totalValue / 1000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'K'
+          : 'Total:' + (Math.round(totalValue / 1000000 * 100) / 100).toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 }) + 'M';
 
         return formattedTotalValue;
       } else {
@@ -629,7 +629,7 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
         },
      callback: function(value, index, values) {
        
-            return '£' + (Math.round(value)).toLocaleString('en-US');
+            return (Math.round(value)).toLocaleString('en-US');
           
         }
       },
@@ -650,7 +650,7 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
       offset: 4,
       formatter: (value, context) => {
     const formattedValue = value !== null && value !== undefined
-        ? '£' + Number(value).toFixed(2)
+        ? Number(value).toFixed(2)
         : '';
 
     return formattedValue;
@@ -662,7 +662,7 @@ const maxBarValue = Math.max(...st_revData.concat(lt_revData));
       formatter: (context) => {
         const totalValue = roiData
     const formattedValue = totalValue !== null && totalValue !== undefined
-        ? '£' + Number(totalValue).toFixed(2)
+        ? Number(totalValue).toFixed(2)
         : '';
 
     return formattedValue;
@@ -863,9 +863,9 @@ function splitLabel(maxWords) {
           metric = selectedMetric();
           if (metric == "Value") {
                       if (value < 1000000) {
-            return '£' + (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
+            return (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
           } else {
-            return '£' + (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
+            return (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
           }
           } else {
                       if (value < 1000000) {
@@ -974,9 +974,9 @@ const maxBarValue2 = Math.max(...totalRevenues);
           metric = selectedMetric();
           if (metric == "Value") {
             if (value < 1000000) {
-            return '£' + (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
+            return (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
           } else {
-            return '£' + (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
+            return (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
           } 
           } else {
             if (value < 1000000) {
@@ -1082,7 +1082,7 @@ const roi_channel_chartOptions = {
           weight: 'bold',
         },
         callback: function(value, index, values) {
-          return '£' + (Math.round(value)).toLocaleString('en-US');
+          return (Math.round(value)).toLocaleString('en-US');
         }
       },
     },
@@ -1214,9 +1214,9 @@ const processedDataLaydown = data.reduce((acc, entry) => {
         },
      callback: function(value, index, values) {
           if (value < 1000000) {
-            return '£' + (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
+            return (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
           } else {
-            return '£' + (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
+            return (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
           }
         }
       },
@@ -1351,9 +1351,9 @@ function generateChartsD(data, metric) {
             },
             callback: function(value, index, values) {
               if (value < 1000000) {
-                return '£' + (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
+                return (Math.round(value / 1000)).toLocaleString('en-US') + 'K';
               } else {
-                return '£' + (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
+                return (Math.round(value / 1000000)).toLocaleString('en-US') + 'M';
               }
             }
           },

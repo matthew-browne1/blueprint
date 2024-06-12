@@ -249,3 +249,7 @@ section {
     background-color: #E8E3E2;
     padding-bottom: 40px;
 }
+
+#export-results-icon {
+    padding-left: 5px;
+}

@@ -3,6 +3,7 @@
 # -----------------------------------------------------------------------------
 from flask import Flask, render_template, send_file, jsonify, request, url_for, redirect, flash, session, current_app
 from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask_talisman import Talisman
 import numpy as np
 import pandas as pd
 import json
@@ -10,7 +11,7 @@ import os
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine, text, Column, DateTime, Integer, func, UUID
 import uuid
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from flask_bcrypt import Bcrypt
 import logging
@@ -29,9 +30,64 @@ import traceback
 #from azure import identity
 
 app = Flask(__name__)
-socketio = SocketIO(app=app, manage_session=False, async_mode="eventlet")
+socketio = SocketIO(app=app, manage_session=False, async_mode='eventlet')
 
 #, async_mode='eventlet'
+
+csp = {
+    'default-src': [
+        '\'self\'',
+        'https://code.jquery.com',
+        'https://cdn.jsdelivr.net',
+        'https://cdnjs.cloudflare.com',
+        'https://cdn.socket.io',
+        'https://fonts.googleapis.com',
+        'https://unpkg.com',
+        'https://cdn.datatables.net',
+        'https://kit.fontawesome.com',
+        'https://ka-f.fontawesome.com',
+        'https://fonts.gstatic.com',
+        'http://code.jquery.com',
+        'http://cdn.datatables.net'
+    ],
+    'script-src': ["'self'", "'unsafe-inline'", 'https://code.jquery.com', 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com', 'https://cdn.socket.io', 'https://unpkg.com', 'https://cdn.datatables.net', 'https://kit.fontawesome.com', 'http://cdn.datatables.net'],
+    'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.datatables.net', 'https://kit.fontawesome.com', 'https://unpkg.com', 'http://code.jquery.com']
+}
+
+permissions_policy = {
+    'accelerometer': '()',
+    'autoplay': '()',
+    'camera': '()',
+    'encrypted-media': '()',
+    'fullscreen': '()',
+    'geolocation': '()',
+    'gyroscope': '()',
+    'magnetometer': '()',
+    'microphone': '()',
+    'midi': '()',
+    'payment': '()',
+    'picture-in-picture': '()',
+    'usb': '()',
+}
+
+talisman = Talisman(app)
+
+hsts = {
+    'max-age': 31536000,
+    'includeSubDomains': True
+}
+# Enforce HTTPS and other headers
+talisman.force_https = True
+talisman.force_file_save = True
+talisman.x_xss_protection = True
+talisman.session_cookie_secure = True
+talisman.session_cookie_samesite = 'Lax'
+talisman.frame_options_allow_from = 'https://www.google.com'
+ 
+# Add the headers to Talisman
+talisman.content_security_policy = csp
+talisman.strict_transport_security = hsts
+talisman.permissions_policy = permissions_policy
 
 app.config.from_object(app_config)
 secret_key = os.urandom(24)
@@ -85,6 +141,12 @@ class Snapshot(db.Model):
     table_data = db.Column(db.Text, nullable=False)
 
 active_sessions = {}
+
+@app.before_request
+def before_request():
+    session.permanent = True
+    app.permanent_session_lifetime = timedelta(minutes=60)
+    session.modified = True
 
 @app.route("/")
 def index():
@@ -306,7 +368,7 @@ laydown_table_name = "laydown"
 num_weeks = 1000
 
 country_to_region = {
-    'Mexico': 'NA',
+    'Mexico': 'LATAM',
     'Brazil': 'LATAM',
     'Chile': 'LATAM',
     'UK': 'EUR',
@@ -769,7 +831,7 @@ def chart_budget_response():
         col_names = db_result.keys()
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
-            a["region_brand"] = f"{a['Region']}_{a['Brand']}"
+            a["country_brand"] = f"{a['Country']}_{a['Brand']}"
             session['chart_budget_response'].append(a)
         
         dropdown_options1 = {}
@@ -888,7 +950,6 @@ def blueprint_results():
     else:
         return redirect(url_for("login"))
     
-
 
 @app.route('/blueprint_curve')
 def blueprint_curve():
@@ -1030,6 +1091,8 @@ def table_data_editor():
 
 @app.route('/export_data')
 def export_data():
+    now = datetime.now()
+    formatted_timestamp = now.strftime("%d%m%Y%H%M")
     excel_buffer = BytesIO()
     with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
         all_input = pd.read_sql_table('All_Channel_Inputs', engine)
@@ -1044,10 +1107,21 @@ def export_data():
     
     if session['user']['oid'] != None:
         user_id = session['user']['oid']
-        return send_file(excel_buffer, download_name=f'{user_id}_Input_File.xlsx', as_attachment=True)
+        return send_file(excel_buffer, download_name=f'{user_id}_{formatted_timestamp}_Input_File.xlsx', as_attachment=True)
     else:
         pass
 
+@app.route('/export_results')
+def export_results():
+    now = datetime.now()
+    formatted_timestamp = now.strftime("%d%m%Y%H%M")
+    excel_buffer = BytesIO()
+    user_id = session['user']['oid']
+    with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
+        results = pd.read_sql_table(f"Blueprint_results_{user_id}", engine)
+        results.to_excel(writer, sheet_name="Results")
+    excel_buffer.seek(0)
+    return send_file(excel_buffer, download_name=f"{user_id}_{formatted_timestamp}_Results.xlsx")
 
 if __name__ == '__main__':
     with app.app_context():
