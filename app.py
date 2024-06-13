@@ -1031,16 +1031,6 @@ def home():
     return render_template('Home.html', current_user=current_user)
 
 
-
-def load_configurations():
-    try:
-        with open('data\config.json', 'r') as config_file:
-            configurations = json.load(config_file)
-    except (FileNotFoundError, json.JSONDecodeError):
-        # Handle the case when the file doesn't exist or is empty
-        configurations = {}
-
-
 def save_configurations(configurations):
     with open('config.json', 'w') as config_file:
         json.dump(configurations, config_file, indent=2)
@@ -1048,10 +1038,11 @@ def save_configurations(configurations):
     return configurations
 
 
-
 @app.route('/export_data')
 @login_required
 def export_data():
+    now = datetime.now()
+    formatted_timestamp = now.strftime("%d%m%Y%H%M")
     excel_buffer = BytesIO()
     with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
         all_input = pd.read_sql_table('All_Channel_Inputs', engine)
@@ -1066,16 +1057,18 @@ def export_data():
 
     excel_buffer.seek(0)
 
-    return send_file(excel_buffer, download_name=f'{current_user.id}_Input_File.xlsx', as_attachment=True)
+    return send_file(excel_buffer, download_name=f'{current_user.id}_{formatted_timestamp}_Input_File.xlsx', as_attachment=True)
 
 @app.route('/export_results')
 def export_results():
+    now = datetime.now()
+    formatted_timestamp = now.strftime("%d%m%Y%H%M")
     excel_buffer = BytesIO()
     with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
         results = pd.read_sql_table("Optimised CSV", engine)
         results.to_excel(writer, sheet_name="Results")
     excel_buffer.seek(0)
-    return send_file(excel_buffer, download_name=f"{current_user.id}_Results.xlsx")
+    return send_file(excel_buffer, download_name=f"{current_user.id}_{formatted_timestamp}_Results.xlsx", as_attachment=True)
 
 def main():
     task_queue = queue.Queue()

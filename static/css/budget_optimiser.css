@@ -784,6 +784,7 @@ tr {
 
 #export-data {
   margin-right: 20px;
+  text-decoration: none;
 }
 
 .right-buttons {
@@ -831,3 +832,6 @@ tbody tr.disabled {
   justify-content: center;
 }
 
+#export-data-icon {
+  padding-left: 5px;
+}

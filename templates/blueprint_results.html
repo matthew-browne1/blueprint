@@ -6,7 +6,8 @@
     <title>Blueprint Results</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
     <link rel="stylesheet" href="/static/css/blueprint_results.css">
-    <link rel="icon" href="/static/images/icon.ico" type="image/x-icon">
+    <script src="https://kit.fontawesome.com/bcdb575c88.js" crossorigin="anonymous" data-auto-add-css="false"></script>
+    <link rel="icon" href="/static/images/logo.png" type="image/png">
 </head>
 <body>
 <div class="title-container">
@@ -63,7 +64,7 @@
         <a href="#channel">Channel Charts</a>
         <a href="#laydown">Laydown Charts</a>
         <a href="/blueprint_curve">Curve Charts</a>
-        <a href= "{{ url_for('export_results') }}" download="{{ user_id }}_Input_File.xlsx">Export Data</a>
+        <a href= "{{ url_for('export_results') }}">Export Data <i class="fa-solid fa-file-export" id="export-results-icon"></i></a>
         <div class="volval-container">
             <div class="volval-radio-buttons">
                 <input type="radio" name="volval" id="volval1" value="Value" checked >
