@@ -150,19 +150,20 @@ def before_request():
 
 @app.route("/")
 def index():
-    #if not session.get("user"):
-    #    return redirect(url_for("login"))
-
     if not session.get("user"):
-        app.logger.info("rendering index.html, user does not exist in session")
-        
-        session["flow"] = _build_auth_code_flow(scopes=app_config.SCOPE)
-        return render_template('index.html', auth_url=session["flow"]["auth_uri"], version=msal.__version__)
+        return redirect(url_for("login"))
     else:
-        user_name = session['user']['name']
-        app.logger.info("rendering index.html, user exists in session")
-        app.logger.info(session["user"]['oid'])
-        return render_template('index.html', user=session["user"], user_name = user_name, version=msal.__version__)
+        return redirect(url_for("blueprint"))
+    # if not session.get("user"):
+    #     app.logger.info("rendering index.html, user does not exist in session")
+        
+    #     session["flow"] = _build_auth_code_flow(scopes=app_config.SCOPE)
+    #     return render_template('index.html', auth_url=session["flow"]["auth_uri"], version=msal.__version__)
+    # else:
+    #     user_name = session['user']['name']
+    #     app.logger.info("rendering index.html, user exists in session")
+    #     app.logger.info(session["user"]['oid'])
+    #     return render_template('index.html', user=session["user"], user_name = user_name, version=msal.__version__)
     
 @app.route("/login")
 def login():
@@ -896,8 +897,8 @@ def handle_curve_filter(curve_filter_data):
             curve_filters['country_brand'] = f"{curve_filters['Country']}_{curve_filters['Brand']}"
 
         app.logger.info('Received filter data:', curve_filters)
-        unique_country_brand_opt = set(row["country_brand"] for row in chart_budget)
-        app.logger.info("Unique values in chart_budget:", unique_country_brand_opt)
+        unique_country_brand_opt = set(row["country_brand"] for row in session['chart_budget'])
+        app.logger.info(f"Unique values in chart_budget: {unique_country_brand_opt}")
 
         apply_curve_filters(session['chart_response'], curve_filters, 'filtered_data_response')
         apply_curve_filters(session['chart_budget'], curve_filters, 'filtered_data_budget')
@@ -937,8 +938,8 @@ def apply_curve_filters(data, curve_filters, event_name):
                 session['filtered_curve_data'].append(data_point)
         session.modified = True
         socketio.emit(event_name, {'filtered_data': session['filtered_curve_data']})
-        app.logger.info("Filtered chart data sent for", event_name)
-        app.logger.info("Filtered chart data length:", len(session['filtered_curve_data']))
+        app.logger.info(f"Filtered chart data sent for: {event_name}")
+        app.logger.info(f"Filtered chart data length: {len(session['filtered_curve_data'])}")
 
     except Exception as e:
         app.logger.info('Error applying filter:', str(e))

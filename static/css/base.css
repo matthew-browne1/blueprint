@@ -35,7 +35,10 @@ nav{
     align-items: center;
     justify-content: space-between;
     background: var(--nav-color);
-    padding: 5px 5%;
+    padding-right: 5%;
+    padding-left: 1%;
+    padding-top: 1%;
+    padding-bottom: 1%;
 }
 
 .logo{
