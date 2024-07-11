@@ -2,8 +2,8 @@ import subprocess
 import urllib
 from sqlalchemy import create_engine
 import pandas as pd
-# from azure.identity import DefaultAzureCredential
-# from azure.keyvault.secrets import SecretClient
+from azure.identity import DefaultAzureCredential
+from azure.keyvault.secrets import SecretClient
 
 def generate_requirements_file(output_file='requirements.txt'):
     # Run 'pip freeze' to get a list of installed packages and their versions
@@ -20,7 +20,7 @@ def generate_requirements_file(output_file='requirements.txt'):
 
 ra_server_uri = 'postgresql://postgres:' + urllib.parse.quote_plus("Gde3400@@") + '@192.168.1.2:5432/CPW Blueprint'
 
-engine = create_engine(ra_server_uri)
+# engine = create_engine(ra_server_uri)
 
 # laydown_ct = pd.read_sql_table('All_Laydown', engine)
 # index = pd.read_sql_table('All_Index', engine)
@@ -34,39 +34,59 @@ engine = create_engine(ra_server_uri)
 # incr_rev_lt_ct.to_csv("incr_rev_lt_ct.csv")
 # channel_inputs.to_csv("channel_inputs.csv")
 
-# keyvault_url = "https://acblueprint-vault.vault.azure.net/"
+keyvault_url = "https://acblueprint-vault.vault.azure.net/"
 
-# # Initialize Azure credentials
-# credential = DefaultAzureCredential()
+# Initialize Azure credentials
+credential = DefaultAzureCredential()
 
-# # Initialize SecretClient
-# secret_client = SecretClient(vault_url=keyvault_url, credential=credential)
+# Initialize SecretClient
+secret_client = SecretClient(vault_url=keyvault_url, credential=credential)
 
-# # Retrieve secrets from Key Vault
-# db_username_secret = secret_client.get_secret("db-username").value
-# db_password_secret = secret_client.get_secret("db-password").value
+# Retrieve secrets from Key Vault
+db_username_secret = secret_client.get_secret("db-username").value
+db_password_secret = secret_client.get_secret("db-password").value
 
-# # Host and database details
-# host = "acblueprint-server.postgres.database.azure.com"
-# database_name = "acblueprint-db"
+# Host and database details
+host = "acblueprint-server.postgres.database.azure.com"
+database_name = "acblueprint-db"
 
-# # Construct connection string
-# connection_string = f"postgresql://{db_username_secret}:{db_password_secret}@{host}/{database_name}"
-# engine = create_engine(connection_string)
+# Construct connection string
+connection_string = f"postgresql://{db_username_secret}:{db_password_secret}@{host}/{database_name}"
+engine = create_engine(connection_string)
 
-# laydown = pd.read_csv("laydown_ct.csv")
-# index = pd.read_csv("index.csv")
-# incr_rev_st_ct = pd.read_csv("incr_rev_st_ct.csv")
-# incr_rev_lt_ct = pd.read_csv("incr_rev_lt_ct.csv")
-# channel_inputs = pd.read_csv("channel_inputs.csv")
+laydown = pd.read_excel("All_Laydown.xlsx", index_col="index")
+channel_inputs = pd.read_excel("All_Channel_Inputs.xlsx", index_col="index")
+incr_rev_lt = pd.read_excel("All_Incremental_Revenue_LT.xlsx", index_col="index")
+incr_rev_st = pd.read_excel("All_Incremental_Revenue_ST.xlsx", index_col="index")
+budget_response = pd.read_excel("Curves_Budget_Response.xlsx")
+channel_response_blended = pd.read_excel("Curves_Channel_Response_Blended.xlsx", index_col="index")
+channel_response_LT = pd.read_excel("Curves_Channel_Response_LT.xlsx", index_col="index")
+channel_response_ST = pd.read_excel("Curves_Channel_Response_ST.xlsx", index_col="index")
+curves_horizon = pd.read_excel("Curves_Horizon.xlsx", index_col="index")
+optimal_tv_laydown = pd.read_excel("Optimal_TV_Laydown.xlsx", index_col="index")
+optimal_roi = pd.read_excel("Curves_Optimal_ROI.xlsx", index_col="index")
 
-# channel_inputs.drop(columns=['level_0'], inplace=True)
+laydown.drop(columns=["Unnamed: 0"], inplace=True)
+channel_inputs.drop(columns=["Unnamed: 0"], inplace=True)
+incr_rev_lt.drop(columns=["Unnamed: 0"], inplace=True)
+incr_rev_st.drop(columns=["Unnamed: 0"], inplace=True)
+budget_response.drop(columns=["Unnamed: 0"], inplace=True)
+channel_response_blended.drop(columns=["Unnamed: 0"], inplace=True)
+channel_response_LT.drop(columns=["Unnamed: 0"], inplace=True)
+channel_response_ST.drop(columns=["Unnamed: 0"], inplace=True)
+optimal_roi.drop(columns=["Unnamed: 0"], inplace=True)
+curves_horizon.drop(columns=["Unnamed: 0"], inplace=True)
+optimal_tv_laydown.drop(columns=["Unnamed: 0"], inplace=True)
 
-# laydown.to_sql('All_Laydown', engine, if_exists='replace')
-# index.to_sql('All_Index', engine, if_exists='replace')
-# incr_rev_st_ct.to_sql('All_Incremental_Revenue_ST', engine, if_exists='replace')
-# incr_rev_lt_ct.to_sql('All_Incremental_Revenue_LT', engine, if_exists='replace')
-# channel_inputs.to_sql('All_Channel_Inputs', engine, if_exists='replace')
 
-results = pd.read_sql_table('Optimised CSV', engine)
-results.to_csv(r"C:\Users\matthew.browne\Documents\Blueprint Documentation\Results.csv")
+laydown.to_sql('All_Laydown', engine, if_exists='replace')
+channel_inputs.to_sql('All_Index', engine, if_exists='replace')
+incr_rev_lt.to_sql('All_Incremental_Revenue_ST', engine, if_exists='replace')
+incr_rev_st.to_sql('All_Incremental_Revenue_LT', engine, if_exists='replace')
+channel_response_blended.to_sql('Curves_Channel_Response_Blended', engine, if_exists='replace')
+channel_response_LT.to_sql('Curves_Channel_Response_LT', engine, if_exists='replace')
+channel_response_ST.to_sql('Curves_Channel_Response_ST', engine, if_exists='replace')
+curves_horizon.to_sql('Curves_Horizon', engine, if_exists='replace')
+optimal_tv_laydown.to_sql('Optimal_TV_Laydown', engine, if_exists='replace')
+optimal_roi.to_sql('Curves_Optimal_ROI', engine, if_exists='replace')
+budget_response.to_sql('Curves_Budget_Response', engine, if_exists='replace')
