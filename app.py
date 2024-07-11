@@ -584,7 +584,7 @@ def chart_data(data):
         result_df = pd.DataFrame(rows, columns=columns)
         db_result.close()
         result_df['Date'] = pd.to_datetime(result_df['Date'])
-        result_df['MonthYear'] = result_df['Date'].dt.strftime('%b %Y')
+        result_df['MonthYear'] = result_df['Date'].dt.strftime('%Y-%m')
         result_df = result_df.groupby(
             ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Country', 'Brand', 'Channel Group', 'Channel',
              'MonthYear']).sum(numeric_only=True)
@@ -919,12 +919,31 @@ def date_range():
     app.logger.info(end_date)
     return jsonify({"startDate": start_date, "endDate": end_date})
 
+@app.route('/refresh_table', methods=['POST'])
+def refresh_table():
+    table_id = str(request.json.get("tableID"))
+    print(table_id)
+    laydown_copy = deepcopy(laydown)
+    start_date = datetime.strptime(request.json.get('startDate'), "%Y-%m-%d")
+    end_date = datetime.strptime(request.json.get('endDate'), "%Y-%m-%d")
+    print(start_date)
+    laydown_copy = laydown_copy[(laydown_copy["Date"] >= start_date) & (laydown_copy["Date"] <= end_date)]
+    current_table = deepcopy(table_data[table_id])
+    for var in current_table:
+        var['Laydown'] = laydown_copy[var['Channel'] + "_" + var['Country'] + "_" + var['Brand']].tolist()
+        var['Current Budget'] = sum(var['Laydown'])
+        
+    return jsonify(current_table)
+
 
 @app.route('/blueprint')
 @login_required
 def blueprint():
-    app.logger.info(laydown_dates)
     return render_template('blueprint.html', current_user=current_user)
+
+@app.route('/blueprintdev')
+def blueprintdev():
+    return render_template('blueprint_dev.html', current_user=current_user)
 
 
 @app.route('/get_table_ids', methods=['GET'])
@@ -991,7 +1010,6 @@ def channel_delete():
 def channel_main():
     app.logger.info(table_data.keys())
     return jsonify(table_data)
-
 
 @app.route('/table_data_editor', methods=['POST'])
 def table_data_editor():

@@ -23,6 +23,45 @@ $(document).ready(function() {
         });
     }
 
+    function populateDate(selector, date, minDate, maxDate) {
+      var dateInput = $(selector);
+      dateInput.val(date);
+      dateInput.attr("min", minDate);
+      dateInput.attr("max", maxDate);
+    }
+
+    function getEarliestAndLatestDate(dates) {
+      // Convert date strings to Date objects
+      var dateObjects = dates.map((dateStr) => new Date(dateStr));
+
+      // Find the earliest and latest dates
+      var minDate = new Date(Math.min.apply(null, dateObjects));
+      var maxDate = new Date(Math.max.apply(null, dateObjects));
+
+      // Format dates back to YYYY-MM
+      var minDateStr = minDate.toISOString().slice(0, 7);
+      var maxDateStr = maxDate.toISOString().slice(0, 7);
+
+      return { minDate: minDateStr, maxDate: maxDateStr };
+    }
+
+    $('input[name="volval"]').change(function() {
+                // Reset all containers
+                $('.volval-cont').css('background-color', '');
+                // Change color of the associated container
+                if ($('#volval1').is(':checked')) {
+                    $('.volval1-cont').css('background-color', '#264F73');
+                    $('#volval1-label').css('color', '#fff');
+                    $(".volval2-cont").css("background-color", "#A0B1C1");
+                    $("#volval2-label").css("color", "#fff");
+                } else if ($('#volval2').is(':checked')) {
+                    $('.volval2-cont').css('background-color', '#264F73');
+                    $("#volval2-label").css("color", "#fff");
+                    $(".volval1-cont").css("background-color", "#A0B1C1");
+                    $("#volval1-label").css("color", "#fff");
+                }
+              });
+
     // Function to collect and send filter selections to backend
     function applyFilters() {
       var currentlySelectedMetric = selectedMetric()
@@ -88,11 +127,16 @@ $(document).ready(function() {
         populateDropdown('#dateFilter', data.options.MonthYear);
         populateDropdown('#channelFilter', data.options.Channel);
         populateDropdown('#channelgroupFilter', data.options['Channel Group']);
-        populateDropdown('#regionFilter', data.options.Region);
+        populateDropdown('#regionFilter', data.options.Country);
         populateDropdown('#brandFilter', data.options.Brand);
         populateDropdown('#scenarioFilter', data.options.Scenario);
         populateDropdown('#revenueFilter', data.options['Budget/Revenue']);
         
+        var dates = data.options.MonthYear;
+        var { minDate, maxDate } = getEarliestAndLatestDate(dates);
+        populateDate('#charts-before-date', minDate, minDate, maxDate);
+        populateDate('#charts-after-date', maxDate, minDate, maxDate);
+
         // Enable custom dropdown with search box for date filter
         enableCustomDropdown('#dateFilter');
     }).on('error', function(xhr, status, error) {
