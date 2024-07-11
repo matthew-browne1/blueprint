@@ -376,7 +376,8 @@ country_to_region = {
     'France': 'EUR',
     'Germany': 'EUR',
     'Poland': 'EUR',
-    'Australia': 'AOA'
+    'Australia': 'AOA',
+    'Saudi Arabia': 'AMEA'
 }
 header = pd.read_sql_table('All_Channel_Inputs', engine)
 # Show column headers without underscores!
@@ -608,7 +609,7 @@ def chart_data(data):
         result_df = pd.DataFrame(rows, columns=columns)
         db_result.close()
         result_df['Date'] = pd.to_datetime(result_df['Date'])
-        result_df['MonthYear'] = result_df['Date'].dt.strftime('%b %Y')
+        result_df['MonthYear'] = result_df['Date'].dt.strftime('%Y-%m')
         result_df = result_df.groupby(
             ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Country', 'Brand', 'Channel Group', 'Channel',
              'MonthYear']).sum(numeric_only=True)
@@ -1089,6 +1090,21 @@ def table_data_editor():
     print(f"table_data_editor (error) endpoint: {session['table_data'].keys()}")
     return jsonify(response)
 
+@app.route('/refresh_table', methods=['POST'])
+def refresh_table():
+    table_id = str(request.json.get("tableID"))
+    print(table_id)
+    laydown_copy = deepcopy(laydown)
+    start_date = datetime.strptime(request.json.get('startDate'), "%Y-%m-%d")
+    end_date = datetime.strptime(request.json.get('endDate'), "%Y-%m-%d")
+    print(start_date)
+    laydown_copy = laydown_copy[(laydown_copy["Date"] >= start_date) & (laydown_copy["Date"] <= end_date)]
+    current_table = deepcopy(session['table_data'][table_id])
+    for var in current_table:
+        var['Laydown'] = laydown_copy[var['Channel'] + "_" + var['Country'] + "_" + var['Brand']].tolist()
+        var['Current Budget'] = sum(var['Laydown'])
+        
+    return jsonify(current_table)
 
 @app.route('/export_data')
 def export_data():
