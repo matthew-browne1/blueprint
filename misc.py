@@ -55,6 +55,7 @@ connection_string = f"postgresql://{db_username_secret}:{db_password_secret}@{ho
 engine = create_engine(connection_string)
 
 laydown = pd.read_excel("All_Laydown.xlsx", index_col="index")
+index = pd.read_excel("All_Index.xlsx", index_col="index")
 channel_inputs = pd.read_excel("All_Channel_Inputs.xlsx", index_col="index")
 incr_rev_lt = pd.read_excel("All_Incremental_Revenue_LT.xlsx", index_col="index")
 incr_rev_st = pd.read_excel("All_Incremental_Revenue_ST.xlsx", index_col="index")
@@ -67,6 +68,7 @@ optimal_tv_laydown = pd.read_excel("Optimal_TV_Laydown.xlsx", index_col="index")
 optimal_roi = pd.read_excel("Curves_Optimal_ROI.xlsx", index_col="index")
 
 laydown.drop(columns=["Unnamed: 0"], inplace=True)
+index.drop(columns=["Unnamed: 0"], inplace=True)
 channel_inputs.drop(columns=["Unnamed: 0"], inplace=True)
 incr_rev_lt.drop(columns=["Unnamed: 0"], inplace=True)
 incr_rev_st.drop(columns=["Unnamed: 0"], inplace=True)
@@ -80,7 +82,8 @@ optimal_tv_laydown.drop(columns=["Unnamed: 0"], inplace=True)
 
 
 laydown.to_sql('All_Laydown', engine, if_exists='replace')
-channel_inputs.to_sql('All_Index', engine, if_exists='replace')
+index.to_sql("All_Index", engine, if_exists="replace")
+channel_inputs.to_sql('All_Channel_Inputs', engine, if_exists='replace')
 incr_rev_lt.to_sql('All_Incremental_Revenue_ST', engine, if_exists='replace')
 incr_rev_st.to_sql('All_Incremental_Revenue_LT', engine, if_exists='replace')
 channel_response_blended.to_sql('Curves_Channel_Response_Blended', engine, if_exists='replace')
