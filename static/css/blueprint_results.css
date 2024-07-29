@@ -108,6 +108,11 @@ h6 {
     cursor:pointer
 }
 
+.filter-container option:hover {
+    color: #fff;
+    background-color: #A0B1C1;
+}
+
 .filter-title {
     display: flex;
     align-items: center;
@@ -173,6 +178,7 @@ input {
     color: #264F73;
     display: flex;
     flex-direction: row;
+    align-items: center;
 }
 
 .upper-nav h2 {
@@ -183,6 +189,20 @@ input {
     right:0;
     position:absolute;
     padding-right: 50px;
+    display: flex;
+    flex-direction: column;
+}
+
+.upper-nav-rhs h3 {
+    display: flex;
+    right: 0;
+    width: fit-content;
+    font-style: italic;
+}
+
+.top-half-upper-nav-rhs {
+    right: 0;
+    position: relative;
 }
 
 .charts-date {
@@ -250,6 +270,11 @@ input {
     transition: ease 0.1s;
 }
 
+.chart-selector .selected {
+    background-color: #264F73;
+    color: #fff;
+}
+
 .nav-container a:hover,
 .nav-container a:active{
     background-color: #B5C3CF;
@@ -287,6 +312,7 @@ input {
 .chart-selector a:hover,
 .chart-selector a:active{
     background-color: #B5C3CF;
+    color: #fff;
 }
 
 .chart-selector a:hover,
@@ -394,6 +420,11 @@ section {
 .multi-select-filter {
     width:90%;
     font-family: 'Carmen Sans Light', sans-serif;
+    cursor: pointer;
+}
+
+.multi-select-filter option {
+    cursor: pointer;
 }
 
 .title-container2 {
@@ -402,6 +433,10 @@ section {
 }
 
 #export-results-icon {
+    padding-left: 5px;
+}
+
+#curve-charts-nav-icon {
     padding-left: 5px;
 }
 
@@ -435,3 +470,46 @@ section {
 .volval-parent {
     padding: 10px;
 }
+
+.tooltip {
+    position: relative;
+    
+  }
+  
+  .tooltip .tooltiptext {
+    visibility: hidden;
+    width: auto;
+    text-wrap: nowrap;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  
+  .tooltip .tooltiptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: #555 transparent transparent transparent;
+  }
+  
+  .tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+  }
+  
+  .tooltip .small-text {
+    font-size: 9pt;
+  }
