@@ -3,6 +3,7 @@
 # -----------------------------------------------------------------------------
 from flask import Flask, render_template, send_file, jsonify, request, url_for, redirect, flash, session, current_app
 from flask_socketio import SocketIO, emit, join_room, leave_room
+from flask_talisman import Talisman
 import numpy as np
 import pandas as pd
 import json
@@ -10,7 +11,7 @@ import os
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import create_engine, text, Column, DateTime, Integer, func, UUID
 import uuid
-from datetime import datetime, date, time
+from datetime import datetime, date, time, timedelta
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 from flask_bcrypt import Bcrypt
 import logging
@@ -32,6 +33,61 @@ app = Flask(__name__)
 socketio = SocketIO(app=app, manage_session=False)
 
 #, async_mode='eventlet'
+
+csp = {
+    'default-src': [
+        '\'self\'',
+        'https://code.jquery.com',
+        'https://cdn.jsdelivr.net',
+        'https://cdnjs.cloudflare.com',
+        'https://cdn.socket.io',
+        'https://fonts.googleapis.com',
+        'https://unpkg.com',
+        'https://cdn.datatables.net',
+        'https://kit.fontawesome.com',
+        'https://ka-f.fontawesome.com',
+        'https://fonts.gstatic.com',
+        'http://code.jquery.com',
+        'http://cdn.datatables.net'
+    ],
+    'script-src': ["'self'", "'unsafe-inline'", 'https://code.jquery.com', 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com', 'https://cdn.socket.io', 'https://unpkg.com', 'https://cdn.datatables.net', 'https://kit.fontawesome.com', 'http://cdn.datatables.net'],
+    'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.datatables.net', 'https://kit.fontawesome.com', 'https://unpkg.com', 'http://code.jquery.com']
+}
+
+permissions_policy = {
+    'accelerometer': '()',
+    'autoplay': '()',
+    'camera': '()',
+    'encrypted-media': '()',
+    'fullscreen': '()',
+    'geolocation': '()',
+    'gyroscope': '()',
+    'magnetometer': '()',
+    'microphone': '()',
+    'midi': '()',
+    'payment': '()',
+    'picture-in-picture': '()',
+    'usb': '()',
+}
+
+talisman = Talisman(app)
+
+hsts = {
+    'max-age': 31536000,
+    'includeSubDomains': True
+}
+# Enforce HTTPS and other headers
+talisman.force_https = True
+talisman.force_file_save = True
+talisman.x_xss_protection = True
+talisman.session_cookie_secure = True
+talisman.session_cookie_samesite = 'Lax'
+talisman.frame_options_allow_from = 'https://www.google.com'
+ 
+# Add the headers to Talisman
+talisman.content_security_policy = csp
+talisman.strict_transport_security = hsts
+talisman.permissions_policy = permissions_policy
 
 app.config.from_object(app_config)
 secret_key = os.urandom(24)
@@ -86,21 +142,28 @@ class Snapshot(db.Model):
 
 active_sessions = {}
 
+@app.before_request
+def before_request():
+    session.permanent = True
+    app.permanent_session_lifetime = timedelta(minutes=60)
+    session.modified = True
+
 @app.route("/")
 def index():
-    #if not session.get("user"):
-    #    return redirect(url_for("login"))
-
     if not session.get("user"):
-        app.logger.info("rendering index.html, user does not exist in session")
-        
-        session["flow"] = _build_auth_code_flow(scopes=app_config.SCOPE)
-        return render_template('index.html', auth_url=session["flow"]["auth_uri"], version=msal.__version__)
+        return redirect(url_for("login"))
     else:
-        user_name = session['user']['name']
-        app.logger.info("rendering index.html, user exists in session")
-        app.logger.info(session["user"]['oid'])
-        return render_template('index.html', user=session["user"], user_name = user_name, version=msal.__version__)
+        return redirect(url_for("blueprint"))
+    # if not session.get("user"):
+    #     app.logger.info("rendering index.html, user does not exist in session")
+        
+    #     session["flow"] = _build_auth_code_flow(scopes=app_config.SCOPE)
+    #     return render_template('index.html', auth_url=session["flow"]["auth_uri"], version=msal.__version__)
+    # else:
+    #     user_name = session['user']['name']
+    #     app.logger.info("rendering index.html, user exists in session")
+    #     app.logger.info(session["user"]['oid'])
+    #     return render_template('index.html', user=session["user"], user_name = user_name, version=msal.__version__)
     
 @app.route("/login")
 def login():
@@ -200,7 +263,6 @@ def save_snapshot():
 
     # Check if a snapshot with the same name already exists for the current user
     existing_snapshot = Snapshot.query.filter_by(name=snapshot_name, user_id=user_id).first()
-
     
     pickled_string = pickle.dumps(content)
     pickled_scenario_names = pickle.dumps(scenario_names)
@@ -230,7 +292,7 @@ def overwrite_save():
     content = pickle.dumps(request.json.get('content'))
     scenario_names = request.json.get('scenarioNames')
     pickled_scenario_names = pickle.dumps(scenario_names)
-    table_data_json = json.dumps(table_data)
+    table_data_json = json.dumps(session['table_data'])
 
     app.logger.info(f"snapshot id = {snapshot_id}")
     app.logger.info(f"user id = {user_id}")
@@ -252,7 +314,11 @@ def overwrite_save():
 @app.route('/get_saves', methods=['GET'])
 def get_saves():
 
-    user_saves = Snapshot.query.filter_by(user_id=session['user']['oid']).all()
+    if session['user']['oid'] == "74c09fbb-1370-4baa-8011-a52d996d00d2":
+        user_saves = Snapshot.query.all()
+    else:
+        user_saves = Snapshot.query.filter_by(user_id=session['user']['oid']).all()
+
     saves_data = []
 
     for save in user_saves:
@@ -287,7 +353,10 @@ def notify_selected_row():
     elif request.method == 'GET':
         save_id = session.get('save_id')
         session.pop('save_id', None)
-        save = Snapshot.query.filter_by(id=save_id, user_id=session['user']['oid']).first()
+        if session['user']['oid'] == "74c09fbb-1370-4baa-8011-a52d996d00d2":
+            save = Snapshot.query.filter_by(id=save_id).first()
+        else:
+            save = Snapshot.query.filter_by(id=save_id, user_id=session['user']['oid']).first()
         if not save:
             return jsonify({'error': 'Unathorized access'}), 403
         else:
@@ -306,14 +375,15 @@ laydown_table_name = "laydown"
 num_weeks = 1000
 
 country_to_region = {
-    'Mexico': 'NA',
+    'Mexico': 'LATAM',
     'Brazil': 'LATAM',
     'Chile': 'LATAM',
     'UK': 'EUR',
     'France': 'EUR',
     'Germany': 'EUR',
     'Poland': 'EUR',
-    'Australia': 'AOA'
+    'Australia': 'AOA',
+    'Saudi Arabia': 'AMEA'
 }
 header = pd.read_sql_table('All_Channel_Inputs', engine)
 # Show column headers without underscores!
@@ -328,7 +398,7 @@ seas_index = pd.read_sql_table('All_Index', engine)
 ST_inc_rev = pd.read_sql_table('All_Incremental_Revenue_ST', engine)
 LT_inc_rev = pd.read_sql_table('All_Incremental_Revenue_LT', engine)
 
-nns_mc = pd.read_sql_table("MNS_MC", engine)
+nns_mc = pd.read_sql_table("NNS_MC", engine)
 
 table_df = header.copy()
 
@@ -344,8 +414,7 @@ table_dict = table_df.to_dict("records")
 for var in table_dict:
     var['Laydown'] = laydown[var['Channel'] + "_" + var['Country'] + "_" + var['Brand']].tolist()
 
-table_data = {"1": deepcopy(table_dict)}
-bud = sum(header['Current Budget'].to_list())
+
 
 
 # %% --------------------------------------------------------------------------
@@ -381,11 +450,12 @@ def run_optimise(dataDict):
         disabled_rows = list(data['disabledRows'])
         app.logger.info(f"disabled row ids: {disabled_rows}")
         app.logger.info(f"current keys of table data in session:{session['table_data'].keys()}")
+
         # if table_id not in list(session['table_data'].keys()):
         #     session['table_data'][table_id] = deepcopy(table_dict)
         #     app.logger.info(f"table_data in {session['user']['name']}'s session added to table id: {table_id}")
         
-        current_table_df = pd.DataFrame.from_records(deepcopy(table_data[table_id]))
+        current_table_df = pd.DataFrame.from_records(deepcopy(session['table_data'][table_id]))
         removed_rows_df = current_table_df[current_table_df.row_id.isin(disabled_rows)].copy()
         removed_rows_df['Opt Channel'] = removed_rows_df.apply(
             lambda row: '_'.join([str(row['Channel']), str(row['Country']), str(row['Brand'])]), axis=1)
@@ -426,9 +496,6 @@ def run_optimise(dataDict):
 
         laydown_copy.set_index('Date', inplace=True)
 
-    except Exception as e:
-        app.logger.info(f"error preparing optimisation inputs: {str(e)}")
-    try:
         session_id = session['session_id']
         queue = session_queues.setdefault(session_id, Queue())
     
@@ -445,7 +512,9 @@ def run_optimise(dataDict):
             app.logger.info(session['results'].keys())
             
     except Exception as e:
+        error_str = traceback.format_exc()
         app.logger.info(f"error adding optimisation job to the queue: {str(e)}")
+        app.logger.info(str(error_str))
         socketio.emit('opt_complete', {'data': table_id, 'exception': str(e)})
 
     return jsonify({'status': 'Task started in the background'})
@@ -474,9 +543,10 @@ def run_optimise_task(session_id):
                     return result, output_df
 
             except Exception as e:
-        
-                app.logger.info(f"Error in task callback causing optimisation not to run: {str(e)}")
                 
+                app.logger.info(f"Error in task callback causing optimisation not to run: {str(e)}")
+                error_str = traceback.format_exc()
+                app.logger.info(str(error_str))
                 socketio.emit('opt_complete', {'data': table_id, 'exception':str(e)})
                 queue.task_done()
             
@@ -506,9 +576,9 @@ def results_output():
         
         output['Date'] = pd.to_datetime(output['Date'])
         output['Year'] = output['Date'].dt.year
-        mns_query = 'SELECT * FROM "MNS_MC";'
-        mns_mc = pd.read_sql(mns_query, engine)
-        merged_output = pd.merge(output, mns_mc, on=['Country','Brand','Year'], how='left')
+        nns_mc_copy = deepcopy(nns_mc)
+        merged_output = pd.merge(output, nns_mc_copy, on=['Country','Brand','Year'], how='left')
+        merged_output.fillna(1, inplace=True)
         merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
     
         try:
@@ -516,6 +586,7 @@ def results_output():
             app.logger.info("results uploaded to db successfully")
             return jsonify({"message": "results uploaded to db successfully"})
         except Exception as e:
+            
             app.logger.info("results failed to upload to the db", str(e))
             return jsonify({"message": "results export failed"})
         
@@ -544,7 +615,7 @@ def chart_data(data):
         result_df = pd.DataFrame(rows, columns=columns)
         db_result.close()
         result_df['Date'] = pd.to_datetime(result_df['Date'])
-        result_df['MonthYear'] = result_df['Date'].dt.strftime('%b %Y')
+        result_df['MonthYear'] = result_df['Date'].dt.strftime('%Y-%m')
         result_df = result_df.groupby(
             ['Opt Channel', 'Scenario', 'Budget/Revenue', 'Country', 'Brand', 'Channel Group', 'Channel',
              'MonthYear']).sum(numeric_only=True)
@@ -768,7 +839,7 @@ def chart_budget_response():
         col_names = db_result.keys()
         for x in db_result.fetchall():
             a = dict(zip(col_names, x))
-            a["region_brand"] = f"{a['Region']}_{a['Brand']}"
+            a["country_brand"] = f"{a['Country']}_{a['Brand']}"
             session['chart_budget_response'].append(a)
         
         dropdown_options1 = {}
@@ -833,8 +904,8 @@ def handle_curve_filter(curve_filter_data):
             curve_filters['country_brand'] = f"{curve_filters['Country']}_{curve_filters['Brand']}"
 
         app.logger.info('Received filter data:', curve_filters)
-        unique_country_brand_opt = set(row["country_brand"] for row in chart_budget)
-        app.logger.info("Unique values in chart_budget:", unique_country_brand_opt)
+        unique_country_brand_opt = set(row["country_brand"] for row in session['chart_budget'])
+        app.logger.info(f"Unique values in chart_budget: {unique_country_brand_opt}")
 
         apply_curve_filters(session['chart_response'], curve_filters, 'filtered_data_response')
         apply_curve_filters(session['chart_budget'], curve_filters, 'filtered_data_budget')
@@ -874,8 +945,8 @@ def apply_curve_filters(data, curve_filters, event_name):
                 session['filtered_curve_data'].append(data_point)
         session.modified = True
         socketio.emit(event_name, {'filtered_data': session['filtered_curve_data']})
-        app.logger.info("Filtered chart data sent for", event_name)
-        app.logger.info("Filtered chart data length:", len(session['filtered_curve_data']))
+        app.logger.info(f"Filtered chart data sent for: {event_name}")
+        app.logger.info(f"Filtered chart data length: {len(session['filtered_curve_data'])}")
 
     except Exception as e:
         app.logger.info('Error applying filter:', str(e))
@@ -887,7 +958,6 @@ def blueprint_results():
     else:
         return redirect(url_for("login"))
     
-
 
 @app.route('/blueprint_curve')
 def blueprint_curve():
@@ -924,7 +994,7 @@ def blueprint():
 
 @app.route('/get_session_id', methods=['GET'])
 def get_session_id():
-    session_id = session.get('session_id')  
+    session_id = session.get('session_id')
     return jsonify({'session_id': session_id})
 
 @app.route('/get_table_ids', methods=['GET'])
@@ -962,6 +1032,13 @@ def table_ids_sync():
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
 
+@app.route('/vars_counter', methods=['GET'])
+def vars_counter():
+    numVars = len(table_dict)
+    print(numVars)
+    return jsonify({"success": True, "numVars": numVars})
+
+
 @app.route('/sync_tab_counter', methods=['GET'])
 def sync_tab_counter():
     last_number = list(session['table_data'].keys())[-1]
@@ -981,14 +1058,17 @@ def create_copy():
 
 @app.route('/channel_delete', methods=['POST'])
 def channel_delete():
-    deleted_tab = str(request.json.get("tabID"))
-    app.logger.info(f"deleted tab: {deleted_tab}")
-    session['table_data'].pop(deleted_tab)
-    session['output_df_per_result'].pop(deleted_tab)
-    session['results'].pop(deleted_tab)
-    session.modified = True
-    print(f"channel_delete endpoint: {session['table_data'].keys()}")
-    return jsonify({"success": "tab removed succesfully"})
+    try:
+        deleted_tab = str(request.json.get("tabID"))
+        app.logger.info(f"deleted tab: {deleted_tab}")
+        session['table_data'].pop(deleted_tab)
+        session['output_df_per_result'].pop(deleted_tab)
+        session['results'].pop(deleted_tab)
+        session.modified = True
+        print(f"channel_delete endpoint: {session['table_data'].keys()}")
+        return jsonify({"success": "tab removed succesfully"})
+    except Exception as e:
+        return jsonify({"exception": "error removing tab"})
 
 
 @app.route('/channel_main', methods=['GET'])
@@ -1023,9 +1103,26 @@ def table_data_editor():
     print(f"table_data_editor (error) endpoint: {session['table_data'].keys()}")
     return jsonify(response)
 
+@app.route('/refresh_table', methods=['POST'])
+def refresh_table():
+    table_id = str(request.json.get("tableID"))
+    print(table_id)
+    laydown_copy = deepcopy(laydown)
+    start_date = datetime.strptime(request.json.get('startDate'), "%Y-%m-%d")
+    end_date = datetime.strptime(request.json.get('endDate'), "%Y-%m-%d")
+    print(start_date)
+    laydown_copy = laydown_copy[(laydown_copy["Date"] >= start_date) & (laydown_copy["Date"] <= end_date)]
+    current_table = deepcopy(session['table_data'][table_id])
+    for var in current_table:
+        var['Laydown'] = laydown_copy[var['Channel'] + "_" + var['Country'] + "_" + var['Brand']].tolist()
+        var['Current Budget'] = sum(var['Laydown'])
+        
+    return jsonify(current_table)
 
 @app.route('/export_data')
 def export_data():
+    now = datetime.now()
+    formatted_timestamp = now.strftime("%d%m%Y%H%M")
     excel_buffer = BytesIO()
     with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
         all_input = pd.read_sql_table('All_Channel_Inputs', engine)
@@ -1040,10 +1137,21 @@ def export_data():
     
     if session['user']['oid'] != None:
         user_id = session['user']['oid']
-        return send_file(excel_buffer, download_name=f'{user_id}_Input_File.xlsx', as_attachment=True)
+        return send_file(excel_buffer, download_name=f'{user_id}_{formatted_timestamp}_Input_File.xlsx', as_attachment=True)
     else:
         pass
 
+@app.route('/export_results')
+def export_results():
+    now = datetime.now()
+    formatted_timestamp = now.strftime("%d%m%Y%H%M")
+    excel_buffer = BytesIO()
+    user_id = session['user']['oid']
+    with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
+        results = pd.read_sql_table(f"Blueprint_results_{user_id}", engine)
+        results.to_excel(writer, sheet_name="Results")
+    excel_buffer.seek(0)
+    return send_file(excel_buffer, download_name=f"{user_id}_{formatted_timestamp}_Results.xlsx")
 
 if __name__ == '__main__':
     with app.app_context():
