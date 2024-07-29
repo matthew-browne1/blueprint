@@ -78,20 +78,6 @@ function syncTabCounter() {
   });
 }
 
-function getNumberOfVars() {
-  var numVars;
-  $.ajax({
-    url: '/vars_counter',
-    type: 'GET',
-    contentType: 'application/json',
-    success: function (response) {
-      numVars = response.numVars;
-      console.log(numVars);
-    }
-  });
-  return numVars;
-}
-
 function initializeCollapsibleButtons(colID) {
   var content = document.getElementById("opt-tab" + colID);
   var coll = document.getElementById("col-btn" + colID);
@@ -261,8 +247,36 @@ $(document).ready(function () {
 });
 
 function openNewTab() {
+  var newTab;
   console.log("opening new tab");
-  window.open("/blueprint_results", "_blank");
+  var loadingSpinner = document.getElementById("results-loading-spinner");
+  loadingSpinner.style.display = "inline-block";
+
+  setTimeout(() => {
+    newTab = window.open("/blueprint_results", "_blank");
+  }, 500);
+  if (newTab) {
+    window.addEventListener('message', function(event) {
+      if (event.data == 'newTabLoaded') {
+        console.log("page opened");
+        loadingSpinner.style.display =
+          "none";
+      }
+
+    });
+  }
+
+    const checkTabClosed = setInterval(() => {
+      if (newTab.closed) {
+        clearInterval(checkTabClosed);
+        // Hide the spinner if the tab is closed before sending the message
+        loadingSpinner.style.display = "none";
+
+      }
+    }, 1000);
+
+  
+
 }
 
 $("#results-div").on("click", "#results-button", function () {
@@ -337,11 +351,9 @@ function optAll() {
           if (dateButtonIsChecked) {
             dataToSend["dates"] = dateTuple;
           }
-          var numVars = getNumberOfVars();
-          var numSelectedVars = numVars - disabledRowIds.length;
 
           optAllArray.push({ dataToSend: dataToSend });
-          if (numSelectedVars > 20) {
+          if (disabledRowIds.length < 85) {
             warningBool = true;
           }
         });
@@ -580,7 +592,6 @@ function spawnNewTab(tabCounter) {
   editButtonTabs(tabCounter);
   closeButtonTab(tabCounter);
   dropdownButtons(tabCounter);
-  // redrawAllTables(tabCounter);
   var buttonName = document.getElementById("col-btn" + tabCounter);
   tabNames[tabCounter] = buttonName.textContent;
   console.log(tabNames);
@@ -624,6 +635,7 @@ function initializeDataTable(tableID) {
           {
             data: "Max Spend Cap",
             render: function (data, type, row) {
+              if (type === "display") {
               // Calculate 1.5 times the "Current Budget"
               var currentBudget = row["Current Budget"];
               var maxSpendCap = currentBudget * 1.5;
@@ -631,7 +643,10 @@ function initializeDataTable(tableID) {
               return $.fn.DataTable.render
                 .number(",", ".", 0)
                 .display(maxSpendCap);
+              } 
+              return $.fn.DataTable.render.number(",", ".", 0).display(data);
             },
+            editable: true
           },
 
         ],
@@ -682,11 +697,11 @@ function initializeDataTable(tableID) {
         table: "#channel" + tableID,
         fields: [
           {
-            label: "Min Spend Cap:",
+            label: "Min Spend Cap (CHF)",
             name: "Min Spend Cap",
           },
           {
-            label: "Max Spend Cap:",
+            label: "Max Spend Cap (CHF)",
             name: "Max Spend Cap",
           },
         ],
@@ -848,12 +863,7 @@ function initializeDataTable(tableID) {
         console.log(dataToSend);
 
         // Use jQuery AJAX to send the data to the Flask endpoint
-
-        var numVars = getNumberOfVars();
-        console.log(numVars);
-        var numSelectedVars = numVars - disabledRowIds.length;
-
-        if (numSelectedVars > 20) {
+        if (disabledRowIds.length < 85) {
           $("#warningPopup").show();
           $("#continueWarning").click(function () {
             // Hide modal
@@ -903,15 +913,6 @@ function initializeDataTable(tableID) {
 
 }
 
-function redrawAllTables(tableID) {
-  $("#channel1").DataTable().ajax.reload(null, false);
-  for (var i = 2; i < tableID; i++) {
-    var currentTableId = i;
-    $("#channel" + currentTableId)
-      .DataTable()
-      .ajax.reload(null, false);
-  }
-}
 
 function showLoadingOverlay(tableID) {
   document.getElementById("loading-overlay" + tableID).style.display = "block";
@@ -925,25 +926,8 @@ function showResultsButton() {
   var div = document.getElementById("results-div");
   var existingButton = document.getElementById("results-button");
 
-  if (existingButton) {
-    // If the button already exists, update its innerHTML to "Update Results"
-    existingButton.innerHTML = "Update Results";
-  } else {
-    // If the button doesn't exist, create a new button and add it to the div
-    var buttonHtml =
-      '<button class="snapshot-btn" role="button" id="results-button">Show Results<i class="fa-solid fa-l fa-arrow-right"></i></button>';
+  existingButton.style.display = 'flex';
 
-    // Create a new div element and set its innerHTML to the buttonHtml
-    var tempDiv = document.createElement("div");
-    tempDiv.innerHTML = buttonHtml;
-
-    // Append the first child of tempDiv (which is the newly created button element) to the actual div
-    div.appendChild(tempDiv.firstChild);
-
-    // Trigger a resize event (you may remove this line if it's not necessary)
-    var event = new Event("resize");
-    window.dispatchEvent(event);
-  }
 }
 
 var tabSocket = io.connect(window.location.origin);
@@ -1728,12 +1712,8 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
           }
           console.log(dataToSend);
 
-          var numVars = getNumberOfVars();
-          
-          var numSelectedVars = numVars - disabledRowIds.length;
-          console.log(numSelectedVars);
-          if (numSelectedVars > 20) {
-            console.log("more than 20 variables selected");
+          // Use jQuery AJAX to send the data to the Flask endpoint
+          if (disabledRowIds.length < 85) {
             $("#warningPopup").show();
             $("#continueWarning").click(function () {
               // Hide modal
@@ -1758,7 +1738,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
       },
     });
 
-    // redrawAllTables(tabCounter);
+   
     var buttonName = document.getElementById("col-btn" + tabCounter);
     tabNames[tabCounter] = buttonName.textContent;
   });

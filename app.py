@@ -954,7 +954,8 @@ def apply_curve_filters(data, curve_filters, event_name):
 @app.route('/blueprint_results')
 def blueprint_results():
     if session['user']['oid']:
-        return render_template('blueprint_results.html')
+        user_name = session['user']['name']
+        return render_template('blueprint_results.html', user_name=user_name)
     else:
         return redirect(url_for("login"))
     
@@ -962,7 +963,8 @@ def blueprint_results():
 @app.route('/blueprint_curve')
 def blueprint_curve():
     if session['user']['oid']:
-        return render_template('blueprint_curveresults.html')
+        user_name = session['user']['name']
+        return render_template('blueprint_curveresults.html', user_name=user_name)
     else:
         return redirect(url_for("login"))
 
