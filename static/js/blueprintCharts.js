@@ -6,8 +6,14 @@ let revenue_channel_chart = null;
 let roi_channel_chart = null;
 let laydown_scenario_chart = null;
 let laydown_channel_chart = null;
-
+window.onload = function () {
+  console.log("tab loaded");
+  window.opener.postMessage("newTabLoaded", "*");
+};
 $(document).ready(function() {
+
+  
+
     var filteredData = [];
     var chartData = [];
 

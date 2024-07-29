@@ -13,6 +13,7 @@
     <link rel="stylesheet" href="/static/css/editor.dataTables.css">
     <script src="https://kit.fontawesome.com/bcdb575c88.js" crossorigin="anonymous" data-auto-add-css="false"></script>
     <link rel="icon" href="/static/images/logo.png" type="image/png">
+
 </head>
 <body>
 
@@ -79,7 +80,8 @@
 
 <div class="main-container" id="main-container">
    <div class="results-div" id="results-div">
-      <!-- dynamic adding of show results button goes in this div -->
+      <button class="snapshot-btn" role="button" id="results-button">Show Results</button>
+      <div id="results-loading-spinner" class="lds-dual-ring"></div>
    </div>
    <div class="tab-container" id="tab-container">
 </div>
@@ -158,6 +160,7 @@
 </footer>
 
  
+
 <script src="https://cdn.socket.io/4.7.4/socket.io.min.js" integrity="sha384-Gr6Lu2Ajx28mzwyVR8CFkULdCU7kMlZ9UthllibdOSo6qAiN+yXNHqtgdTvFXMT4" crossorigin="anonymous"></script>
 <script type="module" src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.min.js"></script>
 <script src="https://code.jquery.com/jquery-3.7.0.js"></script>

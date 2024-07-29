@@ -82,6 +82,20 @@ function syncTabCounter() {
   });
 }
 
+function getNumberOfVars() {
+  var numVars;
+  $.ajax({
+    url: "/vars_counter",
+    type: "GET",
+    contentType: "application/json",
+    success: function (response) {
+      numVars = response.numVars;
+      console.log(numVars);
+    },
+  });
+  return numVars;
+}
+
 function initializeCollapsibleButtons(colID) {
   var content = document.getElementById("opt-tab" + colID);
   var coll = document.getElementById("col-btn" + colID);
@@ -328,8 +342,13 @@ function optAll() {
             dataToSend["dates"] = dateTuple;
           }
 
+          var numVars = getNumberOfVars();
+          var numSelectedVars = numVars - disabledRowIds.length;
+          console.log(numSelectedVars);
+
           optAllArray.push({ dataToSend: dataToSend });
-          if (disabledRowIds.length < 85) {
+          if (numSelectedVars > 20) {
+            console.log(numSelectedVars);
             warningBool = true;
           }
         });
@@ -840,8 +859,13 @@ function initializeDataTable(tableID) {
         }
         console.log(dataToSend);
 
-        // Use jQuery AJAX to send the data to the Flask endpoint
-        if (disabledRowIds.length < 85) {
+        
+        var numVars = getNumberOfVars();
+        var numSelectedVars = numVars - disabledRowIds.length;
+        console.log(numSelectedVars);
+
+        if (numSelectedVars > 20) { 
+          console.log(numSelectedVars);
           $("#warningPopup").show();
           $("#continueWarning").click(function () {
             // Hide modal
@@ -1748,8 +1772,12 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
           }
           console.log(dataToSend);
 
+          var numVars = getNumberOfVars();
+          var numSelectedVars = numVars - disabledRowIds.length;
+          console.log(numSelectedVars);
           // Use jQuery AJAX to send the data to the Flask endpoint
-          if (disabledRowIds.length < 85) {
+          if (numSelectedVars > 20) {
+            console.log(numSelectedVars);
             $("#warningPopup").show();
             $("#continueWarning").click(function () {
               // Hide modal

@@ -50,7 +50,7 @@ csp = {
         'http://cdn.datatables.net'
     ],
     'script-src': ["'self'", "'unsafe-inline'", 'https://code.jquery.com', 'https://cdn.jsdelivr.net', 'https://cdnjs.cloudflare.com', 'https://cdn.socket.io', 'https://unpkg.com', 'https://cdn.datatables.net', 'https://kit.fontawesome.com', 'http://cdn.datatables.net'],
-    'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.datatables.net', 'https://kit.fontawesome.com', 'https://unpkg.com', 'http://code.jquery.com']
+    'style-src': ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com', 'https://cdn.datatables.net', 'https://kit.fontawesome.com', 'https://unpkg.com', 'http://code.jquery.com', 'https://cdn.jsdelivr.net']
 }
 
 permissions_policy = {
@@ -398,7 +398,7 @@ seas_index = pd.read_sql_table('All_Index', engine)
 ST_inc_rev = pd.read_sql_table('All_Incremental_Revenue_ST', engine)
 LT_inc_rev = pd.read_sql_table('All_Incremental_Revenue_LT', engine)
 
-nns_mc = pd.read_excel('ROIs and factors all regions inc. Poland.xlsx', sheet_name='factors')
+nns_mc = pd.read_excel('ROIs and factors all regions inc. KSA.xlsx', sheet_name='factors')
 
 table_df = header.copy()
 
@@ -455,7 +455,7 @@ def run_optimise(dataDict):
     seas_index_copy = deepcopy(seas_index)
     ST_inc_rev_copy = deepcopy(ST_inc_rev)
     LT_inc_rev_copy = deepcopy(LT_inc_rev)
-    nns_copy = pd.read_excel('ROIs and factors all regions.xlsx', sheet_name='factors')
+    nns_copy = pd.read_excel('ROIs and factors all regions inc. KSA.xlsx', sheet_name='factors')
     streams = []
     for stream in header_copy['Opt Channel']:
         streams.append(str(stream))
@@ -550,7 +550,7 @@ def results_output():
     output = create_output(output_df_per_result=output_df_per_result)
     output.to_csv('output.csv')
     output['Year'] = output['Date'].dt.year
-    nns_mc = pd.read_excel('ROIs and factors all regions inc. Poland.xlsx', sheet_name='factors')
+    nns_mc = pd.read_excel('ROIs and factors all regions inc. KSA.xlsx', sheet_name='factors')
     merged_output = pd.merge(output, nns_mc, on=['Country','Brand','Year'], how='left')
     merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
     merged_output.to_csv('merged_output.csv')
@@ -984,6 +984,11 @@ def sync_tab_counter():
     last_number = list(table_data.keys())[-1]
     return jsonify({'lastNumber': last_number})
 
+@app.route('/vars_counter', methods=['GET'])
+def vars_counter():
+    numVars = len(table_dict)
+    print(numVars)
+    return jsonify({"success": True, "numVars": numVars})
 
 @app.route('/create_copy', methods=['POST'])
 def create_copy():
@@ -1017,16 +1022,17 @@ def table_data_editor():
     global table_data
     try:
         data = request.get_json()
-        print(data)
+        
         table_id = str(data['tableId'])
-        print(table_id)
+     
         target_table = table_data[table_id]
         if data['action'] == 'edit':
             for row_id, changes in data['data'].items():
                 row_index = int(row_id) - 1
                 for field, new_value in changes.items():
                     table_data[table_id][row_index][field] = new_value
-        print(table_data["1"][row_index])
+        
+        print(table_data[table_id][row_index][field])
         print(table_data[table_id][row_index])
         return jsonify(data=target_table)
     except Exception as e:
