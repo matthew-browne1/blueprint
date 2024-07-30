@@ -47,7 +47,7 @@ function populateDropdown(selector, options) {
 
         // Listen for 'dropdown_options' event and populate dropdowns
     chartsSocket.on('dropdown_options1', function(data) {
-        populateDropdown('#countryFilter', data.options.Country);
+        populateDropdown('#regionFilter', data.options.Country);
         populateDropdown('#brandFilter', data.options.Brand);
         populateDropdown('#optimisationFilter', data.options['Optimisation Type']);
     }).on('error', function(xhr, status, error) {

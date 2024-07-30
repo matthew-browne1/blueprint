@@ -7,7 +7,7 @@
 
 body {
     margin: 0;
-    background-color: #E8E3E2;
+    background-color: #fff;
     font-family: 'Carmen Sans Light', sans-serif;
     font-weight: 300; 
     font-size: 12pt; 
@@ -17,7 +17,7 @@ h1 {
     margin: 0;
     font-size: 4em;
     letter-spacing: 1px;
-    color: white; 
+    color: #656573; 
     font-weight: 200;
 
 .special-letter {
@@ -34,17 +34,17 @@ h1 {
     justify-content: space-between;
     align-items: center;
     padding: 20px;
-    background-color: #656573;
+    background-color: #fff;
 }
-.wrapper {
+/* .wrapper {
 	display: grid;
     
 	grid-template-columns: 300px auto;
 	grid-template-rows: 100px 1000px auto;
-	background-color: #E8E3E2;
+	background-color: #fff;
 	color: #444;
-	}
-.sidepanel {
+	} */
+/* .sidepanel {
   grid-column: 1 ;
   grid-row: 1 / span 2 ;
   position:sticky;
@@ -64,7 +64,7 @@ h1 {
 }
 .sidepanel::-webkit-scrollbar {
   width: 0;
-}
+} */
 .sidepanel span {
   position:relative;
   display:block;
@@ -87,29 +87,53 @@ h6 {
   margin:0 40px 0 22px;;
 }
 .filter-container {
-    border: 1px solid #ccc;
-    border-radius: 5px;
+    /* border: 1px solid #ccc; */
+    /* border-radius: 5px; */
     padding: 10px;
-    margin: 10px 40px 10px 10px;
+   
     max-width: 300px;
     text-align: left;
+    width: 200px;
+    
+}
+
+.filter-container select {
+    background-color: #F4F6F8;
+    /* border-radius: 20px; */
+    box-shadow: 2px 2px 10px grey;
+    
+}
+
+.filter-container option {
+    cursor:pointer
+}
+
+.filter-container option:hover {
+    color: #fff;
+    background-color: #A0B1C1;
 }
 
 .filter-title {
+    display: flex;
+    align-items: center;
     text-align: left;
     margin: 0;
-    font-size: 0.5em;
+    font-size: 12pt;
+    color: #264F73;
+    padding: 5px;
+    white-space: nowrap;
 }
-label {
-    display: block;
-    text-align: left;
-    margin-bottom: 5px;
-    font-size: 0.5em;
+
+.filter-icon {
+    height:30px;
+    padding-right: 5px;
 }
+
 input {
     width: 100%;
     padding: 5px;
     box-sizing: border-box;
+    
 }
 .custom-dropdown {
     position: relative;
@@ -144,6 +168,51 @@ input {
 .option:hover {
     background-color: #f0f0f0;
 }
+
+.nav-wrapper {
+    display: flex;
+    flex-direction: column;
+}
+
+.upper-nav {
+    padding-left: 30px;
+    color: #264F73;
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+}
+
+.upper-nav h2 {
+    font-size: 25pt;
+}
+
+.upper-nav-rhs {
+    right:0;
+    position:absolute;
+    padding-right: 50px;
+    display: flex;
+    flex-direction: column;
+}
+
+.upper-nav-rhs h3 {
+    display: flex;
+    right: 0;
+    width: fit-content;
+    font-style: italic;
+}
+
+.top-half-upper-nav-rhs {
+    right: 0;
+    position: relative;
+}
+
+.charts-date {
+    display: flex;
+    gap: 10px;
+    flex-direction: row;
+    color: #264F73;
+}
+
 .nav-container {
     font-weight: 300; 
     font-size: 12pt; 
@@ -152,11 +221,14 @@ input {
     top: 0;
     left: 20%; /* Adjust based on the width of sidepanel */
     z-index: 1; /* Adjust as needed, lower than the side panel */
-    background-color: #92A7B9;
+    background-color: #fff;
     text-align: center;
     padding: 10px;
     box-sizing: border-box;
-    
+    display: flex;
+  
+    justify-content: center;
+    flex-direction: row;
     margin-bottom: 20px;
 }
 .nav-container a {
@@ -171,43 +243,147 @@ input {
     text-decoration: none;
 }
 
+.chart-selector {
+    color: #636366;
+    font-weight: 300; 
+    font-size: 12pt; 
+ 
+    grid-column: 2 / span 2;
+    top: 0;
+    left: 20%; /* Adjust based on the width of sidepanel */
+    z-index: 1; /* Adjust as needed, lower than the side panel */
+    
+    text-align: center;
+    box-sizing: border-box;
+    margin-bottom: 20px;
+}
+
+.chart-selector a {
+    display: inline-block;
+    color: #636366;
+    padding: 15px 25px;
+    margin: 5px;
+    border: none;
+    border-radius: 40px;
+    cursor: pointer;
+    font-size: 18px;
+    text-decoration: none;
+    transition: ease 0.1s;
+}
+
+.chart-selector .selected {
+    background-color: #264F73;
+    color: #fff;
+}
+
 .nav-container a:hover,
 .nav-container a:active{
-    background-color: #264F73;
+    background-color: #B5C3CF;
+}
+
+.nav-container a:hover,
+.nav-container a:active{
+    background-color: #B5C3CF;
 }
 
 .nav-container .volval-container {
-    display: inline-block;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     border-radius: 10px;
-    border: 2px solid #656573;
-    padding: 5px;
-    float: right;
+    border: 2px solid #264F73;
     margin-top: 10px;
     margin-right: 25px;
-    height: 60%;
     white-space: nowrap;
+    height: fit-content;
 }
 
 .nav-container .volval-radio-buttons {
     display: flex;
     flex-direction: row;
-    gap: 10px;
+
 }
+
+.volval-parent {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.chart-selector a:hover,
+.chart-selector a:active{
+    background-color: #B5C3CF;
+    color: #fff;
+}
+
+.chart-selector a:hover,
+.chart-selector a:active{
+    background-color: #B5C3CF;
+}
+
+.chart-selector-child {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    
+}
+
+.chart-selector-child-box {
+    background-color: #F6F8F9;
+    border-radius: 40px;
+}
+
 
 .volval-radio-buttons label {
     font-size: 15pt;
-    color: white;
+    color: #fff;
+    cursor:pointer
+}
+
+#volval1-label {
+    transition: ease 0.3s;
+}
+
+#volval2-label {
+    transition: ease 0.3s;
+}
+
+.volval1-cont {
+    display: flex;
+    border-radius: 7px 0px 0px 7px;
+    transition: ease 0.3s;
+    background-color: #264F73;
+    padding:5px;
+    cursor: pointer;
+}
+
+.volval2-cont {
+    display: flex;
+    border-radius: 0px 7px 7px 0px;
+    transition: ease 0.3s;
+    background-color: #A0B1C1;
+    padding:5px;
+    cursor:pointer
 }
 
 .chart-container {
     grid-column: 2/ span 2 ;
 	grid-row: 2/ span 2 ;
 	flex-grow: 1;
-    padding:  15px 15px 15px 15px;
+    padding:  15px;
     height: 100%;
     justify-content: space-between;
     transition: margin-left 0.3s;
+    
 }
+
+.charts-container {
+    background-color: #F2F5F7;
+    border-radius: 20px;
+}
+
+
+
 .all-charts-cont {
     display: flex;
     flex-direction: column;
@@ -228,9 +404,11 @@ section {
     max-height: 450px;
     flex:1;
     border-radius: 10px;
-    border: 2px solid #656573;
+    border: 2px solid #264F73;
     margin-bottom: 50px;
     padding-top: 10px;
+    background-color: #fff;
+    box-shadow: 2px 2px 10px grey;
 }
 
 .chart-content canvas {
@@ -243,6 +421,11 @@ section {
 .multi-select-filter {
     width:90%;
     font-family: 'Carmen Sans Light', sans-serif;
+    cursor: pointer;
+}
+
+.multi-select-filter option {
+    cursor: pointer;
 }
 
 .title-container2 {
@@ -253,3 +436,81 @@ section {
 #export-results-icon {
     padding-left: 5px;
 }
+
+#curve-charts-nav-icon {
+    padding-left: 5px;
+}
+
+.apply-filters-cont {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    padding: 10px;
+}
+
+.filters-parent {
+    color: white;
+    display: flex;
+    padding: 5px;
+    background-color: #A0B1C1;
+    height: 30px;
+    width: 30px;
+    border-radius: 100%;
+    justify-content: center;
+    align-items: center;
+    transition: 0.2s ease;
+    cursor: pointer;
+}
+
+.filters-parent:hover {
+    background-color: #264F73;
+}
+
+.volval-parent {
+    padding: 10px;
+}
+
+.tooltip {
+    position: relative;
+    
+  }
+  
+  .tooltip .tooltiptext {
+    visibility: hidden;
+    width: auto;
+    text-wrap: nowrap;
+    background-color: #555;
+    color: #fff;
+    text-align: center;
+    border-radius: 6px;
+    padding: 5px 5px;
+    position: absolute;
+    z-index: 1;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  
+  .tooltip .tooltiptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 5px;
+    border-style: solid;
+    border-color: #555 transparent transparent transparent;
+  }
+  
+  .tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+  }
+  
+  .tooltip .small-text {
+    font-size: 9pt;
+  }

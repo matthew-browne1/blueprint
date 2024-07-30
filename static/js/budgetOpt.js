@@ -247,26 +247,57 @@ $(document).ready(function () {
 });
 
 function openNewTab() {
-  console.log("opening new tab");
-  window.open("/blueprint_results", "_blank");
+  var newTab;
+  var loadingSpinner = document.getElementById("results-loading-spinner");
+
+  setTimeout(() => {
+    newTab = window.open("/blueprint_results", "_blank");
+  }, 500);
+  if (newTab) {
+    window.addEventListener('message', function(event) {
+      if (event.data == 'newTabLoaded') {
+
+        loadingSpinner.style.display =
+          "none";
+      }
+    });
+  }
+    const checkTabClosed = setInterval(() => {
+      if (newTab.closed) {
+        clearInterval(checkTabClosed);
+        // Hide the spinner if the tab is closed before sending the message
+        loadingSpinner.style.display = "none";
+
+      }
+    }, 1000);
+
 }
 
 $("#results-div").on("click", "#results-button", function () {
-  console.log(tabNames);
-  console.log("results button clicked");
-  $.ajax({
+  var loadingSpinner = document.getElementById("results-loading-spinner");
+  var resultsButton = $("#results-button");
+  loadingSpinner.style.display = "inline-block";
+  resultsButton.html("Please Wait...");
+  setTimeout(() => {
+      $.ajax({
     type: "POST",
     url: "/results_output",
     contentType: "application/json",
     data: JSON.stringify(tabNames),
     success: function (response) {
-      console.log("results csv produced");
       openNewTab();
+      setTimeout(() => {
+        loadingSpinner.style.display = "none";
+        resultsButton.html("Show Results");
+      }, 1000);
+      
     },
     error: function (error) {
       console.error("Error triggering function:", error);
     },
   });
+  }, 500);
+
 });
 
 function fetchTabName(setID) {
@@ -564,7 +595,6 @@ function spawnNewTab(tabCounter) {
   editButtonTabs(tabCounter);
   closeButtonTab(tabCounter);
   dropdownButtons(tabCounter);
-  // redrawAllTables(tabCounter);
   var buttonName = document.getElementById("col-btn" + tabCounter);
   tabNames[tabCounter] = buttonName.textContent;
   console.log(tabNames);
@@ -608,6 +638,7 @@ function initializeDataTable(tableID) {
           {
             data: "Max Spend Cap",
             render: function (data, type, row) {
+              if (type === "display") {
               // Calculate 1.5 times the "Current Budget"
               var currentBudget = row["Current Budget"];
               var maxSpendCap = currentBudget * 1.5;
@@ -615,7 +646,10 @@ function initializeDataTable(tableID) {
               return $.fn.DataTable.render
                 .number(",", ".", 0)
                 .display(maxSpendCap);
+              } 
+              return $.fn.DataTable.render.number(",", ".", 0).display(data);
             },
+            editable: true
           },
 
         ],
@@ -666,11 +700,11 @@ function initializeDataTable(tableID) {
         table: "#channel" + tableID,
         fields: [
           {
-            label: "Min Spend Cap:",
+            label: "Min Spend Cap (CHF)",
             name: "Min Spend Cap",
           },
           {
-            label: "Max Spend Cap:",
+            label: "Max Spend Cap (CHF)",
             name: "Max Spend Cap",
           },
         ],
@@ -882,15 +916,6 @@ function initializeDataTable(tableID) {
 
 }
 
-function redrawAllTables(tableID) {
-  $("#channel1").DataTable().ajax.reload(null, false);
-  for (var i = 2; i < tableID; i++) {
-    var currentTableId = i;
-    $("#channel" + currentTableId)
-      .DataTable()
-      .ajax.reload(null, false);
-  }
-}
 
 function showLoadingOverlay(tableID) {
   document.getElementById("loading-overlay" + tableID).style.display = "block";
@@ -904,25 +929,8 @@ function showResultsButton() {
   var div = document.getElementById("results-div");
   var existingButton = document.getElementById("results-button");
 
-  if (existingButton) {
-    // If the button already exists, update its innerHTML to "Update Results"
-    existingButton.innerHTML = "Update Results";
-  } else {
-    // If the button doesn't exist, create a new button and add it to the div
-    var buttonHtml =
-      '<button class="snapshot-btn" role="button" id="results-button">Show Results<i class="fa-solid fa-l fa-arrow-right"></i></button>';
+  existingButton.style.display = 'flex';
 
-    // Create a new div element and set its innerHTML to the buttonHtml
-    var tempDiv = document.createElement("div");
-    tempDiv.innerHTML = buttonHtml;
-
-    // Append the first child of tempDiv (which is the newly created button element) to the actual div
-    div.appendChild(tempDiv.firstChild);
-
-    // Trigger a resize event (you may remove this line if it's not necessary)
-    var event = new Event("resize");
-    window.dispatchEvent(event);
-  }
 }
 
 var tabSocket = io.connect(window.location.origin);
@@ -1733,7 +1741,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
       },
     });
 
-    // redrawAllTables(tabCounter);
+   
     var buttonName = document.getElementById("col-btn" + tabCounter);
     tabNames[tabCounter] = buttonName.textContent;
   });
