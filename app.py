@@ -674,7 +674,6 @@ def volval_swap(data):
         socketio.emit('chart_data', {'chartData': chart_data, 'metric':metric})
 
             
-
 @socketio.on("response_data")
 def chart_response():
     global chart_response

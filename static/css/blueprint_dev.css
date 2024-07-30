@@ -661,6 +661,8 @@ label {
   align-items: center;
   opacity: 0.8;
   background-color: grey;
+  border-radius: 20px;
+  
 }
 
 .searchLoader {
@@ -753,6 +755,7 @@ label {
 
 .results-div {
   display: flex;
+  flex-direction: row;
   background-color: #FFFFFF;
   align-items: center;
   justify-content: center;
@@ -760,8 +763,16 @@ label {
   padding:10px;
 }
 
+.button-wrapper {
+  position:relative;
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+}
+
 #results-button {
   display: none;
+  margin-right: 20px;
 }
 
 .date-input {
@@ -777,7 +788,7 @@ label {
   color: #474747;
   height: 100%;
   text-align: left;
-  z-index: 100;
+  z-index: 99;
   border-width: 1px;
   padding: 10px;
 }
@@ -981,6 +992,7 @@ footer {
   z-index: 1000;
   border-top: 2px solid grey;
   text-align: center;
+  background-color: #f0f0f0;
 }
 
 .saves-cont {
@@ -1134,8 +1146,10 @@ tbody tr.disabled {
 }
 .lds-dual-ring {
   display: inline-block;
-  width: 60px;
-  height: 60px;
+  /* width: 40px; */
+  height: 40px;
+  position: absolute;
+  left: calc(100% + 10px);
 }
 #results-loading-spinner {
   display: none;
@@ -1145,7 +1159,7 @@ tbody tr.disabled {
   display: block;
   width: 40px;
   height: 40px;
-  margin: 8px;
+  
   border-radius: 50%;
   border: 6.4px solid currentColor;
   border-color: currentColor transparent currentColor transparent;

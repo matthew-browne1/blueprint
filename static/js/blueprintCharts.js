@@ -94,7 +94,7 @@ $(document).ready(function () {
         $("#charts-before-date").val(),
         $("#charts-after-date").val()
       ),
-      Region: $("#regionFilter").val(),
+      Country: $("#regionFilter").val(),
       Brand: $("#brandFilter").val(),
       "Channel Group": $("#channelgroupFilter").val(),
       Channel: $("#channelFilter").val(),
