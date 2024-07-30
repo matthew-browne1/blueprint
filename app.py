@@ -30,7 +30,7 @@ import traceback
 #from azure import identity
 
 app = Flask(__name__)
-socketio = SocketIO(app=app, manage_session=False)
+socketio = SocketIO(app=app, manage_session=False, async_mode='eventlet')
 
 #, async_mode='eventlet'
 
@@ -380,6 +380,7 @@ country_to_region = {
     'Chile': 'LATAM',
     'UK': 'EUR',
     'France': 'EUR',
+    'France24': 'EUR',
     'Germany': 'EUR',
     'Poland': 'EUR',
     'Australia': 'AOA',

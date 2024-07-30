@@ -248,9 +248,7 @@ $(document).ready(function () {
 
 function openNewTab() {
   var newTab;
-  console.log("opening new tab");
   var loadingSpinner = document.getElementById("results-loading-spinner");
-  loadingSpinner.style.display = "inline-block";
 
   setTimeout(() => {
     newTab = window.open("/blueprint_results", "_blank");
@@ -258,14 +256,12 @@ function openNewTab() {
   if (newTab) {
     window.addEventListener('message', function(event) {
       if (event.data == 'newTabLoaded') {
-        console.log("page opened");
+
         loadingSpinner.style.display =
           "none";
       }
-
     });
   }
-
     const checkTabClosed = setInterval(() => {
       if (newTab.closed) {
         clearInterval(checkTabClosed);
@@ -275,26 +271,33 @@ function openNewTab() {
       }
     }, 1000);
 
-  
-
 }
 
 $("#results-div").on("click", "#results-button", function () {
-  console.log(tabNames);
-  console.log("results button clicked");
-  $.ajax({
+  var loadingSpinner = document.getElementById("results-loading-spinner");
+  var resultsButton = $("#results-button");
+  loadingSpinner.style.display = "inline-block";
+  resultsButton.html("Please Wait...");
+  setTimeout(() => {
+      $.ajax({
     type: "POST",
     url: "/results_output",
     contentType: "application/json",
     data: JSON.stringify(tabNames),
     success: function (response) {
-      console.log("results csv produced");
       openNewTab();
+      setTimeout(() => {
+        loadingSpinner.style.display = "none";
+        resultsButton.html("Show Results");
+      }, 1000);
+      
     },
     error: function (error) {
       console.error("Error triggering function:", error);
     },
   });
+  }, 500);
+
 });
 
 function fetchTabName(setID) {
