@@ -706,7 +706,6 @@ def volval_swap(data):
         app.logger.info(metric)
         socketio.emit('chart_data', {'chartData': session['chart_data'], 'metric':metric})
 
-            
 
 @socketio.on("response_data")
 def chart_response():

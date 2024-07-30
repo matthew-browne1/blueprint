@@ -777,7 +777,7 @@ label {
   color: #474747;
   height: 100%;
   text-align: left;
-  z-index: 100;
+  z-index: 99;
   border-width: 1px;
   padding: 10px;
 }
