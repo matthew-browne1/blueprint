@@ -192,7 +192,6 @@ def login():
             return redirect(url_for('login'))
 
 @app.route('/logout')
-@login_required
 def logout():
     user_id = current_user.id
     if user_id in active_sessions:
@@ -246,7 +245,6 @@ def get_user_id():
 
 
 @app.route('/save_snapshot', methods=['POST'])
-@login_required
 def save_snapshot():
     snapshot_name = request.json.get('name')
     user_id = current_user.id
@@ -281,7 +279,6 @@ def save_snapshot():
   
 
 @app.route('/overwrite_save', methods=['POST'])
-@login_required
 def overwrite_save():
     snapshot_id = request.json.get('selectedSaveId')
     user_id = current_user.id
@@ -320,7 +317,6 @@ def overwrite_save():
 
 
 @app.route('/get_saves', methods=['GET'])
-@login_required
 def get_saves():
     if not current_user.is_authenticated:
         return jsonify({'error': 'User not authenticated'}), 401
@@ -344,7 +340,6 @@ def get_saves():
         return jsonify({'data': []})
 
 @app.route('/load_selected_row', methods=['GET', 'POST'])
-@login_required
 def notify_selected_row():
     if request.method == 'POST':
         save_id = request.json.get('selectedSaveId')
@@ -504,7 +499,13 @@ def run_optimise(dataDict):
         ST_header = Beta.beta_calculation(header_copy, laydown_copy, seas_index_copy, ST_inc_rev_copy, 'st')
 
         LT_header = Beta.beta_calculation(header_copy, laydown_copy, seas_index_copy, LT_inc_rev_copy, 'lt')
+        
         print("applied betas")
+        print("Short Term Betas:")
+        print(ST_header['ST Beta'])
+        print("Long Term Betas:")
+        print(LT_header['LT Beta'])
+
         inputs_dict = {'ST_input': ST_header, 'LT_input': LT_header, 'laydown': laydown_copy, 'seas_index': seas_index_copy}
 
         inputs_per_result[table_id] = deepcopy(inputs_dict)
@@ -899,13 +900,11 @@ def apply_curve_filters(data, curve_filters, event_name):
         print('Error applying filter:', str(e))
 
 @app.route('/blueprint_results')
-@login_required
 def blueprint_results():
     return render_template('blueprint_results.html', current_user=current_user)
 
 
 @app.route('/blueprint_curve')
-@login_required
 def blueprint_curve():
     return render_template('blueprint_curveresults.html')
 
@@ -936,7 +935,6 @@ def refresh_table():
 
 
 @app.route('/blueprint')
-@login_required
 def blueprint():
     return render_template('blueprint.html', current_user=current_user)
 
@@ -1062,7 +1060,6 @@ def save_configurations(configurations):
 
 
 @app.route('/export_data')
-@login_required
 def export_data():
     now = datetime.now()
     formatted_timestamp = now.strftime("%d%m%Y%H%M")

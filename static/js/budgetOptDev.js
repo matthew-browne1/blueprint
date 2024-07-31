@@ -637,16 +637,20 @@ function initializeDataTable(tableID) {
           },
           {
             data: "Max Spend Cap",
+
+            // Un comment this
+
+
             render: function (data, type, row) {
-              if (type === "display") {
-              // Calculate 1.5 times the "Current Budget"
-              var currentBudget = row["Current Budget"];
-              var maxSpendCap = currentBudget * 1.5;
-              // Format and display the calculated value
-              return $.fn.DataTable.render
-                .number(",", ".", 0)
-                .display(maxSpendCap);
-              } 
+              // if (type === "display") {
+              // // Calculate 1.5 times the "Current Budget"
+              // var currentBudget = row["Current Budget"];
+              // var maxSpendCap = currentBudget * 1.5;
+              // // Format and display the calculated value
+              // return $.fn.DataTable.render
+              //   .number(",", ".", 0)
+              //   .display(maxSpendCap);
+              // } 
               return $.fn.DataTable.render.number(",", ".", 0).display(data);
             },
             editable: true
@@ -1578,7 +1582,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
 
         tabChannelTable.on(
           "click",
-          "tbody td:nth-child(7), tbody td:nth-child(6)",
+          "tbody td:nth-child(7), tbody td:nth-child(8)",
           function (e) {
             channelEditorTab.inline(this);
           }
