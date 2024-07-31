@@ -78,6 +78,20 @@ function syncTabCounter() {
   });
 }
 
+
+function getNumberOfVars(callback) {
+  $.ajax({
+    url: "/vars_counter",
+    type: "GET",
+    contentType: "application/json",
+    success: function (response) {
+      var numVars = response.numVars;
+      console.log(numVars);
+      callback(numVars);
+    },
+  });
+}
+
 function initializeCollapsibleButtons(colID) {
   var content = document.getElementById("opt-tab" + colID);
   var coll = document.getElementById("col-btn" + colID);
@@ -345,42 +359,40 @@ function optAll() {
             tabName: tabName,
           };
 
-          var dateButtonIsChecked = $("#date-filter-button" + tableId).prop(
-            "checked"
-          );
+
           var startDate = $("#start-date" + tableId).val();
           var endDate = $("#end-date" + tableId).val();
           var dateTuple = [startDate, endDate];
-          if (dateButtonIsChecked) {
-            dataToSend["dates"] = dateTuple;
-          }
+
+          dataToSend["dates"] = dateTuple;
 
           optAllArray.push({ dataToSend: dataToSend });
-          if (disabledRowIds.length < 85) {
-            warningBool = true;
-          }
+          getNumberOfVars(function (numVars) {
+            var numSelectedVars = numVars - disabledRowIds.length;
+            if (numSelectedVars > 20) {
+              $("#warningPopup").show();
+              $("#continueWarning").click(function () {
+                $("#warningPopup").hide();
+  
+                optAllArray.forEach(function (data) {
+                  socket.emit("optimise", data);
+                });
+              });
+              $("#cancelWarning").click(function () {
+                $("#warningPopup").hide();
+  
+                tableIds.forEach(function (tableId) {
+                  hideLoadingOverlay(tableId);
+                });
+              });
+            } else {
+              optAllArray.forEach(function (data) {
+                socket.emit("optimise", data);
+              });
+            }
+          });
         });
-        if (warningBool == true) {
-          $("#warningPopup").show();
-          $("#continueWarning").click(function () {
-            $("#warningPopup").hide();
 
-            optAllArray.forEach(function (data) {
-              socket.emit("optimise", data);
-            });
-          });
-          $("#cancelWarning").click(function () {
-            $("#warningPopup").hide();
-
-            tableIds.forEach(function (tableId) {
-              hideLoadingOverlay(tableId);
-            });
-          });
-        } else {
-          optAllArray.forEach(function (data) {
-            socket.emit("optimise", data);
-          });
-        }
       }
     },
   });
@@ -557,7 +569,7 @@ function spawnNewTab(tabCounter) {
                   <input type="date" name="end-date" class="date-input" id="end-date${tabCounter}" placeholder="End date" />
                </div>
                <div class="tooltip refresh-btn-cont" id="refresh-btn${tabCounter}">
-               <span class="tooltiptext">Reload Table<br><p class="small-text">(NB: All variables will be de-selected)</p></span>
+               <span class="tooltiptext">Reload Table<br><p class="small-text">All variables will be de-selected</p><p class="small-text">All edits will be undone</p></span>
                   <i class="refresh-btn fa-solid fa-arrows-rotate">                  </i>
                </div>
                <div class="tooltip opt-cont-parent" id="opt-button${tabCounter}">
@@ -638,15 +650,6 @@ function initializeDataTable(tableID) {
           {
             data: "Max Spend Cap",
             render: function (data, type, row) {
-              if (type === "display") {
-              // Calculate 1.5 times the "Current Budget"
-              var currentBudget = row["Current Budget"];
-              var maxSpendCap = currentBudget * 1.5;
-              // Format and display the calculated value
-              return $.fn.DataTable.render
-                .number(",", ".", 0)
-                .display(maxSpendCap);
-              } 
               return $.fn.DataTable.render.number(",", ".", 0).display(data);
             },
             editable: true
@@ -854,36 +857,36 @@ function initializeDataTable(tableID) {
           disabledRows: disabledRowIds,
           tabName: tabName,
         };
-        var dateButtonIsChecked = $("#date-filter-button" + tableID).prop(
-          "checked"
-        );
+
         var startDate = $("#start-date" + tableID).val();
         var endDate = $("#end-date" + tableID).val();
         var dateTuple = [startDate, endDate];
-        if (dateButtonIsChecked) {
-          dataToSend["dates"] = dateTuple;
-        }
+
+        dataToSend["dates"] = dateTuple;
+
         console.log(dataToSend);
 
-        // Use jQuery AJAX to send the data to the Flask endpoint
-        if (disabledRowIds.length < 85) {
-          $("#warningPopup").show();
-          $("#continueWarning").click(function () {
-            // Hide modal
-            $("#warningPopup").hide();
-            // Emit socket event
-            socket.emit("optimise", { dataToSend: dataToSend });
-          });
+        getNumberOfVars(function(numVars) {
+          var numSelectedVars = numVars - disabledRowIds.length;
+          if (numSelectedVars > 20) {
+            $("#warningPopup").show();
+            $("#continueWarning").click(function () {
+              // Hide modal
+              $("#warningPopup").hide();
+              // Emit socket event
+              socket.emit("optimise", { dataToSend: dataToSend });
+            });
 
-          // Event listener for close button
-          $("#cancelWarning").click(function () {
-            // Hide modal
-            $("#warningPopup").hide();
-            hideLoadingOverlay(tableID);
-          });
-        } else {
-          socket.emit("optimise", { dataToSend: dataToSend });
-        }
+            // Event listener for close button
+            $("#cancelWarning").click(function () {
+              // Hide modal
+              $("#warningPopup").hide();
+              hideLoadingOverlay(tableID);
+            });
+          } else {
+            socket.emit("optimise", { dataToSend: dataToSend });
+          }
+        });
       });
 
         $("#refresh-btn" + tableID).on("click", function () {
@@ -1401,7 +1404,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
                   <input type="date" name="end-date" class="date-input" id="end-date${tabCounter}" placeholder="End date" />
                </div>
                <div class="tooltip refresh-btn-cont" id="refresh-btn${tabCounter}">
-               <span class="tooltiptext">Reload Table (This will unselect all variables)</span>
+               <span class="tooltiptext">Reload Table<br><p class="small-text">All variables will be de-selected</p><p class="small-text">All edits will be undone</p></span>
                   <i class="refresh-btn fa-solid fa-arrows-rotate"></i>
                </div>
                <div class="tooltip opt-cont-parent" id="opt-button${tabCounter}">
@@ -1704,36 +1707,36 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
             disabledRows: disabledRowIds,
             tabName: tabName,
           };
-          var dateButtonIsChecked = $("#date-filter-button" + tabCounter).prop(
-            "checked"
-          );
+
           var startDate = $("#start-date" + tabCounter).val();
           var endDate = $("#end-date" + tabCounter).val();
           var dateTuple = [startDate, endDate];
-          if (dateButtonIsChecked) {
-            dataToSend["dates"] = dateTuple;
-          }
+
+          dataToSend["dates"] = dateTuple;
+
           console.log(dataToSend);
 
-          // Use jQuery AJAX to send the data to the Flask endpoint
-          if (disabledRowIds.length < 85) {
-            $("#warningPopup").show();
-            $("#continueWarning").click(function () {
-              // Hide modal
-              $("#warningPopup").hide();
-              // Emit socket event
-              socket.emit("optimise", { dataToSend: dataToSend });
-            });
+          getNumberOfVars(function (numVars) {
+            var numSelectedVars = numVars - disabledRowIds.length;
+            if (numSelectedVars > 20) {
+              $("#warningPopup").show();
+              $("#continueWarning").click(function () {
+                // Hide modal
+                $("#warningPopup").hide();
+                // Emit socket event
+                socket.emit("optimise", { dataToSend: dataToSend });
+              });
 
-            // Event listener for close button
-            $("#cancelWarning").click(function () {
-              // Hide modal
-              $("#warningPopup").hide();
-              hideLoadingOverlay(tabCounter);
-            });
-          } else {
-            socket.emit("optimise", { dataToSend: dataToSend });
-          }
+              // Event listener for close button
+              $("#cancelWarning").click(function () {
+                // Hide modal
+                $("#warningPopup").hide();
+                hideLoadingOverlay(tabCounter);
+              });
+            } else {
+              socket.emit("optimise", { dataToSend: dataToSend });
+            }
+        });
         });
       },
       error: function (error) {
