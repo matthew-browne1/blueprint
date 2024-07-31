@@ -414,7 +414,8 @@ table_df.insert(0, 'row_id', range(1, len(table_df) + 1))
 table_dict = table_df.to_dict("records")
 for var in table_dict:
     var['Laydown'] = laydown[var['Channel'] + "_" + var['Country'] + "_" + var['Brand']].tolist()
-
+    var['Current Budget'] = sum(var['Laydown'])
+    var['Max Spend Cap'] = round(var['Current Budget'] * 1.5, 2)
 
 
 
@@ -486,6 +487,11 @@ def run_optimise(dataDict):
 
         app.logger.info(
             f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
+        
+        for var in header_copy.to_dict("records"):
+            var['Laydown'] = laydown_copy[var['Channel'] + "_" + var['Country'] + "_" + var['Brand']].tolist()
+            var['Current Budget'] = sum(var['Laydown'])
+            var['Max Spend Cap'] = round(var['Current Budget'] * 1.5, 2)
 
         ST_header = Beta.beta_calculation(header_copy, laydown_copy, seas_index_copy, ST_inc_rev_copy, 'st')
 
@@ -1118,6 +1124,8 @@ def refresh_table():
     for var in current_table:
         var['Laydown'] = laydown_copy[var['Channel'] + "_" + var['Country'] + "_" + var['Brand']].tolist()
         var['Current Budget'] = sum(var['Laydown'])
+        var['Max Spend Cap'] = round(var['Current Budget'] * 1.5, 2)
+    session['table_data'][table_id] = current_table
         
     return jsonify(current_table)
 
