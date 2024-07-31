@@ -637,6 +637,8 @@ function initializeDataTable(tableID) {
           },
           {
             data: "Max Spend Cap",
+
+      
             render: function (data, type, row) {
               if (type === "display") {
               // Calculate 1.5 times the "Current Budget"
@@ -1578,7 +1580,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
 
         tabChannelTable.on(
           "click",
-          "tbody td:nth-child(7), tbody td:nth-child(6)",
+          "tbody td:nth-child(7), tbody td:nth-child(8)",
           function (e) {
             channelEditorTab.inline(this);
           }
