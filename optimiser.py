@@ -1,4 +1,3 @@
-
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
@@ -31,7 +30,7 @@ class Optimise:
         # print(sum(pct_laydown))
 
         pam = pct_laydown * allocation
-       
+        
         carryover_list = Optimise.adstock(pam, carryover_dict[stream])
 
         rev_list = Optimise.dim_returns(alpha_dict[stream], beta_dict[stream], carryover_list)
@@ -50,11 +49,15 @@ class Optimise:
             
             # Add a 'Year' column to the DataFrame
             indexed_revs_with_date_df['Year'] = pd.to_datetime(indexed_revs_with_date_df['Date']).dt.year
-
-            # Filter the nns_mc DataFrame for the specified stream
+            
+            try:
+                stream_name, country, brand = stream.split("_")
+            except Exception as e:
+                print(e)
+            
             filtered_nns_mc = nns_mc[
-                nns_mc['Country'].astype(str).str.contains(stream) &
-                nns_mc['Brand'].astype(str).str.contains(stream)
+                nns_mc['Country'] == country and
+                nns_mc['Brand'] == brand
             ]
 
             # Merge the DataFrames on 'Year'
