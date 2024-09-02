@@ -586,7 +586,7 @@ def results_output():
         nns_mc_copy = deepcopy(nns_mc)
         merged_output = pd.merge(output, nns_mc_copy, on=['Country','Brand','Year'], how='left')
         merged_output.fillna(1, inplace=True)
-        merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
+        merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC']) * merged_output['Volume Scale-up factor (yearly)']
     
         try:
             merged_output.to_sql(f'Blueprint_results_{session["user"]["oid"]}', engine, if_exists='replace', index=False)
@@ -1009,6 +1009,18 @@ def get_session_id():
 def get_table_ids():
     table_ids = list(session['table_data'].keys())
     return jsonify({"success": True, "tableIds": table_ids})
+
+
+@app.route("/send_scenario_names", methods=['POST'])
+def send_scenario_names():
+    print("reaching send scenario name function")
+    scenario_names = request.json.get("tabNames")
+    print(scenario_names)
+    for key, value in scenario_names.items():
+        session['output_df_per_result'][key].loc[session['output_df_per_result'][key]['Scenario'].str[-14:] == " (Unoptimised)", 'Scenario'] = f"{value} (Unoptimised)"
+        session['output_df_per_result'][key].loc[session['output_df_per_result'][key]['Scenario'].str[-14:] != " (Unoptimised)", 'Scenario'] = f"{value}"
+        
+    return jsonify({'success': True, 'message': 'Scenario names updated in results output'})
 
 
 @app.route('/table_ids_sync', methods=['POST'])

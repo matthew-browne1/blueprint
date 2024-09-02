@@ -155,6 +155,15 @@ function syncTabNames() {
       }
     },
   });
+  $.ajax({
+    url: '/send_scenario_names',
+    method: "POST",
+    contentType: "application/json",
+    data: JSON.stringify({ tabNames: tabNames }),
+    success: function (response) {
+      console.log("response from backend:", response);
+    }
+  });
 }
 
 // ANY EDITS MADE TO THIS FUNCTION, REMEMBER TO ALSO CHANGE THEM IN THE IDENTICAL FUNCTION IN SAVEUI.JS
@@ -988,9 +997,10 @@ function editButtonTabs(tabID) {
       tabNames[tabID] = newText;
       console.log(tabNames);
     }
+    syncTabNames();
   });
 
-  syncTabNames();
+  
 }
 
 function openLoadPopup() {
