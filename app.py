@@ -528,6 +528,7 @@ def run_optimise(dataDict):
             app.logger.info(f"keys currently present in {session['user']['oid']}'s output_df_per_result session object: {session['output_df_per_result'].keys()}")
             session.modified = True
             app.logger.info("opt complete, hiding overlay")
+            socketio.emit('opt_complete', {'data': table_id})
             app.logger.info(session['output_df_per_result'].keys())
             app.logger.info(session['results'].keys())
     
@@ -558,7 +559,7 @@ def run_optimise_task(session_id):
                     result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, nns_mc=nns_copy, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name)
                     app.logger.info(f"Task completed: {result} in {time_elapsed} time")
                     
-                    socketio.emit('opt_complete', {'data': table_id})
+                    
                     queue.task_done()
                     return result, output_df
 
