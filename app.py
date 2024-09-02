@@ -109,12 +109,12 @@ app.config['SESSION_COOKIE_SECURE'] = True
 app.config['PROPAGATE_EXCEPTIONS'] = True
 app.config['DEBUG'] = True
 
-engine = create_engine(ra_server_uri)
+# engine = create_engine(ra_server_uri)
 
-db = SQLAlchemy(app)
-bcrypt = Bcrypt(app)
-login_manager = LoginManager(app)
-login_manager.login_view = 'login'
+# db = SQLAlchemy(app)
+# bcrypt = Bcrypt(app)
+# login_manager = LoginManager(app)
+# login_manager.login_view = 'login'
 
 # Initialize Azure Key Vault client
 # keyvault_url = "https://acblueprint-vault.vault.azure.net/"
@@ -122,26 +122,26 @@ login_manager.login_view = 'login'
 # secret_client = SecretClient(vault_url=keyvault_url, credential=credential)
 
 
-class User(UserMixin, db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    username = db.Column(db.String(20), unique=True, nullable=False)
-    password = db.Column(db.String(60), nullable=False)
-    user_info = db.relationship('UserInfo', backref='user', lazy=True)
+# class User(UserMixin, db.Model):
+#     id = db.Column(db.Integer, primary_key=True)
+#     username = db.Column(db.String(20), unique=True, nullable=False)
+#     password = db.Column(db.String(60), nullable=False)
+#     user_info = db.relationship('UserInfo', backref='user', lazy=True)
 
 
-class UserInfo(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    full_name = db.Column(db.String(100), nullable=False)
-    email = db.Column(db.String(120), unique=True, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+# class UserInfo(db.Model):
+#     id = db.Column(db.Integer, primary_key=True)
+#     full_name = db.Column(db.String(100), nullable=False)
+#     email = db.Column(db.String(120), unique=True, nullable=False)
+#     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
 
-class Snapshot(db.Model):
-    name = db.Column(db.String, nullable=False)
-    id = db.Column(db.Integer, primary_key=True)
-    content = db.Column(db.LargeBinary, nullable=False)
-    scenario_names = db.Column(db.LargeBinary, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    table_data = db.Column(db.Text, nullable=False)
+# class Snapshot(db.Model):
+#     name = db.Column(db.String, nullable=False)
+#     id = db.Column(db.Integer, primary_key=True)
+#     content = db.Column(db.LargeBinary, nullable=False)
+#     scenario_names = db.Column(db.LargeBinary, nullable=False)
+#     user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+#     table_data = db.Column(db.Text, nullable=False)
 
 # class DatabaseHandler(logging.Handler):
 #     def emit(self, record):
@@ -168,46 +168,46 @@ class Snapshot(db.Model):
 
 active_sessions = {}
 
-@app.route('/login', methods=['POST'])
-def login():
-    if request.method == 'POST':
-        username = request.form.get('uname')
-        password = request.form.get('psw')
-        user = User.query.filter_by(username=username).first()
-        if user.id in active_sessions:
-            return 'User is already logged in', 403
+# @app.route('/login', methods=['POST'])
+# def login():
+#     if request.method == 'POST':
+#         username = request.form.get('uname')
+#         password = request.form.get('psw')
+#         user = User.query.filter_by(username=username).first()
+#         if user.id in active_sessions:
+#             return 'User is already logged in', 403
 
-        if user and bcrypt.check_password_hash(user.password, password):
+#         if user and bcrypt.check_password_hash(user.password, password):
         
-            login_user(user, remember=True)
-            flash('You have been logged in successfully!', 'success')
-            active_sessions[user.id] = True
-            app.logger.info(f"User {username} logged in successfully.")
-            app.logger.info(current_user.user_info)
+#             login_user(user, remember=True)
+#             flash('You have been logged in successfully!', 'success')
+#             active_sessions[user.id] = True
+#             app.logger.info(f"User {username} logged in successfully.")
+#             app.logger.info(current_user.user_info)
          
-            return redirect(url_for('blueprint'))
-        else:
-            app.logger.info(f"Failed login attempt for user {username}.")
-            flash('Invalid username or password', 'error')
-            return redirect(url_for('login'))
+#             return redirect(url_for('blueprint'))
+#         else:
+#             app.logger.info(f"Failed login attempt for user {username}.")
+#             flash('Invalid username or password', 'error')
+#             return redirect(url_for('login'))
 
-@app.route('/logout')
-def logout():
-    user_id = current_user.id
-    if user_id in active_sessions:
-        del active_sessions[user_id]
-    logout_user()
-    return redirect(url_for('/home'))
+# @app.route('/logout')
+# def logout():
+#     user_id = current_user.id
+#     if user_id in active_sessions:
+#         del active_sessions[user_id]
+#     logout_user()
+#     return redirect(url_for('/home'))
 
-class Log(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
-    message = db.Column(db.String, nullable=False)
+# class Log(db.Model):
+#     id = db.Column(db.Integer, primary_key=True)
+#     timestamp = db.Column(db.DateTime, default=db.func.current_timestamp())
+#     message = db.Column(db.String, nullable=False)
 
 
-@login_manager.user_loader
-def load_user(user_id):
-    return User.query.options(joinedload(User.user_info)).get(int(user_id))
+# @login_manager.user_loader
+# def load_user(user_id):
+#     return User.query.options(joinedload(User.user_info)).get(int(user_id))
 
 
 # user_data = [
@@ -237,6 +237,10 @@ def load_user(user_id):
 #     else:
 #         app.logger.info(f"User '{user_data['username']}' already exists.")
 
+
+@app.route("/")
+def home():
+    return redirect(url_for('blueprintdev'))
 
 @app.route('/get_user_id', methods=['GET'])
 def get_user_id():
@@ -379,18 +383,23 @@ country_to_region = {
     'Australia': 'AOA',
     'Saudi Arabia' : 'AMEA'
 }
-header = pd.read_sql_table('All_Channel_Inputs', engine)
+# header = pd.read_sql_table('All_Channel_Inputs', engine)
+header = pd.read_excel("All_Channel_Inputs.xlsx")
 # Show column headers without underscores!
 header.columns = [x.replace("_", " ") for x in header.columns.tolist()]
 header.rename(columns={'Region':'Country'}, inplace=True)
 
 header['Region'] = header['Country'].map(country_to_region).fillna('Other')
-laydown = pd.read_sql_table('All_Laydown', engine)
+# laydown = pd.read_sql_table('All_Laydown', engine)
+laydown = pd.read_excel('All_Laydown.xlsx')
 laydown_dates = laydown['Date']
-seas_index = pd.read_sql_table('All_Index', engine)
+# seas_index = pd.read_sql_table('All_Index', engine)
+seas_index = pd.read_excel('All_Index.xlsx')
 
-ST_inc_rev = pd.read_sql_table('All_Incremental_Revenue_ST', engine)
-LT_inc_rev = pd.read_sql_table('All_Incremental_Revenue_LT', engine)
+# ST_inc_rev = pd.read_sql_table('All_Incremental_Revenue_ST', engine)
+# LT_inc_rev = pd.read_sql_table('All_Incremental_Revenue_LT', engine)
+ST_inc_rev = pd.read_excel('All_Incremental_Revenue_ST.xlsx')
+LT_inc_rev = pd.read_excel('All_Incremental_Revenue_LT.xlsx')
 
 nns_mc = pd.read_excel('ROIs and factors all regions inc. KSA.xlsx', sheet_name='factors')
 
@@ -486,7 +495,7 @@ def run_optimise(dataDict):
         else:
             start_date = datetime.strptime(data['dates'][0][:10], "%Y-%m-%d")
             end_date = datetime.strptime(data['dates'][1][:10], "%Y-%m-%d")
-            app.logger.info(f'{current_user.id}, dates found in data')
+            # app.logger.info(f'{current_user.id}, dates found in data')
         
         laydown_copy = laydown_copy[(laydown_copy["Date"] >= start_date) & (laydown_copy["Date"] <= end_date)]
         seas_index_copy = seas_index_copy[(laydown_copy["Date"] >= start_date) & (seas_index_copy["Date"] <= end_date)]
@@ -555,7 +564,8 @@ def results_output():
     merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
     merged_output.to_csv('merged_output.csv')
     try:
-        merged_output.to_sql('Optimised CSV', engine, if_exists='replace', index=False)
+        #merged_output.to_sql('Optimised CSV', engine, if_exists='replace', index=False)
+        
         app.logger.info("csv uploaded to db successfully")
     except:
         app.logger.info("csv db upload failed")
@@ -569,6 +579,9 @@ def create_output(output_df_per_result):
     
     return concat_df
 
+@app.route("/rename_scenario")
+def rename_scenario():
+    data = request.json.get("scenarioName")
 
 @socketio.on("collect_data")
 def chart_data(data):
@@ -576,14 +589,15 @@ def chart_data(data):
     metric = data['metric']
     print(f"metric within chart_data method is {metric}")
     try:
-        conn = engine.connect()
-        query = text('SELECT * FROM "Optimised CSV";')
+        #conn = engine.connect()
+        #query = text('SELECT * FROM "Optimised CSV";')
 
-        db_result = conn.execute(query)
-        rows = db_result.fetchall()
-        columns = db_result.keys()
-        result_df = pd.DataFrame(rows, columns=columns)
-        db_result.close()
+        #db_result = conn.execute(query)
+        #rows = db_result.fetchall()
+        #columns = db_result.keys()
+        #result_df = pd.DataFrame(rows, columns=columns)
+        #db_result.close()
+        result_df = pd.read_csv("merged_output.csv")
         result_df['Date'] = pd.to_datetime(result_df['Date'])
         result_df['MonthYear'] = result_df['Date'].dt.strftime('%Y-%m')
         result_df = result_df.groupby(
@@ -614,9 +628,9 @@ def chart_data(data):
     except SQLAlchemyError as e:
         print('Error executing query:', str(e))
 
-    finally:
-        if 'conn' in locals():
-            conn.close()
+    # finally:
+    #     if 'conn' in locals():
+    #         conn.close()
 
 @socketio.on("apply_filter")
 def handle_apply_filter(data):
@@ -936,17 +950,30 @@ def refresh_table():
 
 @app.route('/blueprint')
 def blueprint():
-    return render_template('blueprint.html', current_user=current_user)
+    return render_template('blueprint.html')
+
 
 @app.route('/blueprintdev')
 def blueprintdev():
-    return render_template('blueprint_dev.html', current_user=current_user)
+    return render_template('blueprint_dev.html')
 
 
 @app.route('/get_table_ids', methods=['GET'])
 def get_table_ids():
     table_ids = list(table_data.keys())
     return jsonify({"success": True, "tableIds": table_ids})
+
+
+@app.route("/send_scenario_names", methods=['POST'])
+def send_scenario_names():
+    print("reaching send scenario name function")
+    scenario_names = request.json.get("tabNames")
+    print(scenario_names)
+    for key, value in scenario_names.items():
+        output_df_per_result[key].loc[output_df_per_result[key]['Scenario'].str[-14:] == " (Unoptimised)", 'Scenario'] = f"{value} (Unoptimised)"
+        output_df_per_result[key].loc[output_df_per_result[key]['Scenario'].str[-14:] != " (Unoptimised)", 'Scenario'] = f"{value}"
+        
+    return jsonify({'success': True, 'message': 'Scenario names updated in results output'})
 
 
 @app.route('/table_ids_sync', methods=['POST'])
@@ -980,11 +1007,13 @@ def sync_tab_counter():
     last_number = list(table_data.keys())[-1]
     return jsonify({'lastNumber': last_number})
 
+
 @app.route('/vars_counter', methods=['GET'])
 def vars_counter():
     numVars = len(table_dict)
     print(numVars)
     return jsonify({"success": True, "numVars": numVars})
+
 
 @app.route('/create_copy', methods=['POST'])
 def create_copy():
@@ -1005,6 +1034,10 @@ def channel_delete():
     deleted_tab = str(request.json.get("tabID"))
     app.logger.info(f"deleted tab: {deleted_tab}")
     table_data.pop(deleted_tab)
+    try:
+        output_df_per_result.pop(deleted_tab)
+    except:
+        print(f"Deleted tab with ID: {deleted_tab} not present in output")
     return jsonify({"success": "tab removed succesfully"})
 
 
@@ -1040,16 +1073,16 @@ def table_data_editor():
     return jsonify(response)
 
 
-@app.route('/')
-def welcome_page():
-    app.logger.info(current_user)
-    return render_template('Welcome.html', current_user=current_user)
+# @app.route('/')
+# def welcome_page():
+#     app.logger.info(current_user)
+#     return render_template('Welcome.html', current_user=current_user)
 
 
 # Get request required pending login db sorted
-@app.route('/home', methods=['GET', 'POST'])
-def home():
-    return render_template('Home.html', current_user=current_user)
+# @app.route('/home', methods=['GET', 'POST'])
+# def home():
+#     return render_template('Home.html', current_user=current_user)
 
 
 def save_configurations(configurations):
@@ -1085,10 +1118,11 @@ def export_results():
     formatted_timestamp = now.strftime("%d%m%Y%H%M")
     excel_buffer = BytesIO()
     with pd.ExcelWriter(excel_buffer, engine='xlsxwriter') as writer:
-        results = pd.read_sql_table("Optimised CSV", engine)
+        #results = pd.read_sql_table("Optimised CSV", engine)
+        results = pd.read_csv("merged_output.csv")
         results.to_excel(writer, sheet_name="Results")
     excel_buffer.seek(0)
-    return send_file(excel_buffer, download_name=f"{current_user.id}_{formatted_timestamp}_Results.xlsx", as_attachment=True)
+    return send_file(excel_buffer, download_name="{formatted_timestamp}_Results.xlsx", as_attachment=True)
 
 def main():
     task_queue = queue.Queue()
@@ -1099,7 +1133,7 @@ def main():
 
 if __name__ == '__main__':
     with app.app_context():
-        db.create_all()
+        # db.create_all()
         # for user in user_data:
         #     add_user(user)
         socketio.run(app=app, host='0.0.0.0', port=os.environ.get('PORT', 5000), debug=True)

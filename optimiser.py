@@ -56,8 +56,8 @@ class Optimise:
                 print(e)
             
             filtered_nns_mc = nns_mc[
-                nns_mc['Country'] == country and
-                nns_mc['Brand'] == brand
+                (nns_mc['Country'] == country) & 
+                (nns_mc['Brand'] == brand)
             ]
 
             # Merge the DataFrames on 'Year'
@@ -193,9 +193,15 @@ class Optimise:
         return indexed_vals
 
     def blended_profit_max_scipy(ST_input, LT_input, laydown, seas_index, nns_mc, return_type, objective_type, max_budget,
-                             exh_budget, method, scenario_name, step=1*10**-25, tolerance=1*10**-25,
+                             exh_budget, method, scenario_name, step=1*10**-5, tolerance=1*10**-5,
                              num_weeks=1000):
         print(type(ST_input))
+        
+        if objective_type == "roi":
+            print("objective type is roi")
+            step = 1*10**-25
+            tolerance = 1*10**-25
+        
         streams = [entry['Opt Channel'] for entry in ST_input]
 
         current_budget_list = [entry['Current Budget'] for entry in ST_input]
@@ -429,7 +435,7 @@ class Beta:
             header.loc[header['Opt Channel'] == stream, 'Current Budget'] = sum(laydown[stream])
 
             header.loc[header['Opt Channel'] == stream, f'{stlt.upper()} Revenue'] = sum(inc_rev[stream])
-
+        print(header)
         header[f'{stlt.upper()} Current ROI'] = header[f'{stlt.upper()} Revenue'] / header['Current Budget']
 
         header_dict = header.to_dict("records")
