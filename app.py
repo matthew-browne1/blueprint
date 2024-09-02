@@ -1,6 +1,8 @@
 # %% --------------------------------------------------------------------------
 #
 # -----------------------------------------------------------------------------
+import eventlet
+eventlet.monkey_patch()
 from flask import Flask, render_template, send_file, jsonify, request, url_for, redirect, flash, session, current_app
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_talisman import Talisman
@@ -23,11 +25,22 @@ from flask_session import Session
 import msal
 from functools import wraps
 from queue import Queue
-from opt_threads import CustomThread
 import pickle
 import traceback
+from threading import Thread
 
-#from azure import identity
+class CustomThread(Thread):
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs={}, Verbose=None):
+        Thread.__init__(self, group, target, name, args, kwargs)
+        self._return = None
+
+    def run(self):
+        if self._target is not None:
+            self._return = self._target(*self._args, **self._kwargs)
+       
+    def join(self):
+        Thread.join(self)
+        return self._return
 
 app = Flask(__name__)
 socketio = SocketIO(app=app, manage_session=False, async_mode='eventlet')
@@ -517,7 +530,7 @@ def run_optimise(dataDict):
             app.logger.info("opt complete, hiding overlay")
             app.logger.info(session['output_df_per_result'].keys())
             app.logger.info(session['results'].keys())
-            
+    
     except Exception as e:
         error_str = traceback.format_exc()
         app.logger.info(f"error adding optimisation job to the queue: {str(e)}")
