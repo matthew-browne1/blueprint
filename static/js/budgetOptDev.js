@@ -1026,7 +1026,6 @@ function editButtonTabs(tabID) {
     }
     syncTabNames();
   });
-
   
 }
 

@@ -561,7 +561,7 @@ def results_output():
     output['Year'] = output['Date'].dt.year
     nns_mc = pd.read_excel('ROIs and factors all regions inc. KSA.xlsx', sheet_name='factors')
     merged_output = pd.merge(output, nns_mc, on=['Country','Brand','Year'], how='left')
-    merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
+    merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC']) * merged_output['Volume Scale-up factor (yearly)']
     merged_output.to_csv('merged_output.csv')
     try:
         #merged_output.to_sql('Optimised CSV', engine, if_exists='replace', index=False)
