@@ -30,7 +30,7 @@ import traceback
 #from azure import identity
 
 app = Flask(__name__)
-socketio = SocketIO(app=app)
+socketio = SocketIO(app=app, ping_interval=600, ping_timeout=720)
 
 csp = {
     'default-src': [
@@ -969,10 +969,12 @@ def send_scenario_names():
     print("reaching send scenario name function")
     scenario_names = request.json.get("tabNames")
     print(scenario_names)
-    for key, value in scenario_names.items():
-        output_df_per_result[key].loc[output_df_per_result[key]['Scenario'].str[-14:] == " (Unoptimised)", 'Scenario'] = f"{value} (Unoptimised)"
-        output_df_per_result[key].loc[output_df_per_result[key]['Scenario'].str[-14:] != " (Unoptimised)", 'Scenario'] = f"{value}"
-        
+    try:
+        for key, value in scenario_names.items():
+            output_df_per_result[key].loc[output_df_per_result[key]['Scenario'].str[-14:] == " (Unoptimised)", 'Scenario'] = f"{value} (Unoptimised)"
+            output_df_per_result[key].loc[output_df_per_result[key]['Scenario'].str[-14:] != " (Unoptimised)", 'Scenario'] = f"{value}"
+    except Exception as e:
+        print(f"renaming scenario names failed with exception: {e}")
     return jsonify({'success': True, 'message': 'Scenario names updated in results output'})
 
 

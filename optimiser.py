@@ -59,7 +59,7 @@ class Optimise:
                 (nns_mc['Country'] == country) & 
                 (nns_mc['Brand'] == brand)
             ]
-
+            
             # Merge the DataFrames on 'Year'
             merged_df = pd.merge(indexed_revs_with_date_df, filtered_nns_mc, on='Year')
 

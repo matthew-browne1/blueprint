@@ -974,7 +974,14 @@ function showResultsButton() {
 
 }
 
-var tabSocket = io.connect(window.location.origin);
+var tabSocket = io.connect(window.location.origin, {
+  reconnection: true, // Enable automatic reconnection
+  reconnectionAttempts: Infinity, // Keep trying to reconnect indefinitely
+  reconnectionDelay: 1000, // Initial delay between reconnection attempts
+  reconnectionDelayMax: 5000, // Maximum delay between reconnection attempts
+  pingInterval: 600000, // Frequency of sending ping messages
+  pingTimeout: 720000, // Time to wait for a pong response before considering the connection closed
+});
 
 tabSocket.on("connect", function () {
   console.log("connected to server");
