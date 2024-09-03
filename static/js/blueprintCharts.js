@@ -426,9 +426,18 @@ function generateChartsA(data, metric) {
     },
     plugins: {
       datalabels: {
+        font: {
+          family: "Carmen Sans Light",
+          size: 14,
+          weight: "bold",
+        },
         color: "black",
-        anchor: "end",
-        align: "top",
+        borderWidth: 1,
+        borderRadius: 8,
+        backgroundColor: "rgba(255, 255, 255, 0.3)",
+        anchor: "center",
+        align: "center",
+        color: "black",
         offset: 4,
         formatter: (value, context) => {
           var metric = selectedMetric();
@@ -460,16 +469,6 @@ function generateChartsA(data, metric) {
 
             return formattedValue;
           }
-        },
-        labels: {
-          title: {
-            font: {
-              weight: "bold",
-            },
-          },
-          value: {
-            color: "black",
-          },
         },
       },
       legend: {
@@ -586,9 +585,18 @@ function generateChartsA(data, metric) {
     },
     plugins: {
       datalabels: {
+        font: {
+          family: "Carmen Sans Light",
+          size: 14,
+          weight: "bold",
+        },
         color: "black",
+        borderWidth: 1,
+        borderRadius: 8,
+
+        backgroundColor: "rgba(255, 255, 255, 0.3)",
         anchor: "center",
-        align: "top",
+        align: "center",
         offset: 4,
         formatter: (value, context) => {
           metric = selectedMetric();
@@ -803,9 +811,18 @@ function generateChartsA(data, metric) {
     },
     plugins: {
       datalabels: {
+        font: {
+          family: "Carmen Sans Light",
+          size: 14,
+          weight: "bold",
+        },
         color: "black",
+        borderWidth: 1,
+        borderRadius: 8,
+        backgroundColor: "rgba(255, 255, 255, 0.3)",
         anchor: "center",
-        align: "top",
+        align: "center",
+        color: "black",
         offset: 4,
         formatter: (value, context) => {
           const formattedValue =

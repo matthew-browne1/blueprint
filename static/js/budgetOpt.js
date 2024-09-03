@@ -1,10 +1,8 @@
 // Base Page - Settings popup and light/dark features
 var settingsmenu = document.querySelector(".settings-menu");
 
-
 function settingsMenuToggle() {
   settingsmenu.classList.toggle("settings-menu-height");
-
 }
 
 var tabNames = { 1: "Scenario 1" };
@@ -36,10 +34,13 @@ $(document).ready(function () {
       }
     }
   };
-
 });
 
-var socket = io.connect(window.location.origin);
+var socket = io.connect(window.location.origin, {
+  pingInterval: 600000,
+  pingTimeout: 720000,
+});
+
 socket.on("connect", function () {
   console.log("connected to server");
 });
@@ -77,7 +78,6 @@ function syncTabCounter() {
     },
   });
 }
-
 
 function getNumberOfVars(callback) {
   $.ajax({
@@ -155,6 +155,15 @@ function syncTabNames() {
       }
     },
   });
+  $.ajax({
+    url: "/send_scenario_names",
+    method: "POST",
+    contentType: "application/json",
+    data: JSON.stringify({ tabNames: tabNames }),
+    success: function (response) {
+      console.log("response from backend:", response);
+    },
+  });
 }
 
 // ANY EDITS MADE TO THIS FUNCTION, REMEMBER TO ALSO CHANGE THEM IN THE IDENTICAL FUNCTION IN SAVEUI.JS
@@ -209,7 +218,6 @@ function getDisabledRowIds(tableID) {
 
   return disabledRowIds;
 }
-
 
 $(document).on("change", ".checkbox.main", function () {
   if ($(this).is(":checked")) {
@@ -268,23 +276,19 @@ function openNewTab() {
     newTab = window.open("/blueprint_results", "_blank");
   }, 500);
   if (newTab) {
-    window.addEventListener('message', function(event) {
-      if (event.data == 'newTabLoaded') {
-
-        loadingSpinner.style.display =
-          "none";
+    window.addEventListener("message", function (event) {
+      if (event.data == "newTabLoaded") {
+        loadingSpinner.style.display = "none";
       }
     });
   }
-    const checkTabClosed = setInterval(() => {
-      if (newTab.closed) {
-        clearInterval(checkTabClosed);
-        // Hide the spinner if the tab is closed before sending the message
-        loadingSpinner.style.display = "none";
-
-      }
-    }, 1000);
-
+  const checkTabClosed = setInterval(() => {
+    if (newTab.closed) {
+      clearInterval(checkTabClosed);
+      // Hide the spinner if the tab is closed before sending the message
+      loadingSpinner.style.display = "none";
+    }
+  }, 1000);
 }
 
 $("#results-div").on("click", "#results-button", function () {
@@ -293,25 +297,23 @@ $("#results-div").on("click", "#results-button", function () {
   loadingSpinner.style.display = "inline-block";
   resultsButton.html("Please Wait...");
   setTimeout(() => {
-      $.ajax({
-    type: "POST",
-    url: "/results_output",
-    contentType: "application/json",
-    data: JSON.stringify(tabNames),
-    success: function (response) {
-      openNewTab();
-      setTimeout(() => {
-        loadingSpinner.style.display = "none";
-        resultsButton.html("Show Results");
-      }, 1000);
-      
-    },
-    error: function (error) {
-      console.error("Error triggering function:", error);
-    },
-  });
+    $.ajax({
+      type: "POST",
+      url: "/results_output",
+      contentType: "application/json",
+      data: JSON.stringify(tabNames),
+      success: function (response) {
+        openNewTab();
+        setTimeout(() => {
+          loadingSpinner.style.display = "none";
+          resultsButton.html("Show Results");
+        }, 1000);
+      },
+      error: function (error) {
+        console.error("Error triggering function:", error);
+      },
+    });
   }, 500);
-
 });
 
 function fetchTabName(setID) {
@@ -359,7 +361,6 @@ function optAll() {
             tabName: tabName,
           };
 
-
           var startDate = $("#start-date" + tableId).val();
           var endDate = $("#end-date" + tableId).val();
           var dateTuple = [startDate, endDate];
@@ -373,14 +374,14 @@ function optAll() {
               $("#warningPopup").show();
               $("#continueWarning").click(function () {
                 $("#warningPopup").hide();
-  
+
                 optAllArray.forEach(function (data) {
                   socket.emit("optimise", data);
                 });
               });
               $("#cancelWarning").click(function () {
                 $("#warningPopup").hide();
-  
+
                 tableIds.forEach(function (tableId) {
                   hideLoadingOverlay(tableId);
                 });
@@ -392,7 +393,6 @@ function optAll() {
             }
           });
         });
-
       }
     },
   });
@@ -439,9 +439,9 @@ function dropdownButtons(dropdownId) {
       .parents("#dd-exh" + dropdownId)
       .find("input")
       .attr("value", $(this).attr("id"));
-      $(this)
-        .parents("#dd-exh" + dropdownId)
-        .addClass("selected");
+    $(this)
+      .parents("#dd-exh" + dropdownId)
+      .addClass("selected");
   });
   $("#dd-blend" + dropdownId).click(function () {
     $(this).attr("tabindex", 1).focus();
@@ -461,19 +461,19 @@ function dropdownButtons(dropdownId) {
       .parents("#dd-blend" + dropdownId)
       .find("input")
       .attr("value", $(this).attr("id"));
-      $(this)
-        .parents("#dd-blend" + dropdownId)
-        .addClass("selected");
+    $(this)
+      .parents("#dd-blend" + dropdownId)
+      .addClass("selected");
   });
 }
 
 function spawnNewTabAndIncrementCounter() {
   tabCounter++; // Increment tabCounter
   spawnNewTab(tabCounter); // Invoke spawnNewTab function
-    window.scrollTo({
-      top: document.body.scrollHeight,
-      behavior: "smooth",
-    });
+  window.scrollTo({
+    top: document.body.scrollHeight,
+    behavior: "smooth",
+  });
 }
 
 function spawnNewTab(tabCounter) {
@@ -649,12 +649,12 @@ function initializeDataTable(tableID) {
           },
           {
             data: "Max Spend Cap",
+
             render: function (data, type, row) {
               return $.fn.DataTable.render.number(",", ".", 0).display(data);
             },
-            editable: true
+            editable: true,
           },
-
         ],
         autoWidth: false,
         columnDefs: [
@@ -684,10 +684,10 @@ function initializeDataTable(tableID) {
           $(row).addClass("disabled");
         },
         rowCallback: function (row, data) {
-          if (data['Current Budget'] === 0) {
+          if (data["Current Budget"] === 0) {
             $(row).addClass("highlight-grey");
           }
-        }
+        },
       });
 
       var channelEditorTab = new $.fn.dataTable.Editor({
@@ -866,7 +866,7 @@ function initializeDataTable(tableID) {
 
         console.log(dataToSend);
 
-        getNumberOfVars(function(numVars) {
+        getNumberOfVars(function (numVars) {
           var numSelectedVars = numVars - disabledRowIds.length;
           if (numSelectedVars > 20) {
             $("#warningPopup").show();
@@ -889,36 +889,32 @@ function initializeDataTable(tableID) {
         });
       });
 
-        $("#refresh-btn" + tableID).on("click", function () {
-          var dateArray = dateOptions(tableID);
-          const [startDate, endDate] = dateArray;
-          console.log(startDate);
-          $.ajax({
-            url: "/refresh_table",
-            method: "POST",
-            contentType: "application/json",
-            data: JSON.stringify({
-              tableID: tableID,
-              startDate: startDate,
-              endDate: endDate,
-            }),
-            success: function (data) {
-              tabChannelTable.clear();
-              tabChannelTable.rows.add(data);
-              tabChannelTable.draw();
-             
-            },
-          });
+      $("#refresh-btn" + tableID).on("click", function () {
+        var dateArray = dateOptions(tableID);
+        const [startDate, endDate] = dateArray;
+        console.log(startDate);
+        $.ajax({
+          url: "/refresh_table",
+          method: "POST",
+          contentType: "application/json",
+          data: JSON.stringify({
+            tableID: tableID,
+            startDate: startDate,
+            endDate: endDate,
+          }),
+          success: function (data) {
+            tabChannelTable.clear();
+            tabChannelTable.rows.add(data);
+            tabChannelTable.draw();
+          },
         });
-
+      });
     },
     error: function (error) {
       console.error("Error creating copy of data:", error);
     },
   });
-
 }
-
 
 function showLoadingOverlay(tableID) {
   document.getElementById("loading-overlay" + tableID).style.display = "block";
@@ -932,11 +928,13 @@ function showResultsButton() {
   var div = document.getElementById("results-div");
   var existingButton = document.getElementById("results-button");
 
-  existingButton.style.display = 'flex';
-
+  existingButton.style.display = "flex";
 }
 
-var tabSocket = io.connect(window.location.origin);
+var tabSocket = io.connect(window.location.origin, {
+  pingInterval: 600000,
+  pingTimeout: 720000,
+});
 
 tabSocket.on("connect", function () {
   console.log("connected to server");
@@ -986,9 +984,8 @@ function editButtonTabs(tabID) {
       tabNames[tabID] = newText;
       console.log(tabNames);
     }
+    syncTabNames();
   });
-
-  syncTabNames();
 }
 
 function openLoadPopup() {
@@ -1439,7 +1436,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
     initializeCollapsibleButtons(tabCounter);
     closeButtonTab(tabCounter);
     editButtonTabs(tabCounter);
-    // method to edit 
+    // method to edit
     $("#date-filter-button" + tabCounter).on("click", function () {
       var isChecked = $(this).prop("checked");
       var dateContainers = $(".date-inputs" + tabCounter);
@@ -1581,7 +1578,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
 
         tabChannelTable.on(
           "click",
-          "tbody td:nth-child(7), tbody td:nth-child(6)",
+          "tbody td:nth-child(7), tbody td:nth-child(8)",
           function (e) {
             channelEditorTab.inline(this);
           }
@@ -1736,7 +1733,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
             } else {
               socket.emit("optimise", { dataToSend: dataToSend });
             }
-        });
+          });
         });
       },
       error: function (error) {
@@ -1744,7 +1741,6 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
       },
     });
 
-   
     var buttonName = document.getElementById("col-btn" + tabCounter);
     tabNames[tabCounter] = buttonName.textContent;
   });

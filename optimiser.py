@@ -1,4 +1,3 @@
-
 import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
@@ -31,7 +30,7 @@ class Optimise:
         # print(sum(pct_laydown))
 
         pam = pct_laydown * allocation
-       
+        
         carryover_list = Optimise.adstock(pam, carryover_dict[stream])
 
         rev_list = Optimise.dim_returns(alpha_dict[stream], beta_dict[stream], carryover_list)
@@ -42,17 +41,33 @@ class Optimise:
         # print(f"length of date list is: {len(date_list)}")
         
         if vol:
-            #print("vol detected")
-            indexed_revs_with_date = dict(zip(date_list, indexed_vals))
-            output_vol_list = []
+            # Convert date_list and indexed_vals to a DataFrame
+            indexed_revs_with_date_df = pd.DataFrame({
+                'Date': date_list,
+                'Indexed_Revenue': indexed_vals
+            })
+            
+            # Add a 'Year' column to the DataFrame
+            indexed_revs_with_date_df['Year'] = pd.to_datetime(indexed_revs_with_date_df['Date']).dt.year
+            
+            try:
+                stream_name, country, brand = stream.split("_")
+            except Exception as e:
+                print(e)
+            
+            filtered_nns_mc = nns_mc[
+                (nns_mc['Country'] == country) & 
+                (nns_mc['Brand'] == brand)
+            ]
 
-            for index, row in nns_mc.iterrows():
-                if str(row['Country']) in str(stream) and str(row['Brand']) in str(stream):
-                    for key, value in indexed_revs_with_date.items():
-                        if int(row['Year']) == int(pd.to_datetime(key).year):
-                            output_vol_list.append(value/(row['NNS']*row['MC']))
-                            
-            total_rev = np.sum(output_vol_list)
+            # Merge the DataFrames on 'Year'
+            merged_df = pd.merge(indexed_revs_with_date_df, filtered_nns_mc, on='Year')
+
+            # Calculate the volume using vectorized operations
+            merged_df['Volume'] = merged_df['Indexed_Revenue'] / (merged_df['NNS'] * merged_df['MC']) * merged_df['Volume Scale-up factor (yearly)']
+
+            # Sum the volumes to get the total revenue
+            total_rev = merged_df['Volume'].sum()
 
             return total_rev
 
@@ -178,9 +193,15 @@ class Optimise:
         return indexed_vals
 
     def blended_profit_max_scipy(ST_input, LT_input, laydown, seas_index, nns_mc, return_type, objective_type, max_budget,
-                             exh_budget, method, scenario_name, step=0.1, tolerance=0.1,
+                             exh_budget, method, scenario_name, step=1*10**-5, tolerance=1*10**-5,
                              num_weeks=1000):
         print(type(ST_input))
+        
+        if objective_type == "roi":
+            print("objective type is roi")
+            step = 1*10**-25
+            tolerance = 1*10**-25
+        
         streams = [entry['Opt Channel'] for entry in ST_input]
 
         current_budget_list = [entry['Current Budget'] for entry in ST_input]
@@ -414,7 +435,7 @@ class Beta:
             header.loc[header['Opt Channel'] == stream, 'Current Budget'] = sum(laydown[stream])
 
             header.loc[header['Opt Channel'] == stream, f'{stlt.upper()} Revenue'] = sum(inc_rev[stream])
-
+        print(header)
         header[f'{stlt.upper()} Current ROI'] = header[f'{stlt.upper()} Revenue'] / header['Current Budget']
 
         header_dict = header.to_dict("records")
@@ -491,6 +512,3 @@ class Beta:
         return header_copy
 
         
-
-        
-

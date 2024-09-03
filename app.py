@@ -1,6 +1,8 @@
 # %% --------------------------------------------------------------------------
 #
 # -----------------------------------------------------------------------------
+import eventlet
+eventlet.monkey_patch()
 from flask import Flask, render_template, send_file, jsonify, request, url_for, redirect, flash, session, current_app
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_talisman import Talisman
@@ -23,14 +25,25 @@ from flask_session import Session
 import msal
 from functools import wraps
 from queue import Queue
-from opt_threads import CustomThread
 import pickle
 import traceback
+from threading import Thread
 
-#from azure import identity
+class CustomThread(Thread):
+    def __init__(self, group=None, target=None, name=None, args=(), kwargs={}, Verbose=None):
+        Thread.__init__(self, group, target, name, args, kwargs)
+        self._return = None
+
+    def run(self):
+        if self._target is not None:
+            self._return = self._target(*self._args, **self._kwargs)
+       
+    def join(self):
+        Thread.join(self)
+        return self._return
 
 app = Flask(__name__)
-socketio = SocketIO(app=app, manage_session=False, async_mode='eventlet')
+socketio = SocketIO(app=app, ping_interval=600, ping_timeout=720, manage_session=False, async_mode='eventlet')
 
 #, async_mode='eventlet'
 
@@ -515,9 +528,10 @@ def run_optimise(dataDict):
             app.logger.info(f"keys currently present in {session['user']['oid']}'s output_df_per_result session object: {session['output_df_per_result'].keys()}")
             session.modified = True
             app.logger.info("opt complete, hiding overlay")
+            socketio.emit('opt_complete', {'data': table_id})
             app.logger.info(session['output_df_per_result'].keys())
             app.logger.info(session['results'].keys())
-            
+    
     except Exception as e:
         error_str = traceback.format_exc()
         app.logger.info(f"error adding optimisation job to the queue: {str(e)}")
@@ -545,7 +559,7 @@ def run_optimise_task(session_id):
                     result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, nns_mc=nns_copy, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name)
                     app.logger.info(f"Task completed: {result} in {time_elapsed} time")
                     
-                    socketio.emit('opt_complete', {'data': table_id})
+                    
                     queue.task_done()
                     return result, output_df
 
@@ -586,7 +600,7 @@ def results_output():
         nns_mc_copy = deepcopy(nns_mc)
         merged_output = pd.merge(output, nns_mc_copy, on=['Country','Brand','Year'], how='left')
         merged_output.fillna(1, inplace=True)
-        merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC'])
+        merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC']) * merged_output['Volume Scale-up factor (yearly)']
     
         try:
             merged_output.to_sql(f'Blueprint_results_{session["user"]["oid"]}', engine, if_exists='replace', index=False)
@@ -1009,6 +1023,18 @@ def get_session_id():
 def get_table_ids():
     table_ids = list(session['table_data'].keys())
     return jsonify({"success": True, "tableIds": table_ids})
+
+
+@app.route("/send_scenario_names", methods=['POST'])
+def send_scenario_names():
+    print("reaching send scenario name function")
+    scenario_names = request.json.get("tabNames")
+    print(scenario_names)
+    for key, value in scenario_names.items():
+        session['output_df_per_result'][key].loc[session['output_df_per_result'][key]['Scenario'].str[-14:] == " (Unoptimised)", 'Scenario'] = f"{value} (Unoptimised)"
+        session['output_df_per_result'][key].loc[session['output_df_per_result'][key]['Scenario'].str[-14:] != " (Unoptimised)", 'Scenario'] = f"{value}"
+        
+    return jsonify({'success': True, 'message': 'Scenario names updated in results output'})
 
 
 @app.route('/table_ids_sync', methods=['POST'])
