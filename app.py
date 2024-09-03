@@ -43,7 +43,7 @@ class CustomThread(Thread):
         return self._return
 
 app = Flask(__name__)
-socketio = SocketIO(app=app, manage_session=False, async_mode='eventlet')
+socketio = SocketIO(app=app, ping_interval=600, ping_timeout=720, manage_session=False, async_mode='eventlet')
 
 #, async_mode='eventlet'
 

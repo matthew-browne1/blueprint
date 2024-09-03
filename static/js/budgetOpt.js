@@ -39,7 +39,11 @@ $(document).ready(function () {
 
 });
 
-var socket = io.connect(window.location.origin);
+var socket = io.connect(window.location.origin, {
+  pingInterval: 600000,
+  pingTimeout: 720000
+});
+
 socket.on("connect", function () {
   console.log("connected to server");
 });
@@ -947,7 +951,10 @@ function showResultsButton() {
 
 }
 
-var tabSocket = io.connect(window.location.origin);
+var tabSocket = io.connect(window.location.origin, {
+  pingInterval: 600000,
+  pingTimeout: 720000
+});
 
 tabSocket.on("connect", function () {
   console.log("connected to server");
