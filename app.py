@@ -480,6 +480,8 @@ def run_optimise(dataDict):
         for col in current_table_df.columns:
             header_copy[col] = current_table_df[col]
 
+        header_copy.loc[header_copy['Max Spend Cap'] < header_copy['Min Spend Cap'], 'Max Spend Cap'] = header_copy['Min Spend Cap']
+
         header_copy = header_copy[~(header_copy['Opt Channel'].isin(disabled_opt_channels))]
 
         laydown_copy = laydown_copy.drop(columns=disabled_opt_channels, errors='ignore')
@@ -621,11 +623,10 @@ def create_output(output_df_per_result):
 
 
 @socketio.on("collect_data")
-def chart_data(data):
+def chart_data():
     session_id = session.get('session_id')
     join_room(session_id)
     session['chart_data'] = []
-    metric = data['metric']
 
     try:
         conn = engine.connect()
@@ -658,7 +659,7 @@ def chart_data(data):
         socketio.emit('dropdown_options', {'options': dropdown_options})
         app.logger.info("Dropdown options sent")
 
-        socketio.emit('chart_data', {'chartData': session['chart_data'], 'metric':metric, 'sessionID':session_id})
+        socketio.emit('chart_data', {'chartData': session['chart_data'], 'sessionID':session_id})
         app.logger.info("chart_data sent")
 
     except SQLAlchemyError as e:
@@ -674,9 +675,9 @@ def handle_apply_filter(data):
     join_room(session_id)
     try:
         filters = data['filters']
-        metric = data['metric']
+   
         app.logger.info(filters)
-        app.logger.info(metric)
+    
         if "Budget/Revenue" in filters and filters["Budget/Revenue"]:
             if "Budget" not in filters["Budget/Revenue"]:
                 filters["Budget/Revenue"].append("Budget")
@@ -684,12 +685,12 @@ def handle_apply_filter(data):
             filters["Budget/Revenue"] = []
 
         app.logger.info('Received filter data:', filters)
-        apply_filters(filters, metric)
+        apply_filters(filters)
     except KeyError:
         app.logger.info("KeyError: 'Budget/Revenue' not found in filter_data")
     
 
-def apply_filters(filters, metric):
+def apply_filters(filters):
     session_id = session.get('session_id')
     try:
         session['filtered_data'] = []
@@ -706,26 +707,12 @@ def apply_filters(filters, metric):
             if include_data_point:
                 session['filtered_data'].append(data_point)
         session.modified = True
-        socketio.emit('filtered_data', {'filtered_data': session['filtered_data'], 'metric':metric, 'sessionID':session_id})
+        socketio.emit('filtered_data', {'filtered_data': session['filtered_data'], 'sessionID':session_id})
         app.logger.info("Filtered chart data sent")
         app.logger.info("Filtered data length:", len(session['filtered_data']))
 
     except Exception as e:
         app.logger.info('Error applying filter:', str(e))
-
-@socketio.on("volval")
-def volval_swap(data):
-    session_id = session.get('session_id')
-    join_room(session_id)
-    metric = str(data['metric'])
-
-    try:
-        socketio.emit('filtered_data', {'filtered_data': session['filtered_data'], 'metric':metric})
-        app.logger.info(metric)
-    except Exception as e:
-        app.logger.info(e)
-        app.logger.info(metric)
-        socketio.emit('chart_data', {'chartData': session['chart_data'], 'metric':metric})
 
 
 @socketio.on("response_data")

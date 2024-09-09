@@ -76,7 +76,7 @@
                 </div>
 
             </div>
-            <div class="volval-parent">
+            <!-- <div class="volval-parent">
                 <div class="volval-container">
                     <div class="volval-radio-buttons">
                         <div class="volval1-cont">
@@ -89,7 +89,7 @@
                         </div>
                     </div>
                 </div>
-            </div>
+            </div> -->
         </div>
     </div>
     <div class="chart-container">
@@ -119,6 +119,10 @@
                     ROI by Scenario
                     <canvas id="roi_scenario_chart" height="400px"></canvas>
                 </div>
+                <div class="chart-content" id="volume_scenario">
+                    Volume (Kg) by Scenario
+                    <canvas id="vol_scenario_chart" height="400px"></canvas>
+                </div>
             </section>
             <section id="channel">
                 <h2>Channel Charts</h2>
@@ -134,12 +138,20 @@
                     ROI by Channel
                     <canvas id="roi_channel_chart" height="400px"></canvas>
                 </div>
+                <div class="chart-content" id="vol_channel">
+                    Volume (Kg) by Channel
+                    <canvas id="volume_channel_chart" height="400px"></canvas>
+                </div>
             </section>
             <section id="laydown">
                 <h2>Laydown Charts</h2>
                 <div class="chart-content" id="laydown_scenario">
-                    Laydown by Scenario
+                    Laydown (CHF) by Scenario
                     <canvas id="laydown_scenario_chart" height="400px"></canvas>
+                </div>
+                <div class="chart-content" id="laydownVol_scenario">
+                    Laydown (Kg) by Scenario
+                    <canvas id="laydownVol_scenario_chart" height="400px"></canvas>
                 </div>
                 <div class="chart-content" id="laydown_channel">
                     Laydown by Channel Group
