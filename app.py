@@ -29,6 +29,7 @@ import pickle
 import traceback
 #from azure import identity
 
+
 app = Flask(__name__)
 socketio = SocketIO(app=app, ping_interval=600, ping_timeout=720)
 
@@ -476,6 +477,7 @@ def run_optimise(dataDict):
 
         current_table_df = pd.DataFrame.from_records(deepcopy(table_data[table_id]))
         removed_rows_df = current_table_df[current_table_df.row_id.isin(disabled_rows)].copy()
+        
         removed_rows_df['Opt Channel'] = removed_rows_df.apply(
             lambda row: '_'.join([str(row['Channel']), str(row['Country']), str(row['Brand'])]), axis=1)
 
@@ -483,6 +485,8 @@ def run_optimise(dataDict):
 
         for col in current_table_df.columns:
             header_copy[col] = current_table_df[col]
+            
+        header_copy.loc[header_copy['Max Spend Cap'] < header_copy['Min Spend Cap'], 'Max Spend Cap'] = header_copy['Min Spend Cap']
 
         header_copy = header_copy[~(header_copy['Opt Channel'].isin(disabled_opt_channels))]
 
@@ -584,10 +588,10 @@ def rename_scenario():
     data = request.json.get("scenarioName")
 
 @socketio.on("collect_data")
-def chart_data(data):
+def chart_data():
     global chart_data
-    metric = data['metric']
-    print(f"metric within chart_data method is {metric}")
+    
+
     try:
         #conn = engine.connect()
         #query = text('SELECT * FROM "Optimised CSV";')
@@ -622,7 +626,7 @@ def chart_data(data):
         socketio.emit('dropdown_options', {'options': dropdown_options})
         print("Dropdown options sent")
 
-        socketio.emit('chart_data', {'chartData': chart_data, 'metric':metric})
+        socketio.emit('chart_data', {'chartData': chart_data})
         print("chart_data sent")
 
     except SQLAlchemyError as e:
@@ -636,9 +640,7 @@ def chart_data(data):
 def handle_apply_filter(data):
     try:
         filters = data['filters']
-        metric = data['metric']
         print(filters)
-        print(metric)
         if "Budget/Revenue" in filters and filters["Budget/Revenue"]:
             if "Budget" not in filters["Budget/Revenue"]:
                 filters["Budget/Revenue"].append("Budget")
@@ -646,12 +648,12 @@ def handle_apply_filter(data):
             filters["Budget/Revenue"] = []
 
         print('Received filter data:', filters)
-        apply_filters(filters, metric)
+        apply_filters(filters)
     except KeyError:
         print("KeyError: 'Budget/Revenue' not found in filter_data")
         print(data)
 
-def apply_filters(filters, metric):
+def apply_filters(filters):
     try:
         global filtered_data
         filtered_data = []
@@ -668,25 +670,12 @@ def apply_filters(filters, metric):
             if include_data_point:
                 filtered_data.append(data_point)
 
-        socketio.emit('filtered_data', {'filtered_data': filtered_data, 'metric':metric})
+        socketio.emit('filtered_data', {'filtered_data': filtered_data})
         print("Filtered chart data sent")
         print("Filtered data length:", len(filtered_data))
 
     except Exception as e:
         print('Error applying filter:', str(e))
-
-@socketio.on("volval")
-def volval_swap(data):
-    print(chart_data)
-    metric = str(data['metric'])
-
-    try:
-        socketio.emit('filtered_data', {'filtered_data': filtered_data, 'metric':metric})
-        print(metric)
-    except Exception as e:
-        print(e)
-        print(metric)
-        socketio.emit('chart_data', {'chartData': chart_data, 'metric':metric})
 
             
 @socketio.on("response_data")
@@ -1061,7 +1050,7 @@ def table_data_editor():
             for row_id, changes in data['data'].items():
                 row_index = int(row_id) - 1
                 for field, new_value in changes.items():
-                    table_data[table_id][row_index][field] = new_value
+                    table_data[table_id][row_index][field] = float(new_value)
         
         print(table_data[table_id][row_index][field])
         print(table_data[table_id][row_index])

@@ -41,33 +41,34 @@ class Optimise:
         # print(f"length of date list is: {len(date_list)}")
         
         if vol:
-            # Convert date_list and indexed_vals to a DataFrame
-            indexed_revs_with_date_df = pd.DataFrame({
-                'Date': date_list,
-                'Indexed_Revenue': indexed_vals
-            })
+            
+            years = pd.to_datetime(date_list).year
             
             # Add a 'Year' column to the DataFrame
-            indexed_revs_with_date_df['Year'] = pd.to_datetime(indexed_revs_with_date_df['Date']).dt.year
-            
+        
             try:
                 stream_name, country, brand = stream.split("_")
             except Exception as e:
                 print(e)
             
-            filtered_nns_mc = nns_mc[
-                (nns_mc['Country'] == country) & 
-                (nns_mc['Brand'] == brand)
-            ]
+            filtered_nns_mc = nns_mc.query("Country == @country and Brand == @brand").copy()
             
-            # Merge the DataFrames on 'Year'
-            merged_df = pd.merge(indexed_revs_with_date_df, filtered_nns_mc, on='Year')
+            nns_vals = np.zeros(len(years))
+            mc_vals = np.zeros(len(years))
+            scaleup_factors = np.zeros(len(years))
+            
+            nns_mc_dict = filtered_nns_mc.set_index('Year')[['NNS', 'MC', 'Volume Scale-up factor (yearly)']].to_dict('index')
+            
+            for i, year in enumerate(years):
+                if year in nns_mc_dict:
+                    nns_vals[i] = nns_mc_dict[year]['NNS']
+                    mc_vals[i] = nns_mc_dict[year]['MC']
+                    scaleup_factors[i] = nns_mc_dict[year]['Volume Scale-up factor (yearly)']
 
-            # Calculate the volume using vectorized operations
-            merged_df['Volume'] = merged_df['Indexed_Revenue'] / (merged_df['NNS'] * merged_df['MC']) * merged_df['Volume Scale-up factor (yearly)']
+            volumes = np.divide(indexed_vals, (nns_vals * mc_vals), where=(nns_vals * mc_vals != 0)) * scaleup_factors
 
             # Sum the volumes to get the total revenue
-            total_rev = merged_df['Volume'].sum()
+            total_rev = np.sum(volumes)
 
             return total_rev
 
@@ -254,7 +255,7 @@ class Optimise:
         initial_budgets = [current_budget_dict[stream] for stream in streams]
 
         bounds = [(min_spend_cap_dict[stream], max_spend_cap_dict[stream]) for stream in streams]
-
+        
         constraints = []
         if exh_budget:
             constraints.append({'type': 'eq', 'fun': lambda budgets: max_budget - sum(budgets)})
@@ -510,8 +511,4 @@ class Beta:
         header_copy = header.copy()
 
         return header_copy
-
-        
-
-        
 

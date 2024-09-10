@@ -1,11 +1,16 @@
 let budget_scenario_chart = null;
 let revenue_scenario_chart = null;
 let roi_scenario_chart = null;
+let vol_scenario_chart = null;
 let budget_channel_chart = null;
 let revenue_channel_chart = null;
 let roi_channel_chart = null;
+let volume_channel_chart = null;
 let laydown_scenario_chart = null;
+let laydownVol_scenario_chart = null;
 let laydown_channel_chart = null;
+
+
 window.onload = function () {
   console.log("tab loaded");
   window.opener.postMessage("newTabLoaded", "*");
@@ -69,26 +74,26 @@ $(document).ready(function () {
     return { minDate: minDateStr, maxDate: maxDateStr };
   }
 
-  $('input[name="volval"]').change(function () {
-    // Reset all containers
-    $(".volval-cont").css("background-color", "");
-    // Change color of the associated container
-    if ($("#volval1").is(":checked")) {
-      $(".volval1-cont").css("background-color", "#264F73");
-      $("#volval1-label").css("color", "#fff");
-      $(".volval2-cont").css("background-color", "#A0B1C1");
-      $("#volval2-label").css("color", "#fff");
-    } else if ($("#volval2").is(":checked")) {
-      $(".volval2-cont").css("background-color", "#264F73");
-      $("#volval2-label").css("color", "#fff");
-      $(".volval1-cont").css("background-color", "#A0B1C1");
-      $("#volval1-label").css("color", "#fff");
-    }
-  });
+  // $('input[name="volval"]').change(function () {
+  //   // Reset all containers
+  //   $(".volval-cont").css("background-color", "");
+  //   // Change color of the associated container
+  //   if ($("#volval1").is(":checked")) {
+  //     $(".volval1-cont").css("background-color", "#264F73");
+  //     $("#volval1-label").css("color", "#fff");
+  //     $(".volval2-cont").css("background-color", "#A0B1C1");
+  //     $("#volval2-label").css("color", "#fff");
+  //   } else if ($("#volval2").is(":checked")) {
+  //     $(".volval2-cont").css("background-color", "#264F73");
+  //     $("#volval2-label").css("color", "#fff");
+  //     $(".volval1-cont").css("background-color", "#A0B1C1");
+  //     $("#volval1-label").css("color", "#fff");
+  //   }
+  // });
 
   // Function to collect and send filter selections to backend
   function applyFilters() {
-    var currentlySelectedMetric = selectedMetric();
+
     var filters = {
       MonthYear: getDatesInRange(
         $("#charts-before-date").val(),
@@ -105,7 +110,7 @@ $(document).ready(function () {
     console.log("Applying filters:", filters);
     chartsSocket.emit("apply_filter", {
       filters: filters,
-      metric: currentlySelectedMetric,
+
     });
   }
 
@@ -122,24 +127,20 @@ $(document).ready(function () {
     console.log("Connected");
   });
 
-  var currentlySelectedMetric = selectedMetric();
 
-  chartsSocket.emit("collect_data", { metric: currentlySelectedMetric });
-  // chartsSocket.emit("apply_filter", {"metric":currentlySelectedMetric});
+
+  chartsSocket.emit("collect_data");
+
 
   chartsSocket.on("chart_data", function (data) {
     chartData = data.chartData;
-    var metric = selectedMetric();
-    console.log(metric);
     console.log("fetched chart data from back end");
-    generateCharts(metric);
+    generateCharts();
   });
 
   chartsSocket.on("filtered_data", function (data) {
     filteredData = data.filtered_data;
-    var metric = selectedMetric();
-    console.log(metric);
-    generateCharts(metric);
+    generateCharts();
   });
 
   // Apply Filters button click event
@@ -220,18 +221,18 @@ $(document).ready(function () {
   }
 
   // Function to generate charts
-  function generateCharts(metric) {
-    console.log(metric);
+  function generateCharts() {
+    console.log();
     if (filteredData.length > 0) {
-      generateChartsA(filteredData, metric);
-      generateChartsB(filteredData, metric);
-      generateChartsC(filteredData, metric);
-      generateChartsD(filteredData, metric);
+      generateChartsA(filteredData);
+      generateChartsB(filteredData);
+      generateChartsC(filteredData);
+      generateChartsD(filteredData);
     } else {
-      generateChartsA(chartData, metric);
-      generateChartsB(chartData, metric);
-      generateChartsC(chartData, metric);
-      generateChartsD(chartData, metric);
+      generateChartsA(chartData);
+      generateChartsB(chartData);
+      generateChartsC(chartData);
+      generateChartsD(chartData);
     }
   }
 
@@ -252,27 +253,12 @@ $(document).ready(function () {
   const volvalButtons = document.querySelectorAll('input[type="radio"]');
   volvalButtons.forEach((button) => {
     button.addEventListener("change", function () {
-      var metric = selectedMetric();
-      console.log("calling the generateCharts method with metric: " + metric);
-      generateCharts(metric);
+      generateCharts();
     });
   });
 });
 
-function selectedMetric() {
-  const volvalButtons = document.querySelectorAll('input[type="radio"]');
-
-  for (var i = 0; i < volvalButtons.length; i++) {
-    if (volvalButtons[i].checked) {
-      console.log("currently selected metric =" + volvalButtons[i].value);
-      return volvalButtons[i].value;
-    }
-  }
-
-  return null; // Return null if no radio button is checked
-}
-function generateChartsA(data, metric) {
-  console.log("reaching generateChartsA method with metric: " + metric);
+function generateChartsA(data) {
 
   // Process data for scenario charts
   const processedData = data.reduce((acc, entry) => {
@@ -286,16 +272,25 @@ function generateChartsA(data, metric) {
         ST_Revenue: 0,
         LT_ROI: 0,
         ST_ROI: 0,
+        LT_Volume:0,
+        ST_Volume:0,
         ROI: 0,
       };
     }
 
     if (entry["Budget/Revenue"] === "LT Revenue") {
-      acc[key].LT_Revenue += entry[metric];
+      acc[key].LT_Revenue += entry['Value'];
     } else if (entry["Budget/Revenue"] === "ST Revenue") {
-      acc[key].ST_Revenue += entry[metric];
+      acc[key].ST_Revenue += entry['Value'];
     } else {
-      acc[key].Budget += entry[metric];
+      acc[key].Budget += entry['Value'];
+    }
+
+    // Calculate Volumes
+    if (entry["Budget/Revenue"] === "LT Revenue") {
+      acc[key].LT_Volume += entry['Volume'];
+    } else if (entry["Budget/Revenue"] === "ST Revenue") {
+      acc[key].ST_Volume += entry['Volume'];
     }
 
     // Calculate ROIs
@@ -307,6 +302,7 @@ function generateChartsA(data, metric) {
       acc[key].Budget !== 0
         ? (acc[key].ST_Revenue + acc[key].LT_Revenue) / acc[key].Budget
         : 0;
+
 
     return acc;
   }, {});
@@ -321,6 +317,8 @@ function generateChartsA(data, metric) {
   );
   const lt_roiData = Object.values(processedData).map((entry) => entry.LT_ROI);
   const st_roiData = Object.values(processedData).map((entry) => entry.ST_ROI);
+  const lt_volData = Object.values(processedData).map((entry) => entry.LT_Volume);
+  const st_volData = Object.values(processedData).map((entry) => entry.ST_Volume);
   const roiData = Object.values(processedData).map((entry) => entry.Total_ROI);
   // Function to break scenario into 2 lines
   function splitLabel(maxWords) {
@@ -394,9 +392,7 @@ function generateChartsA(data, metric) {
             weight: "bold",
           },
           callback: function (value, index, values) {
-            var metric = selectedMetric();
 
-            if (metric == "Value") {
               if (value < 1000000) {
                 return Math.round(value / 1000).toLocaleString("en-US") + "K";
               } else {
@@ -404,15 +400,7 @@ function generateChartsA(data, metric) {
                   Math.round(value / 1000000).toLocaleString("en-US") + "M"
                 );
               }
-            } else {
-              if (value < 1000000) {
-                return Math.round(value / 1000).toLocaleString("en-US") + "K";
-              } else {
-                return (
-                  Math.round(value / 1000000).toLocaleString("en-US") + "M"
-                );
-              }
-            }
+            
           },
         },
       },
@@ -440,9 +428,7 @@ function generateChartsA(data, metric) {
         color: "black",
         offset: 4,
         formatter: (value, context) => {
-          var metric = selectedMetric();
 
-          if (metric == "Value") {
             const formattedValue =
               value < 1000000
                 ? (Math.round((value / 1000) * 100) / 100).toLocaleString(
@@ -455,20 +441,7 @@ function generateChartsA(data, metric) {
                   ) + "M";
 
             return formattedValue;
-          } else {
-            const formattedValue =
-              value < 1000000
-                ? (Math.round((value / 1000) * 100) / 100).toLocaleString(
-                    "en-US",
-                    { minimumFractionDigits: 1, maximumFractionDigits: 1 }
-                  ) + "K"
-                : (Math.round((value / 1000000) * 100) / 100).toLocaleString(
-                    "en-US",
-                    { minimumFractionDigits: 1, maximumFractionDigits: 1 }
-                  ) + "M";
-
-            return formattedValue;
-          }
+          
         },
       },
       legend: {
@@ -599,12 +572,12 @@ function generateChartsA(data, metric) {
         align: "center",
         offset: 4,
         formatter: (value, context) => {
-          metric = selectedMetric();
+   
           const percentageOfMax = value / maxBarValue;
           if (percentageOfMax < 0.02) {
             return "";
           }
-          if (metric == "Value") {
+
             const formattedValue =
               value < 1000000
                 ? (Math.round((value / 1000) * 100) / 100).toLocaleString(
@@ -617,53 +590,14 @@ function generateChartsA(data, metric) {
                   ) + "M";
 
             return formattedValue;
-          } else {
-            const formattedValue =
-              value < 1000000
-                ? (Math.round((value / 1000) * 100) / 100).toLocaleString(
-                    "en-US",
-                    { minimumFractionDigits: 1, maximumFractionDigits: 1 }
-                  ) + "K"
-                : (Math.round((value / 1000000) * 100) / 100).toLocaleString(
-                    "en-US",
-                    { minimumFractionDigits: 1, maximumFractionDigits: 1 }
-                  ) + "M";
-
-            return formattedValue;
-          }
+          
         },
         total: {
           color: "black",
           anchor: "center",
           align: "center",
           formatter: (context) => {
-            metric = selectedMetric();
-            if (metric == "Value") {
-              const totalValue = st_revData.reduce(
-                (acc, val, index) => acc + val + lt_revData[index],
-                0
-              );
-              const formattedTotalValue =
-                totalValue < 1000000
-                  ? "Total:" +
-                    (
-                      Math.round((totalValue / 1000) * 100) / 100
-                    ).toLocaleString("en-US", {
-                      minimumFractionDigits: 1,
-                      maximumFractionDigits: 1,
-                    }) +
-                    "K"
-                  : "Total:" +
-                    (
-                      Math.round((totalValue / 1000000) * 100) / 100
-                    ).toLocaleString("en-US", {
-                      minimumFractionDigits: 1,
-                      maximumFractionDigits: 1,
-                    }) +
-                    "M";
-
-              return formattedTotalValue;
-            } else {
+       
               const totalValue = st_revData.reduce(
                 (acc, val, index) => acc + val + lt_revData[index],
                 0
@@ -688,7 +622,7 @@ function generateChartsA(data, metric) {
                     "M";
 
               return formattedTotalValue;
-            }
+            
           },
           labels: {
             title: {
@@ -886,8 +820,177 @@ function generateChartsA(data, metric) {
       roi_scenario_chartData.datasets[1].data;
     roi_scenario_chart.update();
   }
+
+  // 4. Volume by Scenario Chart
+  // 4a. data block
+  const vol_scenario_chartData = {
+    labels: scenario_labels.map(splitLabel(3)),
+    datasets: [
+      {
+        label: "ST Volume",
+        data: st_volData,
+        backgroundColor: "#D69982",
+        stack: "Stack 0",
+        borderRadius: 15,
+      },
+      {
+        label: "LT Volume",
+        data: lt_volData,
+        backgroundColor: "#D1C7C5",
+        stack: "Stack 0",
+        borderRadius: 15,
+      },
+    ],
+  };
+  // 4b. config block
+  const vol_scenario_chartOptions = {
+    scales: {
+      x: {
+        stacked: true,
+        title: {
+          display: true,
+          text: "Scenario",
+          font: {
+            family: "arial",
+            weight: "bold",
+            size: "16",
+          },
+        },
+        ticks: {
+          font: {
+            family: "Arial",
+            size: "12",
+            weight: "bold",
+          },
+        },
+        grid: {
+          display: false,
+        },
+        autoSkip: false,
+      },
+      y: {
+        stacked: true,
+        title: {
+          display: true,
+          text: "Volume (Kg)",
+          font: {
+            family: "arial",
+            weight: "bold",
+            size: "16",
+          },
+        },
+        ticks: {
+          font: {
+            family: "Arial",
+            size: "12",
+            weight: "bold",
+          },
+          callback: function (value, index, values) {
+            if (value < 1000000) {
+              return Math.round(value / 1000).toLocaleString("en-US") + "K";
+            } else {
+              return Math.round(value / 1000000).toLocaleString("en-US") + "M";
+            }
+          },
+        },
+      },
+    },
+    responsive: true,
+    maintainAspectRatio: true,
+    layout: {
+      padding: {
+        top: 25,
+      },
+    },
+    plugins: {
+      datalabels: {
+        font: {
+          family: "Carmen Sans Light",
+          size: 14,
+          weight: "bold",
+        },
+        color: "black",
+        borderWidth: 1,
+        borderRadius: 8,
+        backgroundColor: "rgba(255, 255, 255, 0.3)",
+        anchor: "center",
+        align: "center",
+        color: "black",
+        offset: 4,
+        formatter: (value, context) => {
+          const formattedValue =
+            value < 1000000
+              ? (Math.round((value / 1000) * 100) / 100).toLocaleString(
+                  "en-US",
+                  { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+                ) + "K"
+              : (Math.round((value / 1000000) * 100) / 100).toLocaleString(
+                  "en-US",
+                  { minimumFractionDigits: 1, maximumFractionDigits: 1 }
+                ) + "M";
+
+          return formattedValue;
+        },
+        total: {
+          color: "black",
+          anchor: "center",
+          align: "center",
+          formatter: (context) => {
+            const totalValue = roiData;
+            const formattedValue =
+              totalValue !== null && totalValue !== undefined
+                ? Number(totalValue).toFixed(2)
+                : "";
+
+            return formattedValue;
+          },
+        },
+        labels: {
+          title: {
+            font: {
+              weight: "bold",
+            },
+          },
+          value: {
+            color: "black",
+          },
+        },
+      },
+      tooltip: {
+        callbacks: {
+          title: (context) => {
+            return context[0].label.replaceAll(",", " ");
+          },
+        },
+      },
+    },
+    animation: true,
+  };
+  // 4c. render block
+  if (vol_scenario_chart === null) {
+    vol_scenario_chart = new Chart(
+      document.getElementById("vol_scenario_chart"),
+      {
+        type: "bar",
+        data: vol_scenario_chartData,
+        plugins: [ChartDataLabels],
+        options: vol_scenario_chartOptions,
+      }
+    );
+  } else {
+    vol_scenario_chart.data.labels = vol_scenario_chartData.labels;
+    vol_scenario_chart.data.datasets[0].data =
+      vol_scenario_chartData.datasets[0].data;
+    vol_scenario_chart.data.datasets[1].data =
+      vol_scenario_chartData.datasets[1].data;
+    vol_scenario_chart.update();
+  }
 }
-function generateChartsB(data, metric) {
+
+
+// Channel charts
+
+function generateChartsB(data) {
   console.log("reaching generateChartsB method");
   // Process data for channel charts
   const processedDataPerChannel = data.reduce((acc, entry) => {
@@ -905,15 +1008,23 @@ function generateChartsB(data, metric) {
         ST_Revenue: 0,
         LT_ROI: 0,
         ST_ROI: 0,
+        LT_Volume: 0,
+        ST_Volume: 0,
         Total_ROI: 0,
       };
     }
     if (entry["Budget/Revenue"] === "LT Revenue") {
-      acc[scenarioKey].Channels[channelKey].LT_Revenue += entry[metric];
+      acc[scenarioKey].Channels[channelKey].LT_Revenue += entry['Value'];
     } else if (entry["Budget/Revenue"] === "ST Revenue") {
-      acc[scenarioKey].Channels[channelKey].ST_Revenue += entry[metric];
+      acc[scenarioKey].Channels[channelKey].ST_Revenue += entry['Value'];
     } else {
-      acc[scenarioKey].Channels[channelKey].Budget += entry[metric];
+      acc[scenarioKey].Channels[channelKey].Budget += entry['Value'];
+    }
+
+    if (entry["Budget/Revenue"] === "LT Revenue") {
+      acc[scenarioKey].Channels[channelKey].LT_Volume += entry['Volume'];
+    } else if (entry["Budget/Revenue"] === "ST Revenue") {
+      acc[scenarioKey].Channels[channelKey].ST_Volume += entry['Volume'];
     }
 
     // Calculate ROIs
@@ -975,6 +1086,25 @@ function generateChartsB(data, metric) {
       borderRadius: 15,
     };
   });
+  const channel_volume_data = scenarios.map((scenario, index) => {
+    const data = channels.map((channel) => {
+      const stVolume =
+        processedDataPerChannel[scenario]?.Channels[channel]?.ST_Volume || 0;
+      const ltVolume =
+        processedDataPerChannel[scenario]?.Channels[channel]?.LT_Volume || 0;
+      return stVolume + ltVolume;
+    });
+    return {
+      label: scenario,
+      data: data,
+      backgroundColor: `hsla(${
+        index * (360 / scenarios.length)
+      }, 70%, 50%, 0.7)`, // Assigning different colors for each scenario
+      borderColor: `hsla(${index * (360 / scenarios.length)}, 70%, 50%, 1)`,
+      borderWidth: 1,
+      borderRadius: 15,
+    };
+  });
   const channel_ROI_data = scenarios.map((scenario, index) => {
     const data = channels.map((channel) => {
       const totalROI =
@@ -1015,13 +1145,13 @@ function generateChartsB(data, metric) {
       }
     };
   }
-  // 4. Spend by Channel Chart
-  // 4a. data block
+  // 5. Spend by Channel Chart
+  // 5a. data block
   const budget_channel_chartData = {
     labels: channels.map(splitLabel(1)),
     datasets: channel_budget_data,
   };
-  // 4b. config block
+  // 5b. config block
   const budget_channel_chartOptions = {
     scales: {
       x: {
@@ -1065,8 +1195,8 @@ function generateChartsB(data, metric) {
             weight: "bold",
           },
           callback: function (value, index, values) {
-            metric = selectedMetric();
-            if (metric == "Value") {
+
+
               if (value < 1000000) {
                 return Math.round(value / 1000).toLocaleString("en-US") + "K";
               } else {
@@ -1074,15 +1204,7 @@ function generateChartsB(data, metric) {
                   Math.round(value / 1000000).toLocaleString("en-US") + "M"
                 );
               }
-            } else {
-              if (value < 1000000) {
-                return Math.round(value / 1000).toLocaleString("en-US") + "K";
-              } else {
-                return (
-                  Math.round(value / 1000000).toLocaleString("en-US") + "M"
-                );
-              }
-            }
+            
           },
         },
       },
@@ -1116,7 +1238,7 @@ function generateChartsB(data, metric) {
     },
     animation: true,
   };
-  // 4c. render block
+  // 5c. render block
   if (budget_channel_chart === null) {
     budget_channel_chart = new Chart(
       document.getElementById("budget_channel_chart"),
@@ -1131,15 +1253,15 @@ function generateChartsB(data, metric) {
     budget_channel_chart.data.datasets = budget_channel_chartData.datasets;
     budget_channel_chart.update();
   }
-  // 5. Revenue by Channel Chart
+  // 6. Revenue by Channel Chart
   const totalRevenues = channel_revenue_data.flatMap((dataset) => dataset.data);
   const maxBarValue2 = Math.max(...totalRevenues);
-  // 5a. data block
+  // 6a. data block
   const revenue_channel_chartData = {
     labels: channels.map(splitLabel(1)),
     datasets: channel_revenue_data,
   };
-  // 5b. config block
+  // 6b. config block
   const revenue_channel_chartOptions = {
     scales: {
       x: {
@@ -1183,8 +1305,8 @@ function generateChartsB(data, metric) {
             weight: "bold",
           },
           callback: function (value, index, values) {
-            metric = selectedMetric();
-            if (metric == "Value") {
+     
+
               if (value < 1000000) {
                 return Math.round(value / 1000).toLocaleString("en-US") + "K";
               } else {
@@ -1192,15 +1314,7 @@ function generateChartsB(data, metric) {
                   Math.round(value / 1000000).toLocaleString("en-US") + "M"
                 );
               }
-            } else {
-              if (value < 1000000) {
-                return Math.round(value / 1000).toLocaleString("en-US") + "K";
-              } else {
-                return (
-                  Math.round(value / 1000000).toLocaleString("en-US") + "M"
-                );
-              }
-            }
+            
           },
         },
       },
@@ -1234,7 +1348,7 @@ function generateChartsB(data, metric) {
     },
     animation: true,
   };
-  // 5c. render block
+  // 6c. render block
   if (revenue_channel_chart === null) {
     revenue_channel_chart = new Chart(
       document.getElementById("revenue_channel_chart"),
@@ -1249,15 +1363,122 @@ function generateChartsB(data, metric) {
     revenue_channel_chart.data.datasets = revenue_channel_chartData.datasets;
     revenue_channel_chart.update();
   }
-  // 6. ROI by Channel Chart
-  // 6. ROI by Channel Chart
-  // 6a. data block
+  // 7. Volume by Channel Chart
+  const totalVolume = channel_volume_data.flatMap((dataset) => dataset.data);
+  const maxBarValue3 = Math.max(...totalVolume);
+  // 7a. data block
+  const volume_channel_chartData = {
+    labels: channels.map(splitLabel(1)),
+    datasets: channel_volume_data,
+  };
+  // 7b. config block
+  const volume_channel_chartOptions = {
+    scales: {
+      x: {
+        stacked: false,
+        title: {
+          display: true,
+          text: "Channel",
+          font: {
+            family: "arial",
+            weight: "bold",
+            size: "16",
+          },
+        },
+        ticks: {
+          font: {
+            family: "Arial",
+            size: "12",
+            weight: "bold",
+          },
+        },
+        grid: {
+          display: false,
+        },
+        autoSkip: false,
+      },
+      y: {
+        stacked: false,
+        title: {
+          display: true,
+          text: "Volume (Kg)",
+          font: {
+            family: "arial",
+            weight: "bold",
+            size: "16",
+          },
+        },
+        ticks: {
+          font: {
+            family: "Arial",
+            size: "12",
+            weight: "bold",
+          },
+          callback: function (value, index, values) {
+              if (value < 1000000) {
+                return Math.round(value / 1000).toLocaleString("en-US") + "K";
+              } else {
+                return (
+                  Math.round(value / 1000000).toLocaleString("en-US") + "M"
+                );
+              }
+          },
+        },
+      },
+    },
+    responsive: true,
+    maintainAspectRatio: true,
+    layout: {
+      padding: {
+        top: 25,
+      },
+    },
+    plugins: {
+      legend: {
+        position: "top",
+        display: true,
+        labels: {
+          font: {
+            family: "Arial",
+            size: 12,
+            weight: "bold",
+          },
+        },
+      },
+      tooltip: {
+        callbacks: {
+          title: (context) => {
+            return context[0].label.replaceAll(",", " ");
+          },
+        },
+      },
+    },
+    animation: true,
+  };
+  // 7c. render block
+  if (volume_channel_chart === null) {
+    volume_channel_chart = new Chart(
+      document.getElementById("volume_channel_chart"),
+      {
+        type: "bar",
+        data: volume_channel_chartData,
+        options: volume_channel_chartOptions,
+      }
+    );
+  } else {
+    volume_channel_chart.data.labels = volume_channel_chartData.labels;
+    volume_channel_chart.data.datasets = volume_channel_chartData.datasets;
+    volume_channel_chart.update();
+  }
+
+  // 8. ROI by Channel Chart
+  // 8a. data block
   const roi_channel_chartData = {
     labels: channels.map(splitLabel(1)),
     datasets: channel_ROI_data,
   };
 
-  // 6b. config block
+  // 8b. config block
   const roi_channel_chartOptions = {
     scales: {
       x: {
@@ -1325,7 +1546,7 @@ function generateChartsB(data, metric) {
     animation: true,
   };
 
-  // 6c. render block
+  // 8c. render block
   if (roi_channel_chart === null) {
     roi_channel_chart = new Chart(
       document.getElementById("roi_channel_chart"),
@@ -1341,7 +1562,7 @@ function generateChartsB(data, metric) {
     roi_channel_chart.update();
   }
 }
-function generateChartsC(data, metric) {
+function generateChartsC(data) {
   console.log("reaching generateChartsC method");
   // Process data for laydown scenario charts
   const processedDataLaydown = data.reduce((acc, entry) => {
@@ -1354,14 +1575,36 @@ function generateChartsC(data, metric) {
       acc[key][monthYear] = 0;
     }
     if (entry["Budget/Revenue"] === "Budget") {
-      acc[key][monthYear] += entry[metric];
+      acc[key][monthYear] += entry['Value'];
+    }
+    return acc;
+  }, {});
+  const processedDataVolLaydown = data.reduce((acc, entry) => {
+    const key = entry.Scenario;
+    const monthYear = entry.MonthYear;
+    if (!acc[key]) {
+      acc[key] = {};
+    }
+    if (!acc[key][monthYear]) {
+      acc[key][monthYear] = 0;
+    }
+    if (entry["Budget/Revenue"] === "Budget") {
+      acc[key][monthYear] += entry['Volume'];
     }
     return acc;
   }, {});
   // Extract labels and datasets for laydown charts
   const laydown_scenario_labels = Object.keys(processedDataLaydown);
+  const laydownVol_scenario_labels = Object.keys(processedDataVolLaydown);
   const timePeriods = Object.keys(
     processedDataLaydown[laydown_scenario_labels[0]]
+  ).sort((a, b) => {
+    const dateA = new Date(a);
+    const dateB = new Date(b);
+    return dateA - dateB;
+  });
+  const timePeriodsVol = Object.keys(
+    processedDataVolLaydown[laydownVol_scenario_labels[0]]
   ).sort((a, b) => {
     const dateA = new Date(a);
     const dateB = new Date(b);
@@ -1376,9 +1619,17 @@ function generateChartsC(data, metric) {
       laydown_budgetData.push(processedDataLaydown[scenario][period] || 0);
     });
   });
+  const laydownVol_budgetData = [];
 
-  // 7. Laydown by Scenario Chart
-  // 7a. data block
+  // Iterate through each scenario and time period to extract data
+  laydownVol_scenario_labels.forEach((scenario) => {
+    timePeriodsVol.forEach((period) => {
+      laydownVol_budgetData.push(processedDataVolLaydown[scenario][period] || 0);
+    });
+  });
+  
+  // 9. Laydown by Scenario Chart
+  // 9a. data block
   const laydown_scenario_chartData = {
     labels: timePeriods,
     datasets: laydown_scenario_labels.map((scenario) => ({
@@ -1391,7 +1642,7 @@ function generateChartsC(data, metric) {
       borderRadius: 15,
     })),
   };
-  // 7b. config block
+  // 9b. config block
   const laydown_scenario_chartOptions = {
     scales: {
       x: {
@@ -1473,7 +1724,7 @@ function generateChartsC(data, metric) {
     },
     animation: true,
   };
-  // 7c. render block
+  // 9c. render block
   if (laydown_scenario_chart === null) {
     laydown_scenario_chart = new Chart(
       document.getElementById("laydown_scenario_chart"),
@@ -1488,9 +1739,120 @@ function generateChartsC(data, metric) {
     laydown_scenario_chart.data.datasets = laydown_scenario_chartData.datasets;
     laydown_scenario_chart.update();
   }
+  // 10. Laydown by Scenario Chart
+  // 10a. data block
+  const laydownVol_scenario_chartData = {
+    labels: timePeriodsVol,
+    datasets: laydownVol_scenario_labels.map((scenario) => ({
+      label: scenario,
+      data: timePeriodsVol.map(
+        (period) => processedDataVolLaydown[scenario][period] || 0
+      ), // Retrieve budget data for each scenario and period
+      backgroundColor: "#" + Math.random().toString(16).substr(-6), // Random background color for each scenario
+      borderWidth: 1,
+      borderRadius: 15,
+    })),
+  };
+  // 9b. config block
+  const laydownVol_scenario_chartOptions = {
+    scales: {
+      x: {
+        stacked: false,
+        title: {
+          display: true,
+          text: "Month/Year",
+          font: {
+            family: "arial",
+            weight: "bold",
+            size: "16",
+          },
+        },
+        ticks: {
+          font: {
+            family: "Arial",
+            size: "12",
+            weight: "bold",
+          },
+        },
+        grid: {
+          display: false,
+        },
+        autoSkip: false,
+      },
+      y: {
+        stacked: false,
+        title: {
+          display: true,
+          text: "Volume (Kg)",
+          font: {
+            family: "arial",
+            weight: "bold",
+            size: "16",
+          },
+        },
+        ticks: {
+          font: {
+            family: "Arial",
+            size: "12",
+            weight: "bold",
+          },
+          callback: function (value, index, values) {
+            if (value < 1000000) {
+              return Math.round(value / 1000).toLocaleString("en-US") + "K";
+            } else {
+              return Math.round(value / 1000000).toLocaleString("en-US") + "M";
+            }
+          },
+        },
+      },
+    },
+    responsive: true,
+    maintainAspectRatio: true,
+    layout: {
+      padding: {
+        top: 25,
+      },
+    },
+    plugins: {
+      legend: {
+        position: "top",
+        display: true,
+        labels: {
+          font: {
+            family: "Arial",
+            size: 12,
+            weight: "bold",
+          },
+        },
+      },
+      tooltip: {
+        callbacks: {
+          title: (context) => {
+            return context[0].label.replaceAll(",", " ");
+          },
+        },
+      },
+    },
+    animation: true,
+  };
+  // 9c. render block
+  if (laydownVol_scenario_chart === null) {
+    laydownVol_scenario_chart = new Chart(
+      document.getElementById("laydownVol_scenario_chart"),
+      {
+        type: "bar",
+        data: laydownVol_scenario_chartData,
+        options: laydownVol_scenario_chartOptions,
+      }
+    );
+  } else {
+    laydownVol_scenario_chart.data.labels = laydownVol_scenario_chartData.labels;
+    laydownVol_scenario_chart.data.datasets = laydownVol_scenario_chartData.datasets;
+    laydownVol_scenario_chart.update();
+  }
 }
-function generateChartsD(data, metric) {
-  // 8. Laydown by Channel Chart
+function generateChartsD(data) {
+  // 10. Laydown by Channel Chart
   // Process data for laydown channel charts
   const processedDataChannel = data.reduce((acc, entry) => {
     const key = entry.Scenario;
@@ -1504,7 +1866,7 @@ function generateChartsD(data, metric) {
       acc[monthYear][channel] = 0;
     }
     if (entry["Budget/Revenue"] === "Budget") {
-      acc[monthYear][channel] += entry[metric];
+      acc[monthYear][channel] += entry['Value'];
     }
     return acc;
   }, {});
@@ -1520,7 +1882,7 @@ function generateChartsD(data, metric) {
     processedDataChannel[sortedMonthYears[0]]
   );
 
-  // 8a. data block
+  // 10a. data block
   const laydown_channel_chartData = {
     labels: sortedMonthYears,
     datasets: laydown_channel_data.map((channel) => ({
@@ -1534,7 +1896,7 @@ function generateChartsD(data, metric) {
     })),
   };
 
-  // 8b. config block
+  // 10b. config block
   const laydown_channel_chartOptions = {
     scales: {
       x: {
@@ -1617,7 +1979,7 @@ function generateChartsD(data, metric) {
     animation: true,
   };
 
-  // 8c. render block
+  // c. render block
   if (laydown_channel_chart === null) {
     laydown_channel_chart = new Chart(
       document.getElementById("laydown_channel_chart"),
@@ -1644,3 +2006,4 @@ function generateChartsD(data, metric) {
     laydown_channel_chart.update(); // Update the chart
   }
 }
+
