@@ -194,16 +194,17 @@ class Optimise:
         return indexed_vals
 
     def blended_profit_max_scipy(ST_input, LT_input, laydown, seas_index, nns_mc, return_type, objective_type, max_budget,
-                             exh_budget, method, scenario_name, step=1*10**-5, tolerance=1*10**-5,
+                             exh_budget, method, scenario_name, locked_budgets, step=1*10**-5, tolerance=1*10**-5,
                              num_weeks=1000):
         print(type(ST_input))
-        
+        result = None
+        elapsed_time_seconds = 0
         if objective_type == "roi":
             print("objective type is roi")
             step = 1*10**-25
             tolerance = 1*10**-25
         
-        streams = [entry['Opt Channel'] for entry in ST_input]
+        streams = {entry['Opt Channel'] for entry in ST_input}
 
         current_budget_list = [entry['Current Budget'] for entry in ST_input]
         current_budget_dict = dict(zip(streams, current_budget_list))
@@ -246,12 +247,14 @@ class Optimise:
         seas_dict = {}
         for x in seas_index.columns:
             seas_dict[x] = seas_index[x].to_list()
+            
+        for stream in list(locked_budgets.keys()):
+            streams.remove(stream)
 
         args = (streams, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,
                 LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict,
                 recorded_impressions, date_list, seas_dict, nns_mc, num_weeks, max_budget, exh_budget, return_type, objective_type)
 
-        #initial_budgets = [min(max_spend_cap_dict[stream], max_budget / len(streams)) for stream in streams]
         initial_budgets = [current_budget_dict[stream] for stream in streams]
 
         bounds = [(min_spend_cap_dict[stream], max_spend_cap_dict[stream]) for stream in streams]
@@ -266,20 +269,25 @@ class Optimise:
         def optimization_callback(xk):
             # Add any relevant information you want to print or check at each iteration
             print("Current solution:", xk)
-
+        opt_budgets_dict = {}
         start_time = time.time()
-        result = minimize(Optimise.profit_objective, initial_budgets, args=args, bounds=bounds, constraints=constraints,
+        if streams:
+            result = minimize(Optimise.profit_objective, initial_budgets, args=args, bounds=bounds, constraints=constraints,
                         method=method,
                         # callback=optimization_callback,
                         options={'disp': True, 'maxiter': 10000, 'eps': step, 'ftol': tolerance})
-        end_time = time.time()
-        elapsed_time_seconds = end_time - start_time
-        # result = minimize(profit_objective_with_penalty, initial_budgets, args=args, bounds=bounds, method='Powell')#, method=method)
+            end_time = time.time()
+            elapsed_time_seconds = end_time - start_time
 
-        # result = differential_evolution(profit_objective_with_penalty, bounds, args=args, disp=True)
+            opt_budgets_dict = dict(zip(streams, result.x))
+        
+        if locked_budgets:
+            opt_budgets_dict = opt_budgets_dict | locked_budgets
+            streams.update(list(locked_budgets.keys()))
 
-        opt_budgets_dict = dict(zip(streams, result.x))
-
+        print(locked_budgets)
+        print(opt_budgets_dict)
+        
         opt_revenues_ST = {'Date': list(laydown.index)}
         opt_revenues_LT = {'Date': list(laydown.index)}
         opt_laydown = {'Date': list(laydown.index)}
@@ -355,15 +363,16 @@ class Optimise:
         output_df = pd.merge(output_df,
                             pd.DataFrame.from_dict(ST_input)[['Opt Channel', 'Country', 'Brand', 'Channel Group', 'Channel']].drop_duplicates(),
                             on='Opt Channel')
+        if result is not None:
+            if result.success:
+                print("Optimal Solution Found:")
+                for stream in streams:
+                    print(f"{stream} Budget: {opt_budgets_dict[stream]}")
+                print(f"Maximized Profit: {-result.fun}")
+            else:
+                print("Solver did not find an optimal solution.")
+                print(f"Solution failed using budget input of: {max_budget} with max total spend cap of: {sum(max_spend_cap_list)}")
 
-        if result.success:
-            print("Optimal Solution Found:")
-            for stream in streams:
-                print(f"{stream} Budget: {opt_budgets_dict[stream]}")
-            print(f"Maximized Profit: {-result.fun}")
-        else:
-            print("Solver did not find an optimal solution.")
-            print(f"Solution failed using budget input of: {max_budget} with max total spend cap of: {sum(max_spend_cap_list)}")
 
         return opt_budgets_dict, elapsed_time_seconds, output_df
 

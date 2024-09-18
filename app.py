@@ -428,18 +428,19 @@ bud = sum(header['Current Budget'].to_list())
 inputs_per_result = {}
 output_df_per_result = {}
 
-def optimise(ST_input, LT_input, laydown, seas_index, nns_mc, blend, obj_func, max_budget, exh_budget, table_id, scenario_name):
+def optimise(ST_input, LT_input, laydown, seas_index, nns_mc, blend, obj_func, max_budget, exh_budget, table_id, scenario_name, locked_budgets):
 
     global results
     global output_df_per_result
 
     try:
         with app.app_context():
-            result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown, seas_index=seas_index, nns_mc=nns_mc, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name)
+            result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown, seas_index=seas_index, nns_mc=nns_mc, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name, locked_budgets=locked_budgets)
             print(f"Task completed: {result} in {time_elapsed} time")
             results[table_id] = result
             output_df_per_result[table_id] = output_df
-            print(f"total results: {results}")
+            print(output_df)
+            #print(f"total results: {results}")
             socketio.emit('opt_complete', {'data': table_id})
     except Exception as e:
         with app.app_context():
@@ -473,7 +474,7 @@ def run_optimise(dataDict):
         num_weeks = 1000
         blend = data['blendValue']
         disabled_rows = list(data['disabledRows'])
-        print(f"disabled row ids: {disabled_rows}")
+        #print(f"disabled row ids: {disabled_rows}")
 
         current_table_df = pd.DataFrame.from_records(deepcopy(table_data[table_id]))
         removed_rows_df = current_table_df[current_table_df.row_id.isin(disabled_rows)].copy()
@@ -487,6 +488,16 @@ def run_optimise(dataDict):
             header_copy[col] = current_table_df[col]
             
         header_copy.loc[header_copy['Max Spend Cap'] < header_copy['Min Spend Cap'], 'Max Spend Cap'] = header_copy['Min Spend Cap']
+            
+        equal_caps_df = header_copy.loc[abs(header_copy['Min Spend Cap'] - header_copy['Max Spend Cap']) <= 1]
+        
+        locked_budgets = dict(zip(equal_caps_df['Opt Channel'],equal_caps_df['Min Spend Cap']))
+        
+        max_budget -= equal_caps_df['Min Spend Cap'].sum()
+            
+        #header_copy = header_copy.loc[abs(header_copy['Min Spend Cap']-header_copy['Max Spend Cap']) > 1]
+        
+        print(header_copy)
 
         header_copy = header_copy[~(header_copy['Opt Channel'].isin(disabled_opt_channels))]
 
@@ -513,19 +524,19 @@ def run_optimise(dataDict):
 
         LT_header = Beta.beta_calculation(header_copy, laydown_copy, seas_index_copy, LT_inc_rev_copy, 'lt')
         
-        print("applied betas")
-        print("Short Term Betas:")
-        print(ST_header['ST Beta'])
-        print("Long Term Betas:")
-        print(LT_header['LT Beta'])
+        # print("applied betas")
+        # print("Short Term Betas:")
+        # print(ST_header['ST Beta'])
+        # print("Long Term Betas:")
+        # print(LT_header['LT Beta'])
 
         inputs_dict = {'ST_input': ST_header, 'LT_input': LT_header, 'laydown': laydown_copy, 'seas_index': seas_index_copy}
 
         inputs_per_result[table_id] = deepcopy(inputs_dict)
 
         laydown_copy.set_index('Date', inplace=True)
-
-        task_queue.put((ST_header.to_dict("records"), LT_header.to_dict("records"), laydown_copy, seas_index_copy, nns_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name))
+        
+        task_queue.put((ST_header.to_dict("records"), LT_header.to_dict("records"), laydown_copy, seas_index_copy, nns_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name, locked_budgets))
 
     except Exception as e:
         print('Error in user inputs', str(e))
@@ -542,10 +553,10 @@ def run_optimise_task():
             break
         
         # Unpack the task arguments
-        ST_input, LT_input, laydown_copy, seas_index_copy, nns_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name = task
+        ST_input, LT_input, laydown_copy, seas_index_copy, nns_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name, locked_budgets = task
         
         # Run the optimise task with provided arguments
-        optimise(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, nns_mc=nns_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, table_id=table_id, scenario_name=scenario_name)
+        optimise(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, nns_mc=nns_copy, blend=blend, obj_func=obj_func, max_budget=max_budget, exh_budget=exh_budget, table_id=table_id, scenario_name=scenario_name, locked_budgets=locked_budgets)
         
         # Mark the task as done
         task_queue.task_done()
