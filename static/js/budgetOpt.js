@@ -705,10 +705,16 @@ function initializeDataTable(tableID) {
           {
             label: "Min Spend Cap (CHF)",
             name: "Min Spend Cap",
+            attr: {
+              type: "number",
+            },
           },
           {
             label: "Max Spend Cap (CHF)",
             name: "Max Spend Cap",
+            attr: {
+              type: "number",
+            },
           },
         ],
         idSrc: "row_id",
@@ -1546,10 +1552,16 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
             {
               label: "Min Spend Cap:",
               name: "Min Spend Cap",
+              attr: {
+                type: "number",
+              },
             },
             {
               label: "Max Spend Cap:",
               name: "Max Spend Cap",
+              attr: {
+                type: "number",
+              },
             },
           ],
           idSrc: "row_id",
