@@ -202,7 +202,7 @@ class Optimise:
             print("objective type is roi")
             step = 1*10**-25
             tolerance = 1*10**-25
-            
+
         # Must be a list:
         streams = [entry['Opt Channel'] for entry in ST_input]
 
@@ -361,15 +361,15 @@ class Optimise:
         output_df = pd.merge(output_df,
                             pd.DataFrame.from_dict(ST_input)[['Opt Channel', 'Country', 'Brand', 'Channel Group', 'Channel']].drop_duplicates(),
                             on='Opt Channel')
-
-        if result.success:
-            print("Optimal Solution Found:")
-            for stream in streams:
-                print(f"{stream} Budget: {opt_budgets_dict[stream]}")
-            print(f"Maximized Profit: {-result.fun}")
-        else:
-            print("Solver did not find an optimal solution.")
-            print(f"Solution failed using budget input of: {max_budget} with max total spend cap of: {sum(max_spend_cap_list)}")
+        if result is not None:
+            if result.success:
+                print("Optimal Solution Found:")
+                for stream in streams:
+                    print(f"{stream} Budget: {opt_budgets_dict[stream]}")
+                print(f"Maximized Profit: {-result.fun}")
+            else:
+                print("Solver did not find an optimal solution.")
+                print(f"Solution failed using budget input of: {max_budget} with max total spend cap of: {sum(max_spend_cap_list)}")
 
         return opt_budgets_dict, elapsed_time_seconds, output_df
 
