@@ -481,6 +481,12 @@ def run_optimise(dataDict):
             header_copy[col] = current_table_df[col]
 
         header_copy.loc[header_copy['Max Spend Cap'] < header_copy['Min Spend Cap'], 'Max Spend Cap'] = header_copy['Min Spend Cap']
+            
+        equal_caps_df = header_copy.loc[abs(header_copy['Min Spend Cap'] - header_copy['Max Spend Cap']) <= 1]
+        
+        locked_budgets = dict(zip(equal_caps_df['Opt Channel'],equal_caps_df['Min Spend Cap']))
+        
+        max_budget -= equal_caps_df['Min Spend Cap'].sum()
 
         header_copy = header_copy[~(header_copy['Opt Channel'].isin(disabled_opt_channels))]
 
@@ -521,7 +527,7 @@ def run_optimise(dataDict):
         session_id = session['session_id']
         queue = session_queues.setdefault(session_id, Queue())
     
-        queue.put((ST_header.to_dict("records"), LT_header.to_dict("records"), laydown_copy, seas_index_copy, nns_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name))
+        queue.put((ST_header.to_dict("records"), LT_header.to_dict("records"), laydown_copy, seas_index_copy, nns_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name, locked_budgets))
 
         if not queue.empty():
             result, output_df = start_optimise_thread(session_id)
@@ -554,11 +560,11 @@ def run_optimise_task(session_id):
 
             task = queue.get()
             
-            ST_input, LT_input, laydown_copy, seas_index_copy, nns_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name = task
+            ST_input, LT_input, laydown_copy, seas_index_copy, nns_copy, blend, obj_func, max_budget, exh_budget, table_id, scenario_name, locked_budgets = task
             
             try:
                 with app.app_context():
-                    result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, nns_mc=nns_copy, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name)
+                    result, time_elapsed, output_df = Optimise.blended_profit_max_scipy(ST_input=ST_input, LT_input=LT_input, laydown=laydown_copy, seas_index=seas_index_copy, nns_mc=nns_copy, return_type=blend, objective_type=obj_func, max_budget=max_budget, exh_budget=exh_budget, method='SLSQP', scenario_name=scenario_name, locked_budgets=locked_budgets)
                     app.logger.info(f"Task completed: {result} in {time_elapsed} time")
                     
                     
