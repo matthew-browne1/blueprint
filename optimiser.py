@@ -203,8 +203,9 @@ class Optimise:
             print("objective type is roi")
             step = 1*10**-25
             tolerance = 1*10**-25
-        
-        streams = {entry['Opt Channel'] for entry in ST_input}
+            
+        # keep as list!!
+        streams = [entry['Opt Channel'] for entry in ST_input]
 
         current_budget_list = [entry['Current Budget'] for entry in ST_input]
         current_budget_dict = dict(zip(streams, current_budget_list))
@@ -283,7 +284,7 @@ class Optimise:
         
         if locked_budgets:
             opt_budgets_dict = opt_budgets_dict | locked_budgets
-            streams.update(list(locked_budgets.keys()))
+            streams.extend(list(locked_budgets.keys()))
 
         print(locked_budgets)
         print(opt_budgets_dict)

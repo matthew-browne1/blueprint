@@ -494,7 +494,9 @@ def run_optimise(dataDict):
         locked_budgets = dict(zip(equal_caps_df['Opt Channel'],equal_caps_df['Min Spend Cap']))
         
         max_budget -= equal_caps_df['Min Spend Cap'].sum()
-            
+        
+        print(f"max_budget = {max_budget}")
+        
         #header_copy = header_copy.loc[abs(header_copy['Min Spend Cap']-header_copy['Max Spend Cap']) > 1]
         
         print(header_copy)
