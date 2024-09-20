@@ -480,6 +480,9 @@ def run_optimise(dataDict):
         for col in current_table_df.columns:
             header_copy[col] = current_table_df[col]
 
+        header_copy['Max Spend Cap'] = header_copy['Max Spend Cap'].astype(float)
+        header_copy['Min Spend Cap'] = header_copy['Min Spend Cap'].astype(float)
+
         header_copy.loc[header_copy['Max Spend Cap'] < header_copy['Min Spend Cap'], 'Max Spend Cap'] = header_copy['Min Spend Cap']
             
         equal_caps_df = header_copy.loc[abs(header_copy['Min Spend Cap'] - header_copy['Max Spend Cap']) <= 1]
