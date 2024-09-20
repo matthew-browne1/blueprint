@@ -9,14 +9,17 @@ function settingsMenuToggle() {
 
 var tabNames = { 1: "Scenario 1" };
 
-var tabCounter = 1;
+var tableID = 1;
+
+var numVars = 0;
 
 $(document).ready(function () {
-  spawnNewTab(tabCounter);
+  console.log(numVars);
+  spawnNewTab(tableID);
   //initializeInitialButton();
   sendTableIDsOnRefresh();
   newTabButtonInit();
-  syncTabCounter();
+  synctableID();
   var optAllBtn = document.getElementById("optimise-all");
   optAllBtn.addEventListener("click", optAll);
 
@@ -39,11 +42,7 @@ $(document).ready(function () {
 
 });
 
-var socket = io.connect(window.location.origin, {
-  pingInterval: 600000,
-  pingTimeout: 720000
-});
-
+var socket = io.connect(window.location.origin);
 socket.on("connect", function () {
   console.log("connected to server");
 });
@@ -64,7 +63,7 @@ function newTabButtonInit() {
     .addEventListener("click", spawnNewTabAndIncrementCounter);
 }
 
-function syncTabCounter() {
+function synctableID() {
   $.ajax({
     url: "/sync_tab_counter",
     type: "GET",
@@ -72,8 +71,8 @@ function syncTabCounter() {
     success: function (response) {
       if (response && response.lastNumber) {
         var lastNumber = response.lastNumber;
-        tabCounter = lastNumber;
-        console.log("tabCounter being set to: ", lastNumber);
+        tableID = lastNumber;
+        console.log("tableID being set to: ", lastNumber);
       }
     },
     error: function (error) {
@@ -81,7 +80,6 @@ function syncTabCounter() {
     },
   });
 }
-
 
 function getNumberOfVars(callback) {
   $.ajax({
@@ -95,6 +93,7 @@ function getNumberOfVars(callback) {
     },
   });
 }
+
 
 function initializeCollapsibleButtons(colID) {
   var content = document.getElementById("opt-tab" + colID);
@@ -203,6 +202,13 @@ function sendTableIDsOnRefresh() {
       console.error("Error sending TableIDs:", error);
     },
   });
+}
+
+function listToFalseObject(list) {
+  return list.reduce((acc, item) => {
+    acc[item] = false;
+    return acc;
+  }, {});
 }
 
 function getDisabledRowIds(tableID) {
@@ -335,7 +341,6 @@ function fetchTabName(setID) {
 
 function optAll() {
   var optAllArray = [];
-  var warningBool = false;
   $.ajax({
     url: "get_table_ids",
     method: "GET",
@@ -372,28 +377,29 @@ function optAll() {
             tabName: tabName,
           };
 
-
           var startDate = $("#start-date" + tableId).val();
           var endDate = $("#end-date" + tableId).val();
           var dateTuple = [startDate, endDate];
-
+          
           dataToSend["dates"] = dateTuple;
-
+          
           optAllArray.push({ dataToSend: dataToSend });
+          
+          
           getNumberOfVars(function (numVars) {
             var numSelectedVars = numVars - disabledRowIds.length;
             if (numSelectedVars > 20) {
               $("#warningPopup").show();
               $("#continueWarning").click(function () {
                 $("#warningPopup").hide();
-  
+
                 optAllArray.forEach(function (data) {
                   socket.emit("optimise", data);
                 });
               });
               $("#cancelWarning").click(function () {
                 $("#warningPopup").hide();
-  
+
                 tableIds.forEach(function (tableId) {
                   hideLoadingOverlay(tableId);
                 });
@@ -405,7 +411,6 @@ function optAll() {
             }
           });
         });
-
       }
     },
   });
@@ -481,22 +486,22 @@ function dropdownButtons(dropdownId) {
 }
 
 function spawnNewTabAndIncrementCounter() {
-  tabCounter++; // Increment tabCounter
-  spawnNewTab(tabCounter); // Invoke spawnNewTab function
+  tableID++; // Increment tableID
+  spawnNewTab(tableID); // Invoke spawnNewTab function
     window.scrollTo({
       top: document.body.scrollHeight,
       behavior: "smooth",
     });
 }
 
-function spawnNewTab(tabCounter) {
+function spawnNewTab(tableID) {
   // Clone the HTML content and append it to the document
   var tabContent = document.createElement("div");
-  tabContent.setAttribute("id", "new-tab" + tabCounter);
+  tabContent.setAttribute("id", "new-tab" + tableID);
   tabContent.setAttribute("class", "new-tab-cont");
   tabContent.innerHTML = `
-        <div class="content" id="opt-tab${tabCounter}">
-          <div class="loading-overlay" id="loading-overlay${tabCounter}">
+        <div class="content" id="opt-tab${tableID}">
+          <div class="loading-overlay" id="loading-overlay${tableID}">
             <div class="searchLoader">
                <svg id="loading-wheel" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
                <style>
@@ -513,24 +518,24 @@ function spawnNewTab(tabCounter) {
          </div>
       <div class="content-sub">
          <div class="scenario-title">
-            <button class="collapsible" id="col-btn${tabCounter}">Scenario ${tabCounter}</button>
-            <div class="rename-scenario-btn-cont" id="edit-tab-button${tabCounter}">
+            <button class="collapsible" id="col-btn${tableID}">Scenario ${tableID}</button>
+            <div class="rename-scenario-btn-cont" id="edit-tab-button${tableID}">
               <i class="rename-scenario-btn fa-solid fa-pen-to-square fa-lg"></i>
             </div>
-            <div class="close-btn-cont" id="close-button${tabCounter}">
+            <div class="close-btn-cont" id="close-button${tableID}">
               <i class="close-btn fa-solid fa-xmark"></i>
             </div>
          </div>
-         <div class="div-above-nav-bar" id="buttons-div${tabCounter}">
+         <div class="div-above-nav-bar" id="buttons-div${tableID}">
             <div class="nav-model-left">
                <div class="obj-func">   
                   <label for="obj-input1">Select KPI:</label>
-                  <div class="dropdown" id="dd-obj${tabCounter}">
+                  <div class="dropdown" id="dd-obj${tableID}">
                      <div class="select">
                         <span class="input-span">Please Select</span>
                         <i class="fa fa-chevron-left"></i>
                      </div>
-                     <input type="hidden" name="objective" id="obj-input${tabCounter}">
+                     <input type="hidden" name="objective" id="obj-input${tableID}">
                      <ul class="dropdown-menu">
                         <li id="profit">Profit</li>
                         <li id="revenue">NNS</li>
@@ -541,12 +546,12 @@ function spawnNewTab(tabCounter) {
                </div>
                <div class="blend">
                   <label for="dd-blend1">Objective Function:</label>
-                  <div class="dropdown" id="dd-blend${tabCounter}">
+                  <div class="dropdown" id="dd-blend${tableID}">
                       <div class="select">
                         <span>Please Select</span>
                         <i class="fa fa-chevron-left"></i>
                      </div>
-                     <input type="hidden" name="blend" id="blend-input${tabCounter}">
+                     <input type="hidden" name="blend" id="blend-input${tableID}">
                      <ul class="dropdown-menu">
                         <li id="blend">Blended</li>
                         <li id="st">ST</li>
@@ -556,13 +561,13 @@ function spawnNewTab(tabCounter) {
                </div>
                <div class="exh-bud">
                   <label for="exh-input1">Budget Exhaustion:</label> 
-                  <div class="dropdown" id="dd-exh${tabCounter}">
+                  <div class="dropdown" id="dd-exh${tableID}">
                      
                      <div class="select">
                         <span>Please Select</span>
                         <i class="fa fa-chevron-left"></i>
                      </div>
-                     <input type="hidden" name="exhaust-budget" id="exh-input${tabCounter}">
+                     <input type="hidden" name="exhaust-budget" id="exh-input${tableID}">
                      <ul class="dropdown-menu">
                         <li id="yes">Exhaust Budget</li>
                         <li id="no">Do Not Exhaust Budget</li>
@@ -570,34 +575,34 @@ function spawnNewTab(tabCounter) {
                   </div>
                </div>
                <div class="max-input-cont">
-                  <label for="max-input${tabCounter}">Maximum Budget:</label>
-                  <input type="number" id="max-input${tabCounter}" class="max-input" step="5000" placeholder="Please Enter">
+                  <label for="max-input${tableID}">Maximum Budget:</label>
+                  <input type="number" id="max-input${tableID}" class="max-input" step="5000" placeholder="Please Enter">
                </div>
                <div class="start-date-cont">
-                  <label for="start-date${tabCounter}">Start Date:</label>
-                  <input type="date" name="start-date" id="start-date${tabCounter}" class="date-input" placeholder="Start date" />
+                  <label for="start-date${tableID}">Start Date:</label>
+                  <input type="date" name="start-date" id="start-date${tableID}" class="date-input" placeholder="Start date" />
                </div>
                <div class="end-date-cont">
-                  <label for="end-date${tabCounter}"> End Date:</label>
-                  <input type="date" name="end-date" class="date-input" id="end-date${tabCounter}" placeholder="End date" />
+                  <label for="end-date${tableID}"> End Date:</label>
+                  <input type="date" name="end-date" class="date-input" id="end-date${tableID}" placeholder="End date" />
                </div>
-               <div class="tooltip refresh-btn-cont" id="refresh-btn${tabCounter}">
+               <div class="tooltip refresh-btn-cont" id="refresh-btn${tableID}">
                <span class="tooltiptext">Reload Table<br><p class="small-text">All variables will be de-selected</p><p class="small-text">All edits will be undone</p></span>
-                  <i class="refresh-btn fa-solid fa-arrows-rotate">                  </i>
+                  <i class="refresh-btn fa-solid fa-arrows-rotate"></i>
                </div>
-               <div class="tooltip opt-cont-parent" id="opt-button${tabCounter}">
+               <div class="tooltip opt-cont-parent" id="opt-button${tableID}">
                 <span class="tooltiptext">Optimise</span>
                   <i class="opt-btn fa-solid fa-magnifying-glass"></i>
                </div>
                
             </div>
          </div>
-       
-         <div class="bo-container" id="channel-container${tabCounter}">
-         <table id="channel${tabCounter}" class="hover">
+        
+         <div class="bo-container" id="channel-container${tableID}">
+         <table id="channel${tableID}" class="hover">
             <thead>
                <tr>
-                  <th><input type="checkbox" name="select_all" value="1" id="example-select-all${tabCounter}" ></th>
+                  <th><input type="checkbox" name="select_all" value="1" id="example-select-all${tableID}" ></th>
                   <th>Region</th>
                   <th>Country</th>
                   <th>Brand</th>
@@ -615,24 +620,40 @@ function spawnNewTab(tabCounter) {
 
   var mainCont = document.getElementById("tab-container");
   mainCont.appendChild(tabContent);
-  initializeCollapsibleButtons(tabCounter);
-  initializeDataTable(tabCounter);
-  editButtonTabs(tabCounter);
-  closeButtonTab(tabCounter);
-  dropdownButtons(tabCounter);
-  var buttonName = document.getElementById("col-btn" + tabCounter);
-  tabNames[tabCounter] = buttonName.textContent;
+  initializeCollapsibleButtons(tableID);
+  initializeDataTable(tableID);
+  editButtonTabs(tableID);
+  closeButtonTab(tableID);
+  dropdownButtons(tableID);
+  var buttonName = document.getElementById("col-btn" + tableID);
+  tabNames[tableID] = buttonName.textContent;
   console.log(tabNames);
 }
 
+function checkboxRender(tableID, checkboxStates) {
+  Object.entries(checkboxStates).forEach(([rowId, value]) => {
+    //console.log(checkboxStates);
+    if (value === true) {
+      //console.log(rowId + "is checked in checkboxRender method");
+      const checkbox = document.getElementById(`checkbox${tableID}-${rowId}`);
+      //console.log(`checkbox${tableID}-${rowId}`);
+      if (checkbox) {
+        //console.log(checkbox + " exists");
+        checkbox.checked = true;
+      }
+    }
+  });
+}
+
 function initializeDataTable(tableID) {
+  var checkboxStates = {};
   $.ajax({
     type: "POST",
     url: "/create_copy",
     data: { tableID: tableID },
     success: function (response) {
-      console.log("pinged create_copy");
-      console.log("/channel" + tableID);
+      //console.log("pinged create_copy");
+      //console.log("/channel" + tableID);
 
       var tabChannelTable = $("#channel" + tableID).DataTable({
         destroy: true,
@@ -643,7 +664,14 @@ function initializeDataTable(tableID) {
           dataSrc: tableID.toString(),
         },
         columns: [
-          { data: null },
+            {
+            data: null,
+            render: function(data, type, row) {
+              var rowId = row.row_id;
+              //console.log(rowId);
+              return `<input type="checkbox" id="checkbox${tableID}-${rowId}">`;
+            }
+          },
           { data: "Region" },
           { data: "Country" },
           { data: "Brand" },
@@ -663,7 +691,6 @@ function initializeDataTable(tableID) {
           {
             data: "Max Spend Cap",
 
-      
             render: function (data, type, row) {
               return $.fn.DataTable.render.number(",", ".", 0).display(data);
             },
@@ -686,11 +713,6 @@ function initializeDataTable(tableID) {
             searchable: false,
             orderable: false,
             className: "dt-body-center",
-            render: function (data, type, full, meta) {
-              return `<input type="checkbox" id="checkbox${tableID}-${
-                meta.row + 1
-              }">`;
-            },
           },
           { className: "dt-head-center", targets: [0, 1, 2, 3, 4, 5, 6, 7] },
         ],
@@ -702,7 +724,7 @@ function initializeDataTable(tableID) {
           if (data['Current Budget'] === 0) {
             $(row).addClass("highlight-grey");
           }
-        }
+        },
       });
 
       var channelEditorTab = new $.fn.dataTable.Editor({
@@ -720,14 +742,25 @@ function initializeDataTable(tableID) {
           {
             label: "Min Spend Cap (CHF)",
             name: "Min Spend Cap",
+            attr: {
+              type: "number",
+            },
           },
           {
             label: "Max Spend Cap (CHF)",
             name: "Max Spend Cap",
+            attr: {
+              type: "number",
+            },
           },
         ],
         idSrc: "row_id",
       });
+
+      channelEditorTab.on("submitComplete", function (e, json, data) {
+        checkboxRender(tableID, checkboxStates);
+      })
+
       tabChannelTable.on(
         "mouseenter",
         "tbody td:nth-child(0), tbody td:nth-child(7), tbody td:nth-child(8)",
@@ -760,12 +793,23 @@ function initializeDataTable(tableID) {
       $("#example-select-all" + tableID).on("click", function () {
         // Get all rows with search applied
         var rows = tabChannelTable.rows({ search: "applied" }).nodes();
+        var rowIds = tabChannelTable.rows({ search: "applied" }).ids().toArray();
+        
+        rowIds.forEach(function(id) {
+          checkboxStates[id] = true;
+        });
         // Check/uncheck checkboxes for all rows in the table
         $('input[type="checkbox"]', rows).prop("checked", this.checked);
         if (!this.checked) {
           $(rows).addClass("disabled");
+          rowIds.forEach(function(id) {
+            checkboxStates[id] = false;
+          });
         } else {
           $(rows).removeClass("disabled");
+          rowIds.forEach(function (id) {
+            checkboxStates[id] = true;
+          });
         }
       });
       $("#channel" + tableID + " tbody").on(
@@ -784,26 +828,6 @@ function initializeDataTable(tableID) {
           }
         }
       );
-      $("#frm-example" + tableID).on("submit", function (e) {
-        var form = this;
-
-        // Iterate over all checkboxes in the table
-        tabChannelTable.$('input[type="checkbox"]').each(function () {
-          // If checkbox doesn't exist in DOM
-          if (!$.contains(document, this)) {
-            // If checkbox is checked
-            if (this.checked) {
-              // Create a hidden element
-              $(form).append(
-                $("<input>")
-                  .attr("type", "hidden")
-                  .attr("name", this.name)
-                  .val(this.value)
-              );
-            }
-          }
-        });
-      });
 
       $("#channel" + tableID + " tbody").on(
         "change",
@@ -814,12 +838,15 @@ function initializeDataTable(tableID) {
           var isChecked = $(this).prop("checked");
           if (isChecked) {
             tabChannelTable.row(row).nodes().to$().removeClass("disabled");
-            console.log("removing class");
-            console.log(rowId);
+            //console.log("removing class");
+            //console.log(rowId);
+            checkboxStates[rowId] = true;
           } else {
             tabChannelTable.row(row).nodes().to$().addClass("disabled");
-            console.log("adding class");
-            console.log(rowId);
+            //console.log("adding class");
+            //console.log(rowId);
+            checkboxStates[rowId] = false;
+            //console.log(checkboxStates);
           }
         }
       );
@@ -872,15 +899,16 @@ function initializeDataTable(tableID) {
           disabledRows: disabledRowIds,
           tabName: tabName,
         };
-
+        
         var startDate = $("#start-date" + tableID).val();
         var endDate = $("#end-date" + tableID).val();
         var dateTuple = [startDate, endDate];
-
+        
         dataToSend["dates"] = dateTuple;
-
+        
         console.log(dataToSend);
 
+        // Use jQuery AJAX to send the data to the Flask endpoint
         getNumberOfVars(function(numVars) {
           var numSelectedVars = numVars - disabledRowIds.length;
           if (numSelectedVars > 20) {
@@ -902,6 +930,7 @@ function initializeDataTable(tableID) {
             socket.emit("optimise", { dataToSend: dataToSend });
           }
         });
+
       });
 
         $("#refresh-btn" + tableID).on("click", function () {
@@ -952,8 +981,12 @@ function showResultsButton() {
 }
 
 var tabSocket = io.connect(window.location.origin, {
-  pingInterval: 600000,
-  pingTimeout: 720000
+  reconnection: true, // Enable automatic reconnection
+  reconnectionAttempts: Infinity, // Keep trying to reconnect indefinitely
+  reconnectionDelay: 1000, // Initial delay between reconnection attempts
+  reconnectionDelayMax: 5000, // Maximum delay between reconnection attempts
+  pingInterval: 600000, // Frequency of sending ping messages
+  pingTimeout: 720000, // Time to wait for a pong response before considering the connection closed
 });
 
 tabSocket.on("connect", function () {
@@ -1006,7 +1039,6 @@ function editButtonTabs(tabID) {
     }
     syncTabNames();
   });
-
   
 }
 
@@ -1260,12 +1292,12 @@ function loadFunc() {
               var tabContainer = document.getElementById("tab-container");
               tabContainer.innerHTML = "";
               initializeDataTableFromSave(arrayToLoad, scenarioNameObj);
-              syncTabCounter();
+              synctableID();
 
               // call buildDatatable funciton here
             }
             sendTableIDsOnRefresh();
-            syncTabCounter();
+            synctableID();
             closeLoadPopup();
           },
         });
@@ -1279,16 +1311,17 @@ function loadFunc() {
 }
 
 function initializeDataTableFromSave(data, scenarioNameObj) {
+  var checkboxStates = {};
   var isTableInitialized = false;
 
   const tableIds = Object.keys(data);
   var defaultText = "Please Select";
-  tableIds.forEach(function (tabCounter) {
+  tableIds.forEach(function (tableID) {
     var { disabledRowIds, enteredBudget, dateArray, optionsArray } =
-      data[tabCounter];
+      data[tableID];
     const [startDate, endDate] = dateArray;
     const [kpiValue, objValue, exhValue] = optionsArray;
-    var tabName = scenarioNameObj[tabCounter];
+    var tabName = scenarioNameObj[tableID];
     var kpiText = "";
     var objText = "";
     var exhText = "";
@@ -1334,11 +1367,11 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
 
     const strDisabledRowIds = disabledRowIds.toString();
     var tabContent = document.createElement("div");
-    tabContent.setAttribute("id", "new-tab" + tabCounter);
+    tabContent.setAttribute("id", "new-tab" + tableID);
     tabContent.setAttribute("class", "new-tab-cont");
     tabContent.innerHTML = `
-          <div class="content" id="opt-tab${tabCounter}">
-         <div class="loading-overlay" id="loading-overlay${tabCounter}">
+          <div class="content" id="opt-tab${tableID}">
+         <div class="loading-overlay" id="loading-overlay${tableID}">
             <div class="searchLoader">
                <svg id="loading-wheel" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60">
                <style>
@@ -1355,24 +1388,24 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
          </div>
       <div class="content-sub">
          <div class="scenario-title">
-            <button class="collapsible" id="col-btn${tabCounter}">${tabName}</button>
-              <div class="rename-scenario-btn-cont" id="edit-tab-button${tabCounter}">
+            <button class="collapsible" id="col-btn${tableID}">${tabName}</button>
+              <div class="rename-scenario-btn-cont" id="edit-tab-button${tableID}">
                 <i class="rename-scenario-btn fa-solid fa-pen-to-square fa-lg"></i>
               </div>
-              <div class="close-btn-cont" id="close-button${tabCounter}">
+              <div class="close-btn-cont" id="close-button${tableID}">
                 <i class="close-btn fa-solid fa-xmark"></i>
               </div>
             </div>
-         <div class="div-above-nav-bar" id="buttons-div${tabCounter}">
+         <div class="div-above-nav-bar" id="buttons-div${tableID}">
             <div class="nav-model-left">
                <div class="obj-func">       
-                  <label for="obj-input${tabCounter}">Select KPI:</label>
-                  <div class="dropdown" id="dd-obj${tabCounter}">
+                  <label for="obj-input${tableID}">Select KPI:</label>
+                  <div class="dropdown" id="dd-obj${tableID}">
                      <div class="select">
                         <span class="input-span">${kpiText}</span>
                         <i class="fa fa-chevron-left"></i>
                      </div>
-                     <input value="${kpiValue}" type="hidden" name="objective" id="obj-input${tabCounter}">
+                     <input value="${kpiValue}" type="hidden" name="objective" id="obj-input${tableID}">
                      <ul class="dropdown-menu">
                         <li id="profit">Profit</li>
                         <li id="revenue">NNS</li>
@@ -1382,13 +1415,13 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
                   </div>
                </div>
                <div class="blend">       
-                  <label for="dd-blend${tabCounter}">Objective Function:</label>
-                  <div class="dropdown" id="dd-blend${tabCounter}">
+                  <label for="dd-blend${tableID}">Objective Function:</label>
+                  <div class="dropdown" id="dd-blend${tableID}">
                      <div class="select">
                         <span>${objText}</span>
                         <i class="fa fa-chevron-left"></i>
                      </div>
-                     <input value="${objValue}" type="hidden" name="blend" id="blend-input${tabCounter}">
+                     <input value="${objValue}" type="hidden" name="blend" id="blend-input${tableID}">
                      <ul class="dropdown-menu">
                         <li id="blend">Blended</li>
                         <li id="st">ST</li>
@@ -1397,13 +1430,13 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
                   </div>
                </div>
                <div class="exh-bud">
-                  <label for="exh-input${tabCounter}">Budget Exhaustion:</label>        
-                  <div class="dropdown" id="dd-exh${tabCounter}">
+                  <label for="exh-input${tableID}">Budget Exhaustion:</label>        
+                  <div class="dropdown" id="dd-exh${tableID}">
                      <div class="select">
                         <span>${exhText}</span>
                         <i class="fa fa-chevron-left"></i>
                      </div>
-                     <input vaule="${exhValue}" type="hidden" name="exhaust-budget" id="exh-input${tabCounter}">
+                     <input vaule="${exhValue}" type="hidden" name="exhaust-budget" id="exh-input${tableID}">
                      <ul class="dropdown-menu">
                         <li id="yes">Exhaust Budget</li>
                         <li id="no">Do Not Exhaust Budget</li>
@@ -1411,33 +1444,33 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
                   </div>
                </div>
                <div class="max-input-cont">
-                  <label for="max-input${tabCounter}">Maximum Budget:</label>
-                  <input type="number" id="max-input${tabCounter}" class="max-input" step="5000" placeholder="Please Enter">
+                  <label for="max-input${tableID}">Maximum Budget:</label>
+                  <input type="number" id="max-input${tableID}" class="max-input" step="5000" placeholder="Please Enter">
                </div>
                <div class="start-date-cont">
-                  <label for="start-date${tabCounter}">Start Date:</label>
-                  <input type="date" name="start-date" id="start-date${tabCounter}" class="date-input" placeholder="Start date" />
+                  <label for="start-date${tableID}">Start Date:</label>
+                  <input type="date" name="start-date" id="start-date${tableID}" class="date-input" placeholder="Start date" />
                </div>
                <div class="end-date-cont">
-                  <label for="end-date${tabCounter}"> End Date:</label>
-                  <input type="date" name="end-date" class="date-input" id="end-date${tabCounter}" placeholder="End date" />
+                  <label for="end-date${tableID}"> End Date:</label>
+                  <input type="date" name="end-date" class="date-input" id="end-date${tableID}" placeholder="End date" />
                </div>
-               <div class="tooltip refresh-btn-cont" id="refresh-btn${tabCounter}">
+               <div class="tooltip refresh-btn-cont" id="refresh-btn${tableID}">
                <span class="tooltiptext">Reload Table<br><p class="small-text">All variables will be de-selected</p><p class="small-text">All edits will be undone</p></span>
                   <i class="refresh-btn fa-solid fa-arrows-rotate"></i>
                </div>
-               <div class="tooltip opt-cont-parent" id="opt-button${tabCounter}">
+               <div class="tooltip opt-cont-parent" id="opt-button${tableID}">
                 <span class="tooltiptext">Optimise</span>
                   <i class="opt-btn fa-solid fa-magnifying-glass"></i>
                </div>
             </div>
          </div>
        
-         <div class="bo-container" id="channel-container${tabCounter}">
-         <table id="channel${tabCounter}" class="hover">
+         <div class="bo-container" id="channel-container${tableID}">
+         <table id="channel${tableID}" class="hover">
             <thead>
                <tr>
-                  <th><input type="checkbox" name="select_all" value="1" id="example-select-all${tabCounter}" ></th>
+                  <th><input type="checkbox" name="select_all" value="1" id="example-select-all${tableID}" ></th>
                   <th>Region</th>
                   <th>Country</th>
                   <th>Brand</th>
@@ -1455,42 +1488,36 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
 
     var mainCont = document.getElementById("tab-container");
     mainCont.appendChild(tabContent);
-    initializeCollapsibleButtons(tabCounter);
-    closeButtonTab(tabCounter);
-    editButtonTabs(tabCounter);
-    // method to edit 
-    $("#date-filter-button" + tabCounter).on("click", function () {
-      var isChecked = $(this).prop("checked");
-      var dateContainers = $(".date-inputs" + tabCounter);
-
-      if (!isChecked) {
-        console.log("date button is unchecked");
-        dateContainers.addClass("greyed-out");
-      } else {
-        console.log("date button is checked");
-        dateContainers.removeClass("greyed-out");
-      }
-    });
-    dropdownButtons(tabCounter);
+    initializeCollapsibleButtons(tableID);
+    closeButtonTab(tableID);
+    editButtonTabs(tableID);
+    dropdownButtons(tableID);
 
     $.ajax({
       type: "POST",
       url: "/create_copy",
-      data: { tableID: tabCounter },
+      data: { tableID: tableID },
       success: function (response) {
         console.log("pinged create_copy");
-        console.log("/channel" + tabCounter);
+        console.log("/channel" + tableID);
 
-        var tabChannelTable = $("#channel" + tabCounter).DataTable({
+        var tabChannelTable = $("#channel" + tableID).DataTable({
           destroy: true,
           dom: "Blfrtip",
           ajax: {
             url: "/channel_main",
             contentType: "application/json",
-            dataSrc: tabCounter.toString(),
+            dataSrc: tableID.toString(),
           },
           columns: [
-            { data: null },
+            {
+              data: null,
+              render: function (data, type, row) {
+                var rowId = row.row_id;
+                //console.log(rowId);
+                return `<input type="checkbox" id="checkbox${tableID}-${rowId}">`;
+              },
+            },
             { data: "Region" },
             { data: "Country" },
             { data: "Brand" },
@@ -1529,21 +1556,15 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
               searchable: false,
               orderable: false,
               className: "dt-body-center",
-              render: function (data, type, full, meta) {
-                if (!isTableInitialized) {
-                  const rowId = meta.row + 1;
-                  const isChecked = !disabledRowIds.includes(rowId);
-                  return `<input type="checkbox" id="checkbox${tabCounter}-${
-                    meta.row + 1
-                  }"${isChecked ? "checked" : ""}>`;
-                }
-              },
             },
             {
               className: "dt-head-center",
               targets: [0, 1, 2, 3, 4, 5, 6, 7],
             },
           ],
+          initComplete: function (settings, json) {
+            isTableInitialized = true;
+          },
           rowId: "row_id",
           createdRow: function (row, data, dataIndex) {
             const rowId = dataIndex + 1;
@@ -1559,23 +1580,34 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
             url: "/table_data_editor",
             contentType: "application/json", // Set the content type to JSON
             data: function (d) {
-              d.tableId = tabCounter;
+              d.tableId = tableID;
               return JSON.stringify(d); // Convert the data to JSON string
             },
           },
-          table: "#channel" + tabCounter,
+          table: "#channel" + tableID,
           fields: [
             {
               label: "Min Spend Cap:",
               name: "Min Spend Cap",
+              attr: {
+                type: "number",
+              },
             },
             {
               label: "Max Spend Cap:",
               name: "Max Spend Cap",
+              attr: {
+                type: "number",
+              },
             },
           ],
           idSrc: "row_id",
         });
+
+        channelEditorTab.on("submitComplete", function (e, json, data) {
+          checkboxRender(tableID, checkboxStates);
+        });
+        
         tabChannelTable.on(
           "mouseenter",
           "tbody td:nth-child(0), tbody td:nth-child(7), tbody td:nth-child(8)",
@@ -1586,7 +1618,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
             });
           }
         );
-
+0 
         tabChannelTable.on(
           "mouseleave",
           "tbody td:nth-child(0), tbody td:nth-child(7), tbody td:nth-child(8)",
@@ -1605,24 +1637,49 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
             channelEditorTab.inline(this);
           }
         );
-        $("#example-select-all" + tabCounter).on("click", function () {
-          // Get all rows with search applied
+        setTimeout(() => {
+            var rows = tabChannelTable.rows().nodes();
+            $('input[type="checkbox"]', rows).each(function () {
+              var rowId = parseInt(this.id.split("-")[1], 10);
+              if (!disabledRowIds.includes(rowId)) {
+                $(this).prop("checked", this.checked);
+              }
+            });
+            
+        },0);
+
+        $("#example-select-all" + tableID).on("click", function () {
+      
           var rows = tabChannelTable.rows({ search: "applied" }).nodes();
-          // Check/uncheck checkboxes for all rows in the table
+          var rowIds = tabChannelTable
+            .rows({ search: "applied" })
+            .ids()
+            .toArray();
+
+          rowIds.forEach(function (id) {
+            checkboxStates[id] = true;
+          });
           $('input[type="checkbox"]', rows).prop("checked", this.checked);
           if (!this.checked) {
             $(rows).addClass("disabled");
+            rowIds.forEach(function (id) {
+              checkboxStates[id] = false;
+            });
+
           } else {
             $(rows).removeClass("disabled");
+                        rowIds.forEach(function (id) {
+                          checkboxStates[id] = true;
+                        });
           }
         });
-        $("#channel" + tabCounter + " tbody").on(
+        $("#channel" + tableID + " tbody").on(
           "change",
           'input[type="checkbox"]',
           function () {
             // If checkbox is not checked
             if (!this.checked) {
-              var el = $("#example-select-all" + tabCounter).get(0);
+              var el = $("#example-select-all" + tableID).get(0);
               // If "Select all" control is checked and has 'indeterminate' property
               if (el && el.checked && "indeterminate" in el) {
                 // Set visual state of "Select all" control
@@ -1632,28 +1689,9 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
             }
           }
         );
-        $("#frm-example" + tabCounter).on("submit", function (e) {
-          var form = this;
 
-          // Iterate over all checkboxes in the table
-          tabChannelTable.$('input[type="checkbox"]').each(function () {
-            // If checkbox doesn't exist in DOM
-            if (!$.contains(document, this)) {
-              // If checkbox is checked
-              if (this.checked) {
-                // Create a hidden element
-                $(form).append(
-                  $("<input>")
-                    .attr("type", "hidden")
-                    .attr("name", this.name)
-                    .val(this.value)
-                );
-              }
-            }
-          });
-        });
 
-        $("#channel" + tabCounter + " tbody").on(
+        $("#channel" + tableID + " tbody").on(
           "change",
           'input[type="checkbox"]',
           function () {
@@ -1688,52 +1726,53 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
               .split("T")[0];
             var endDate = new Date(data.endDate).toISOString().split("T")[0];
 
-            $("#start-date" + tabCounter).val(startDate);
-            $("#start-date" + tabCounter).prop("min", startDate);
-            $("#start-date" + tabCounter).prop("max", endDate);
-            $("#end-date" + tabCounter).val(endDate);
-            $("#end-date" + tabCounter).prop("min", startDate);
-            $("#end-date" + tabCounter).prop("max", endDate);
+            $("#start-date" + tableID).val(startDate);
+            $("#start-date" + tableID).prop("min", startDate);
+            $("#start-date" + tableID).prop("max", endDate);
+            $("#end-date" + tableID).val(endDate);
+            $("#end-date" + tableID).prop("min", startDate);
+            $("#end-date" + tableID).prop("max", endDate);
           },
           error: function (error) {
             console.error("Error fetching dates:", error);
           },
         });
 
-        var obj = document.getElementById("obj-input" + tabCounter);
-        var exh = document.getElementById("exh-input" + tabCounter);
-        var max = document.getElementById("max-input" + tabCounter);
-        var optButton = document.getElementById("opt-button" + tabCounter);
-        var blend = document.getElementById("blend-input" + tabCounter);
+        var obj = document.getElementById("obj-input" + tableID);
+        var exh = document.getElementById("exh-input" + tableID);
+        var max = document.getElementById("max-input" + tableID);
+        var optButton = document.getElementById("opt-button" + tableID);
+        var blend = document.getElementById("blend-input" + tableID);
 
         optButton.addEventListener("click", function () {
-          showLoadingOverlay(tabCounter);
+          showLoadingOverlay(tableID);
           var objValue = obj.value;
           var exhValue = exh.value;
           var maxValue = max.value;
           var blendValue = blend.value;
 
-          var disabledRowIds = getDisabledRowIds(tabCounter);
-          var tabName = fetchTabName(tabCounter);
+          var disabledRowIds = getDisabledRowIds(tableID);
+          var tabName = fetchTabName(tableID);
 
           var dataToSend = {
             objectiveValue: objValue,
             exhaustValue: exhValue,
             maxValue: maxValue,
             blendValue: blendValue,
-            tableID: tabCounter,
+            tableID: tableID,
 
             disabledRows: disabledRowIds,
             tabName: tabName,
           };
-
-          var startDate = $("#start-date" + tabCounter).val();
-          var endDate = $("#end-date" + tabCounter).val();
+          
+          var startDate = $("#start-date" + tableID).val();
+          var endDate = $("#end-date" + tableID).val();
           var dateTuple = [startDate, endDate];
-
+          
           dataToSend["dates"] = dateTuple;
-
+          
           console.log(dataToSend);
+
 
           getNumberOfVars(function (numVars) {
             var numSelectedVars = numVars - disabledRowIds.length;
@@ -1750,7 +1789,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
               $("#cancelWarning").click(function () {
                 // Hide modal
                 $("#warningPopup").hide();
-                hideLoadingOverlay(tabCounter);
+                hideLoadingOverlay(tableID);
               });
             } else {
               socket.emit("optimise", { dataToSend: dataToSend });
@@ -1764,7 +1803,7 @@ function initializeDataTableFromSave(data, scenarioNameObj) {
     });
 
    
-    var buttonName = document.getElementById("col-btn" + tabCounter);
-    tabNames[tabCounter] = buttonName.textContent;
+    var buttonName = document.getElementById("col-btn" + tableID);
+    tabNames[tableID] = buttonName.textContent;
   });
 }
