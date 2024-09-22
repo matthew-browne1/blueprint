@@ -247,9 +247,14 @@ class Optimise:
         seas_dict = {}
         for x in seas_index.columns:
             seas_dict[x] = seas_index[x].to_list()
-
-        for stream in list(locked_budgets.keys()):
-            streams.remove(stream)
+            
+        if locked_budgets:
+            try:
+                for stream in list(locked_budgets.keys()):
+                    streams.remove(stream)
+            except Exception as e:
+                print("locked budgets failed to be removed from streams list")
+                print(e)
 
         args = (streams, ST_cost_per_dict, ST_carryover_dict, ST_alpha_dict, ST_beta_dict,
                 LT_cost_per_dict, LT_carryover_dict, LT_alpha_dict, LT_beta_dict,
