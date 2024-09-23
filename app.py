@@ -400,6 +400,19 @@ country_to_region = {
     'Saudi Arabia': 'AMEA'
 }
 header = pd.read_sql_table('All_Channel_Inputs', engine)
+fill_dict = {
+    "ST Carryover":0,
+    "ST Alpha":0,
+    "ST Current ROI":0,
+    "LT Carryover":0,
+    "LT Alpha":0,
+    "LT Current ROI":0
+}
+try:
+    header.fillna(fill_dict, inplace=True)
+except Exception as e:
+    app.logger.info("Failed to fill NaN values in header")
+    app.logger.info(e)
 # Show column headers without underscores!
 header.columns = [x.replace("_", " ") for x in header.columns.tolist()]
 header.rename(columns={'Region':'Country'}, inplace=True)
