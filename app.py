@@ -611,12 +611,12 @@ def results_output():
     
     with app.app_context():
         tab_names = dict(request.json)
-        app.logger.info(tab_names)
-        app.logger.info(f"results_output endpoint printing output df keys: {session['output_df_per_result'].keys()}")
+        #app.logger.info(tab_names)
+        #app.logger.info(f"results_output endpoint printing output df keys: {session['output_df_per_result'].keys()}")
         
-        app.logger.info(f"output_df_per_result session variable from within results_output method: {session['output_df_per_result']}")
+        #app.logger.info(f"output_df_per_result session variable from within results_output method: {session['output_df_per_result']}")
         output = create_output(output_df_per_result=session["output_df_per_result"])
-        app.logger.info(f"output from create_output method: {output}")
+        #app.logger.info(f"output from create_output method: {output}")
         
         output['Date'] = pd.to_datetime(output['Date'])
         output['Year'] = output['Date'].dt.year
@@ -624,8 +624,8 @@ def results_output():
         merged_output = pd.merge(output, nns_mc_copy, on=['Country','Brand','Year'], how='left')
         merged_output.fillna(1, inplace=True)
         merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC']) * merged_output['Volume Scale-up factor (yearly)']
-        app.logger.info(f"merged output being uploaded to db: {merged_output}")
-        app.logger.info(f"merged output Value column being uploaded to db: {merged_output['Value']}")
+        #app.logger.info(f"merged output being uploaded to db: {merged_output}")
+        #app.logger.info(f"merged output Value column being uploaded to db: {merged_output['Value']}")
     
         try:
             merged_output.to_sql(f'Blueprint_results_{session["user"]["oid"]}', engine, if_exists='replace', index=False)
@@ -659,6 +659,7 @@ def chart_data():
         rows = db_result.fetchall()
         columns = db_result.keys()
         result_df = pd.DataFrame(rows, columns=columns)
+        app.logger.info(result_df)
         db_result.close()
         result_df['Date'] = pd.to_datetime(result_df['Date'])
         result_df['MonthYear'] = result_df['Date'].dt.strftime('%Y-%m')
@@ -684,7 +685,7 @@ def chart_data():
         app.logger.info("Dropdown options sent")
 
         socketio.emit('chart_data', {'chartData': session['chart_data'], 'sessionID':session_id})
-        app.logger.info("chart_data sent")
+        app.logger.info(f"chart_data sent: {session['chart_data']}")
 
     except SQLAlchemyError as e:
         app.logger.info('Error executing query:', str(e))
