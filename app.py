@@ -492,6 +492,7 @@ def run_optimise(dataDict):
 
         for col in current_table_df.columns:
             header_copy[col] = current_table_df[col]
+        header_copy = header_copy[~(header_copy['Opt Channel'].isin(disabled_opt_channels))]
 
         header_copy['Max Spend Cap'] = header_copy['Max Spend Cap'].astype(float)
         header_copy['Min Spend Cap'] = header_copy['Min Spend Cap'].astype(float)
@@ -503,8 +504,6 @@ def run_optimise(dataDict):
         locked_budgets = dict(zip(equal_caps_df['Opt Channel'],equal_caps_df['Min Spend Cap']))
         
         max_budget -= equal_caps_df['Min Spend Cap'].sum()
-
-        header_copy = header_copy[~(header_copy['Opt Channel'].isin(disabled_opt_channels))]
 
         laydown_copy = laydown_copy.drop(columns=disabled_opt_channels, errors='ignore')
         seas_index_copy = seas_index_copy.drop(columns=disabled_opt_channels, errors='ignore')
@@ -1161,7 +1160,7 @@ def refresh_table():
         var['Current Budget'] = sum(var['Laydown'])
         var['Max Spend Cap'] = round(var['Current Budget'] * 1.5, 2)
     session['table_data'][table_id] = current_table
-        
+    
     return jsonify(current_table)
 
 @app.route('/export_data')
