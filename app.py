@@ -611,12 +611,13 @@ def results_output():
     
     with app.app_context():
         tab_names = dict(request.json)
-        print(tab_names)
+        app.logger.info(tab_names)
         app.logger.info(f"results_output endpoint printing output df keys: {session['output_df_per_result'].keys()}")
         
-        #print(inputs_per_result)
+        app.logger.info(f"inputs_per_result from results_output endpoint: {inputs_per_result}")
+        app.logger.info(f"output_df_per_result session variable from within results_output method: {session['output_df_per_result']}")
         output = create_output(output_df_per_result=session["output_df_per_result"])
-        #print(output)
+        app.logger.info(f"output from create_output method: {output}")
         
         output['Date'] = pd.to_datetime(output['Date'])
         output['Year'] = output['Date'].dt.year
@@ -637,6 +638,7 @@ def results_output():
 
 def create_output(output_df_per_result):
     concat_df = pd.DataFrame()
+    app.logger.info(f"from within create_output method: {output_df_per_result}")
     for key, value in output_df_per_result.items():
         concat_df = pd.concat([concat_df, value])
     
