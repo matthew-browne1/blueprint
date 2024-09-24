@@ -614,7 +614,6 @@ def results_output():
         app.logger.info(tab_names)
         app.logger.info(f"results_output endpoint printing output df keys: {session['output_df_per_result'].keys()}")
         
-        app.logger.info(f"inputs_per_result from results_output endpoint: {inputs_per_result}")
         app.logger.info(f"output_df_per_result session variable from within results_output method: {session['output_df_per_result']}")
         output = create_output(output_df_per_result=session["output_df_per_result"])
         app.logger.info(f"output from create_output method: {output}")
