@@ -386,6 +386,15 @@ country_to_region = {
 }
 # header = pd.read_sql_table('All_Channel_Inputs', engine)
 header = pd.read_excel("All_Channel_Inputs.xlsx")
+fill_dict = {
+    "ST Carryover":0,
+    "ST Alpha":0,
+    "ST Current_ROI":0,
+    "LT Carryover":0,
+    "LT Alpha":0,
+    "LT Current_ROI":0
+}
+header.fillna(fill_dict, inplace=True)
 # Show column headers without underscores!
 header.columns = [x.replace("_", " ") for x in header.columns.tolist()]
 header.rename(columns={'Region':'Country'}, inplace=True)
@@ -486,13 +495,14 @@ def run_optimise(dataDict):
 
         for col in current_table_df.columns:
             header_copy[col] = current_table_df[col]
+        header_copy = header_copy[~(header_copy['Opt Channel'].isin(disabled_opt_channels))]
             
         header_copy.loc[header_copy['Max Spend Cap'] < header_copy['Min Spend Cap'], 'Max Spend Cap'] = header_copy['Min Spend Cap']
             
         equal_caps_df = header_copy.loc[abs(header_copy['Min Spend Cap'] - header_copy['Max Spend Cap']) <= 1]
         
         locked_budgets = dict(zip(equal_caps_df['Opt Channel'],equal_caps_df['Min Spend Cap']))
-        
+        print(locked_budgets)
         max_budget -= equal_caps_df['Min Spend Cap'].sum()
         
         print(f"max_budget = {max_budget}")
@@ -500,8 +510,6 @@ def run_optimise(dataDict):
         #header_copy = header_copy.loc[abs(header_copy['Min Spend Cap']-header_copy['Max Spend Cap']) > 1]
         
         print(header_copy)
-
-        header_copy = header_copy[~(header_copy['Opt Channel'].isin(disabled_opt_channels))]
 
         laydown_copy = laydown_copy.drop(columns=disabled_opt_channels, errors='ignore')
         seas_index_copy = seas_index_copy.drop(columns=disabled_opt_channels, errors='ignore')
@@ -521,6 +529,13 @@ def run_optimise(dataDict):
 
         print(
             f"retrieved from the server: table id = {table_id}, objective function = {obj_func}, exhaust budget = {exh_budget}, max budget = {max_budget}, blended = {blend}")
+
+        for var in header_copy.to_dict("records"):
+            var['Laydown'] = laydown_copy[var['Opt Channel']].tolist()
+            var['Current Budget'] = sum(var['Laydown'])
+            var['Max Spend Cap'] = round(var['Current Budget'] * 1.5, 2)
+            var['ST Current_ROI'] = ST_inc_rev_copy[var['Opt Channel']].sum() / var['Current Budget']
+            var['LT Current_ROI'] = LT_inc_rev_copy[var['Opt Channel']].sum() / var['Current Budget']
 
         ST_header = Beta.beta_calculation(header_copy, laydown_copy, seas_index_copy, ST_inc_rev_copy, 'st')
 
@@ -946,6 +961,8 @@ def refresh_table():
     for var in current_table:
         var['Laydown'] = laydown_copy[var['Channel'] + "_" + var['Country'] + "_" + var['Brand']].tolist()
         var['Current Budget'] = sum(var['Laydown'])
+        var['Max Spend Cap'] = round(var['Current Budget'] * 1.5, 2)
+    table_data[table_id] = current_table
         
     return jsonify(current_table)
 
