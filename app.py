@@ -167,16 +167,7 @@ def index():
         return redirect(url_for("login"))
     else:
         return redirect(url_for("blueprint"))
-    # if not session.get("user"):
-    #     app.logger.info("rendering index.html, user does not exist in session")
-        
-    #     session["flow"] = _build_auth_code_flow(scopes=app_config.SCOPE)
-    #     return render_template('index.html', auth_url=session["flow"]["auth_uri"], version=msal.__version__)
-    # else:
-    #     user_name = session['user']['name']
-    #     app.logger.info("rendering index.html, user exists in session")
-    #     app.logger.info(session["user"]['oid'])
-    #     return render_template('index.html', user=session["user"], user_name = user_name, version=msal.__version__)
+
     
 @app.route("/login")
 def login():
@@ -552,8 +543,7 @@ def run_optimise(dataDict):
             session.modified = True
             app.logger.info("opt complete, hiding overlay")
             socketio.emit('opt_complete', {'data': table_id})
-            app.logger.info(session['output_df_per_result'].keys())
-            app.logger.info(session['results'].keys())
+
     
     except Exception as e:
         error_str = traceback.format_exc()
@@ -685,7 +675,7 @@ def chart_data():
         app.logger.info("Dropdown options sent")
 
         socketio.emit('chart_data', {'chartData': session['chart_data'], 'sessionID':session_id})
-        app.logger.info(f"chart_data sent: {session['chart_data']}")
+   
 
     except SQLAlchemyError as e:
         app.logger.info('Error executing query:', str(e))
@@ -719,7 +709,7 @@ def apply_filters(filters):
     session_id = session.get('session_id')
     try:
         session['filtered_data'] = []
-        app.logger.info(filters)
+     
  
         for data_point in session['chart_data']:
             include_data_point = True
@@ -935,7 +925,6 @@ def handle_curve_filter(curve_filter_data):
         if 'Country' in curve_filters and 'Brand' in curve_filters:
             curve_filters['country_brand'] = f"{curve_filters['Country']}_{curve_filters['Brand']}"
 
-        app.logger.info('Received filter data:', curve_filters)
         unique_country_brand_opt = set(row["country_brand"] for row in session['chart_budget'])
         app.logger.info(f"Unique values in chart_budget: {unique_country_brand_opt}")
 
@@ -1004,9 +993,7 @@ def blueprint_curve():
 @app.route('/date_range', methods=['GET', 'POST'])
 def date_range():
     start_date = list(laydown_dates)[1]
-    app.logger.info(start_date)
     end_date = list(laydown_dates)[-1]
-    app.logger.info(end_date)
     return jsonify({"startDate": start_date, "endDate": end_date})
 
 @login_required
@@ -1023,7 +1010,6 @@ def blueprint():
     session['output_df_per_result'] = {}
     session['results'] = {}
     session.modified = True
-    app.logger.info(laydown_dates)
     return render_template('blueprint.html', user_id=user_id, user_name=user_name)
 
 @app.route('/get_session_id', methods=['GET'])
