@@ -624,6 +624,8 @@ def results_output():
         merged_output = pd.merge(output, nns_mc_copy, on=['Country','Brand','Year'], how='left')
         merged_output.fillna(1, inplace=True)
         merged_output['Volume'] = merged_output['Value'] / (merged_output['NNS']*merged_output['MC']) * merged_output['Volume Scale-up factor (yearly)']
+        app.logger.info(f"merged output being uploaded to db: {merged_output}")
+        app.logger.info(f"merged output Value column being uploaded to db: {merged_output['Value']}")
     
         try:
             merged_output.to_sql(f'Blueprint_results_{session["user"]["oid"]}', engine, if_exists='replace', index=False)
