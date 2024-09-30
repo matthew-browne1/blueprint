@@ -666,7 +666,7 @@ def chart_data():
                 else:
                     dropdown_options[column] = result_df[column].unique().tolist()
         
-        socketio.emit('dropdown_options', {'options': dropdown_options})
+        socketio.emit('dropdown_options', {'options': dropdown_options}, to=request.sid)
         app.logger.info("Dropdown options sent")
 
         socketio.emit('chart_data', {'chartData': session['chart_data'], 'sessionID':session_id}, to=request.sid)
