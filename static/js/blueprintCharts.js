@@ -16,8 +16,6 @@ window.onload = function () {
   window.opener.postMessage("newTabLoaded", "*");
 };
 $(document).ready(function () {
-  var filteredData = [];
-  var chartData = [];
 
   // Function to populate dropdown options
   function populateDropdown(selector, options) {
@@ -74,22 +72,7 @@ $(document).ready(function () {
     return { minDate: minDateStr, maxDate: maxDateStr };
   }
 
-  // $('input[name="volval"]').change(function () {
-  //   // Reset all containers
-  //   $(".volval-cont").css("background-color", "");
-  //   // Change color of the associated container
-  //   if ($("#volval1").is(":checked")) {
-  //     $(".volval1-cont").css("background-color", "#264F73");
-  //     $("#volval1-label").css("color", "#fff");
-  //     $(".volval2-cont").css("background-color", "#A0B1C1");
-  //     $("#volval2-label").css("color", "#fff");
-  //   } else if ($("#volval2").is(":checked")) {
-  //     $(".volval2-cont").css("background-color", "#264F73");
-  //     $("#volval2-label").css("color", "#fff");
-  //     $(".volval1-cont").css("background-color", "#A0B1C1");
-  //     $("#volval1-label").css("color", "#fff");
-  //   }
-  // });
+
 
   // Function to collect and send filter selections to backend
   function applyFilters() {
@@ -127,20 +110,17 @@ $(document).ready(function () {
     console.log("Connected");
   });
 
-
-
   chartsSocket.emit("collect_data");
 
-
   chartsSocket.on("chart_data", function (data) {
-    chartData = data.chartData;
+    var collectedData = data.chartData;
     console.log("fetched chart data from back end");
-    generateCharts();
+    generateCharts(collectedData);
   });
 
   chartsSocket.on("filtered_data", function (data) {
-    filteredData = data.filtered_data;
-    generateCharts();
+    var filteredData = data.filtered_data;
+    generateCharts(filteredData);
   });
 
   // Apply Filters button click event
@@ -221,19 +201,11 @@ $(document).ready(function () {
   }
 
   // Function to generate charts
-  function generateCharts() {
-    console.log();
-    if (filteredData.length > 0) {
-      generateChartsA(filteredData);
-      generateChartsB(filteredData);
-      generateChartsC(filteredData);
-      generateChartsD(filteredData);
-    } else {
-      generateChartsA(chartData);
-      generateChartsB(chartData);
-      generateChartsC(chartData);
-      generateChartsD(chartData);
-    }
+  function generateCharts(data) {
+      generateChartsA(data);
+      generateChartsB(data);
+      generateChartsC(data);
+      generateChartsD(data);    
   }
 
   // Automatically select all options when 'Select All' is clicked
@@ -250,12 +222,7 @@ $(document).ready(function () {
     }
   });
 
-  const volvalButtons = document.querySelectorAll('input[type="radio"]');
-  volvalButtons.forEach((button) => {
-    button.addEventListener("change", function () {
-      generateCharts();
-    });
-  });
+
 });
 
 function generateChartsA(data) {
