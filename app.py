@@ -436,10 +436,6 @@ for var in table_dict:
 
 
 
-# %% --------------------------------------------------------------------------
-#
-# -----------------------------------------------------------------------------
-
 @socketio.on('optimise')
 def run_optimise(dataDict):
     session_id = session.get('session_id')
@@ -639,7 +635,6 @@ def create_output(output_df_per_result):
 @socketio.on("collect_data")
 def chart_data():
     session_id = session.get('session_id')
-    join_room(session_id)
     session['chart_data'] = []
 
     try:
@@ -674,7 +669,7 @@ def chart_data():
         socketio.emit('dropdown_options', {'options': dropdown_options})
         app.logger.info("Dropdown options sent")
 
-        socketio.emit('chart_data', {'chartData': session['chart_data'], 'sessionID':session_id})
+        socketio.emit('chart_data', {'chartData': session['chart_data'], 'sessionID':session_id}, to=request.sid)
    
 
     except SQLAlchemyError as e:
@@ -722,7 +717,7 @@ def apply_filters(filters):
             if include_data_point:
                 session['filtered_data'].append(data_point)
         session.modified = True
-        socketio.emit('filtered_data', {'filtered_data': session['filtered_data'], 'sessionID':session_id})
+        socketio.emit('filtered_data', {'filtered_data': session['filtered_data'], 'sessionID':session_id}, to=request.sid)
         app.logger.info("Filtered chart data sent")
         app.logger.info("Filtered data length:", len(session['filtered_data']))
 
@@ -763,10 +758,10 @@ def chart_response():
 
  
         session.modified = True
-        socketio.emit('dropdown_options1', {'options': session['dropdown_options1']})
+        socketio.emit('dropdown_options1', {'options': session['dropdown_options1']}, to=request.sid)
         app.logger.info("Curve Dropdown options sent")
 
-        socketio.emit('chart_response', {'chartResponse': chart_response_default})
+        socketio.emit('chart_response', {'chartResponse': chart_response_default}, to=request.sid)
         app.logger.info("chart_response sent")
 
     except SQLAlchemyError as e:
@@ -803,7 +798,7 @@ def chart_budget():
 
  
         session.modified = True
-        socketio.emit('chart_budget', {'chartBudget': chart_budget_default})
+        socketio.emit('chart_budget', {'chartBudget': chart_budget_default}, to=request.sid)
         app.logger.info("chart_budget sent")
 
     except SQLAlchemyError as e:
@@ -838,7 +833,7 @@ def chart_roi():
         default_option = dropdown_options1["country_brand"][0]
         chart_roi_default = [row for row in session['chart_roi'] if row["country_brand"] == default_option]
         session.modified = True
-        socketio.emit('chart_roi', {'chartROI': chart_roi_default})
+        socketio.emit('chart_roi', {'chartROI': chart_roi_default}, to=request.sid)
         app.logger.info("chart_roi sent")
 
     except SQLAlchemyError as e:
@@ -872,7 +867,7 @@ def chart_budget_response():
         default_option = dropdown_options1["country_brand"][0]
         chart_budget_response_default = [row for row in session['chart_budget_response'] if row["country_brand"] == default_option]
         session.modified = True
-        socketio.emit('chart_budget_response', {'chartBudget_response': chart_budget_response_default})
+        socketio.emit('chart_budget_response', {'chartBudget_response': chart_budget_response_default}, to=request.sid)
         app.logger.info("chart_budget_response sent")
 
     except SQLAlchemyError as e:
@@ -906,7 +901,7 @@ def tv_data_process():
             chart_data.append(a)
         app.logger.info("printing chart data for tv data")
         session['tv_data'] = chart_data
-        socketio.emit('tv_chart_data', {'tv_chartData':session['tv_data']})
+        socketio.emit('tv_chart_data', {'tv_chartData':session['tv_data']}, to=request.sid)
     except SQLAlchemyError as e:
         app.logger.info('Error executing query:', str(e))
 
@@ -918,6 +913,7 @@ def tv_data_process():
 def handle_curve_filter(curve_filter_data):
     session_id = session.get('session_id')
     join_room(session_id)
+    sid = request.sid
     try:
         curve_filters = curve_filter_data
         if 'Country' in curve_filters and 'Brand' in curve_filters and 'Optimisation Type' in curve_filters:
@@ -928,17 +924,17 @@ def handle_curve_filter(curve_filter_data):
         unique_country_brand_opt = set(row["country_brand"] for row in session['chart_budget'])
         app.logger.info(f"Unique values in chart_budget: {unique_country_brand_opt}")
 
-        apply_curve_filters(session['chart_response'], curve_filters, 'filtered_data_response')
-        apply_curve_filters(session['chart_budget'], curve_filters, 'filtered_data_budget')
-        apply_curve_filters(session['chart_roi'], curve_filters, 'filtered_data_roi')
-        apply_curve_filters(session['chart_budget_response'], curve_filters, 'filtered_data_budget_response')
-        apply_curve_filters(session['tv_data'], curve_filters, 'filtered_tv_chartData')
+        apply_curve_filters(session['chart_response'], curve_filters, 'filtered_data_response', sid)
+        apply_curve_filters(session['chart_budget'], curve_filters, 'filtered_data_budget', sid)
+        apply_curve_filters(session['chart_roi'], curve_filters, 'filtered_data_roi', sid)
+        apply_curve_filters(session['chart_budget_response'], curve_filters, 'filtered_data_budget_response', sid)
+        apply_curve_filters(session['tv_data'], curve_filters, 'filtered_tv_chartData', sid)
         session.modified = True
 
     except Exception as e:
         app.logger.info('Error applying filters:', str(e))
 
-def apply_curve_filters(data, curve_filters, event_name):
+def apply_curve_filters(data, curve_filters, event_name, sid):
     session['filtered_curve_data'] = []
     try:
         
@@ -961,11 +957,11 @@ def apply_curve_filters(data, curve_filters, event_name):
                 if values and data_point[key] not in values:
                     include_data_point = False
                     break
-
+                
             if include_data_point:
                 session['filtered_curve_data'].append(data_point)
         session.modified = True
-        socketio.emit(event_name, {'filtered_data': session['filtered_curve_data']})
+        socketio.emit(event_name, {'filtered_data': session['filtered_curve_data']}, to=sid)
         app.logger.info(f"Filtered chart data sent for: {event_name}")
         app.logger.info(f"Filtered chart data length: {len(session['filtered_curve_data'])}")
 
