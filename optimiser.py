@@ -64,7 +64,7 @@ class Optimise:
             merged_df = pd.merge(indexed_revs_with_date_df, filtered_nns_mc, on='Year')
 
             # Calculate the volume using vectorized operations
-            merged_df['Volume'] = merged_df['Indexed_Revenue'] / (merged_df['NNS'] * merged_df['MC']) * merged_df['Volume Scale-up factor (yearly)']
+            merged_df['Volume'] = merged_df['Indexed_Revenue'] / (merged_df['NNS'] * merged_df['MC'] * merged_df['FX rate'])
 
             # Sum the volumes to get the total revenue
             total_rev = merged_df['Volume'].sum()
